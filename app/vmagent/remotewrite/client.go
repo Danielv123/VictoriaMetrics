@@ -151,9 +151,19 @@ func newHTTPClient(argIdx int, remoteWriteURL, sanitizedURL string, fq *persiste
 		}
 		tr.Proxy = http.ProxyURL(pu)
 	}
+
 	hc := &http.Client{
 		Transport: authCfg.NewRoundTripper(tr),
 		Timeout:   sendTimeout.GetOptionalArg(argIdx),
+	}
+	rwURL, err := url.Parse(remoteWriteURL)
+	if err != nil {
+		logger.Fatalf("BUGL cannot parse already parsed -remoteWrite.url=%q: %s", remoteWriteURL, err)
+	}
+	if strings.HasPrefix(rwURL.Host, "dns+") {
+		rwURL.Host = rwURL.Host[4:]
+		remoteWriteURL = rwURL.String()
+		hc.Transport = httputil.NewLoadBalancerTransport(hc.Transport, rwURL)
 	}
 	retryMaxIntervalFlag := retryMaxTime
 	if retryMaxInterval.String() != "" {

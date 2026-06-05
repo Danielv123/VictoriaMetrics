@@ -431,6 +431,22 @@ and `-remoteWrite.streamAggr.config`:
 
 There is also the `-promscrape.configCheckInterval` command-line flag, which can be used to automatically reload configs from the updated `-promscrape.config` file.
 
+## DNS URLs
+
+If `vmagent` encounters URLs with the `dns+` prefix in the hostname (such as `http://dns+some-addr:8428/some/path`), it resolves `some-addr` into IP addresses
+via [DNS A records](https://datatracker.ietf.org/doc/html/rfc1035#section-3.4.1). The port from the original URL is appended to each discovered IP address.
+Each discovered IP address is used for round-robin balancing of write requests.
+
+DNS URLs are supported in the following places:
+
+* In `-remoteWrite.url` command-line flag. For example, if `victoria-metrics` [DNS A Record](https://datatracker.ietf.org/doc/html/rfc1035#section-3.4.1) record contains
+  `192.168.1.15` IP address, then `-remoteWrite.url=http://dns+victoria-metrics:8428/api/v1/write` is automatically resolved into
+  `-remoteWrite.url=http://192.168.1.15:8428/api/v1/write`.
+
+DNS URLs are useful when client-side HTTP load balancing is needed. A good example
+is a [Kubernetes headless Service](https://kubernetes.io/docs/concepts/services-networking/service/#headless-services),
+which returns multiple IP addresses for a single hostname.
+
 ## SRV URLs
 
 If `vmagent` encounters URLs with `srv+` prefix in hostname (such as `http://srv+some-addr/some/path`), then it resolves `some-addr` [DNS SRV](https://en.wikipedia.org/wiki/SRV_record)
