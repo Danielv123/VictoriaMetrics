@@ -473,6 +473,7 @@ apptest:
 	$(MAKE) victoria-metrics-race vmagent-race vmalert-race vmauth-race vmctl-race vmbackup-race vmrestore-race
 	go test ./apptest/... -skip="^Test(Cluster|Mixed|Legacy).*"
 
+# App tests for legacy indexDB
 apptest-legacy: victoria-metrics-race vmbackup-race vmrestore-race
 	OS=$$(uname | tr '[:upper:]' '[:lower:]'); \
 	ARCH=$$(uname -m | tr '[:upper:]' '[:lower:]' | sed 's/x86_64/amd64/'); \
@@ -489,10 +490,11 @@ apptest-legacy: victoria-metrics-race vmbackup-race vmrestore-race
 	VMSTORAGE_V1_132_0_PATH=$${DIR}/vmstorage-prod \
 	go test ./apptest/tests -run="^TestLegacySingle.*"
 
-apptest-clusternative-vmsingle: victoria-metrics-race
+# App tests for mixed setups where vmsingle and vmcluster coexist.
+apptest-mixed: victoria-metrics-race
 	OS=$$(uname | tr '[:upper:]' '[:lower:]'); \
 	ARCH=$$(uname -m | tr '[:upper:]' '[:lower:]' | sed 's/x86_64/amd64/'); \
-	VERSION=v1.144.0; \
+	VERSION=v1.145.0; \
 	VMCLUSTER=victoria-metrics-$${OS}-$${ARCH}-$${VERSION}-cluster.tar.gz; \
 	URL=https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/$${VERSION}; \
 	DIR=/tmp/$${VERSION}; \
