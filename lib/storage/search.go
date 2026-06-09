@@ -325,6 +325,17 @@ func (s *Search) NextMetricBlock() bool {
 
 // SearchQuery is used for sending search queries from vmselect to vmstorage.
 type SearchQuery struct {
+	AccountID uint32
+	ProjectID uint32
+
+	// TenantTokens and IsMultiTenant is artificial fields
+	// they're only exist at runtime and cannot be transferred
+	// via network calls for keeping communication protocol compatibility
+	// TODO:@f41gh7 introduce breaking change to the protocol later
+	// and use TenantTokens instead of AccountID and ProjectID
+	TenantTokens  []TenantToken
+	IsMultiTenant bool
+
 	// The time range for searching time series
 	MinTimestamp int64
 	MaxTimestamp int64
@@ -377,6 +388,22 @@ func (t *TenantToken) Marshal(dst []byte) []byte {
 	dst = encoding.MarshalUint32(dst, t.AccountID)
 	dst = encoding.MarshalUint32(dst, t.ProjectID)
 	return dst
+}
+
+// NewMultiTenantSearchQuery creates new search query for the given args.
+func NewMultiTenantSearchQuery(tenants []TenantToken, start, end int64, tagFilterss [][]TagFilter, maxMetrics int) *SearchQuery {
+	if start < 0 {
+		// This is needed for https://github.com/VictoriaMetrics/VictoriaMetrics/issues/5553
+		start = 0
+	}
+	return &SearchQuery{
+		TenantTokens:  tenants,
+		MinTimestamp:  start,
+		MaxTimestamp:  end,
+		TagFilterss:   tagFilterss,
+		MaxMetrics:    maxMetrics,
+		IsMultiTenant: true,
+	}
 }
 
 // TagFilter represents a single tag filter from SearchQuery.
@@ -476,7 +503,15 @@ func (sq *SearchQuery) String() string {
 	}
 	start := TimestampToHumanReadableFormat(sq.MinTimestamp)
 	end := TimestampToHumanReadableFormat(sq.MaxTimestamp)
-	return fmt.Sprintf("filters=%s, timeRange=[%s..%s]", a, start, end)
+	if !sq.IsMultiTenant {
+		return fmt.Sprintf("accountID=%d, projectID=%d, filters=%s, timeRange=[%s..%s]", sq.AccountID, sq.ProjectID, a, start, end)
+	}
+
+	tts := make([]string, len(sq.TenantTokens))
+	for i, tt := range sq.TenantTokens {
+		tts[i] = tt.String()
+	}
+	return fmt.Sprintf("tenants=[%s], filters=%s, timeRange=[%s..%s]", strings.Join(tts, ","), a, start, end)
 }
 
 func tagFiltersToString(tfs []TagFilter) string {
@@ -487,8 +522,9 @@ func tagFiltersToString(tfs []TagFilter) string {
 	return "{" + strings.Join(a, ",") + "}"
 }
 
-// Marshal appends marshaled sq to dst and returns the result.
-func (sq *SearchQuery) Marshal(dst []byte) []byte {
+// MarshalWithoutTenant appends marshaled sq without AccountID/ProjectID to dst and returns the result.
+// It is expected that TenantToken is already marshaled to dst.
+func (sq *SearchQuery) MarshalWithoutTenant(dst []byte) []byte {
 	dst = encoding.MarshalVarInt64(dst, sq.MinTimestamp)
 	dst = encoding.MarshalVarInt64(dst, sq.MaxTimestamp)
 	dst = encoding.MarshalVarUint64(dst, uint64(len(sq.TagFilterss)))
@@ -498,11 +534,25 @@ func (sq *SearchQuery) Marshal(dst []byte) []byte {
 			dst = tagFilters[i].Marshal(dst)
 		}
 	}
+	dst = encoding.MarshalUint32(dst, uint32(sq.MaxMetrics))
 	return dst
 }
 
 // Unmarshal unmarshals sq from src and returns the tail.
 func (sq *SearchQuery) Unmarshal(src []byte) ([]byte, error) {
+	if len(src) < 4 {
+		return src, fmt.Errorf("cannot unmarshal AccountID: too short src len: %d; must be at least %d bytes", len(src), 4)
+	}
+	sq.AccountID = encoding.UnmarshalUint32(src)
+	src = src[4:]
+
+	if len(src) < 4 {
+		return src, fmt.Errorf("cannot unmarshal ProjectID: too short src len: %d; must be at least %d bytes", len(src), 4)
+	}
+	sq.ProjectID = encoding.UnmarshalUint32(src)
+	src = src[4:]
+
+	sq.TenantTokens = []TenantToken{{AccountID: sq.AccountID, ProjectID: sq.ProjectID}}
 	minTs, nSize := encoding.UnmarshalVarInt64(src)
 	if nSize <= 0 {
 		return src, fmt.Errorf("cannot unmarshal MinTimestamp from varint")
@@ -542,6 +592,12 @@ func (sq *SearchQuery) Unmarshal(src []byte) ([]byte, error) {
 		}
 		sq.TagFilterss[i] = tagFilters
 	}
+
+	if len(src) < 4 {
+		return src, fmt.Errorf("cannot unmarshal MaxMetrics: too short src len: %d; must be at least %d bytes", len(src), 4)
+	}
+	sq.MaxMetrics = int(encoding.UnmarshalUint32(src))
+	src = src[4:]
 
 	return src, nil
 }

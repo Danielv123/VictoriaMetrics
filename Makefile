@@ -471,7 +471,7 @@ test-full-386:
 
 apptest:
 	$(MAKE) victoria-metrics-race vmagent-race vmalert-race vmauth-race vmctl-race vmbackup-race vmrestore-race
-	go test ./apptest/... -skip="^Test(Cluster|Legacy).*"
+	go test ./apptest/... -skip="^Test(Cluster|Mixed|Legacy).*"
 
 apptest-legacy: victoria-metrics-race vmbackup-race vmrestore-race
 	OS=$$(uname | tr '[:upper:]' '[:lower:]'); \
@@ -488,6 +488,19 @@ apptest-legacy: victoria-metrics-race vmbackup-race vmrestore-race
 	VMSINGLE_V1_132_0_PATH=$${DIR}/victoria-metrics-prod \
 	VMSTORAGE_V1_132_0_PATH=$${DIR}/vmstorage-prod \
 	go test ./apptest/tests -run="^TestLegacySingle.*"
+
+apptest-clusternative-vmsingle: victoria-metrics-race
+	OS=$$(uname | tr '[:upper:]' '[:lower:]'); \
+	ARCH=$$(uname -m | tr '[:upper:]' '[:lower:]' | sed 's/x86_64/amd64/'); \
+	VERSION=v1.144.0; \
+	VMCLUSTER=victoria-metrics-$${OS}-$${ARCH}-$${VERSION}-cluster.tar.gz; \
+	URL=https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/$${VERSION}; \
+	DIR=/tmp/$${VERSION}; \
+	test -d $${DIR} || (mkdir $${DIR} && \
+		curl --output-dir /tmp -LO $${URL}/$${VMCLUSTER} && tar xzf /tmp/$${VMCLUSTER} -C $${DIR} \
+	); \
+	VMSELECT_PATH=$${DIR}/vmselect-prod \
+	go test ./apptest/tests -run="^TestMixed.*"
 
 benchmark:
 	go test -run=NO_TESTS -bench=. ./lib/...

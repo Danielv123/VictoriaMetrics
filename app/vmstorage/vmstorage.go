@@ -164,6 +164,10 @@ func (vms *VMStorage) IsReadOnly() bool {
 }
 
 func (vms *VMStorage) InitSearch(qt *querytracer.Tracer, sq *storage.SearchQuery, deadline uint64) (vmselectapi.BlockIterator, error) {
+	return vms.initSearch(qt, sq, nil, deadline)
+}
+
+func (vms *VMStorage) initSearch(qt *querytracer.Tracer, sq *storage.SearchQuery, marshal marshalFunc, deadline uint64) (vmselectapi.BlockIterator, error) {
 	vms.wg.Add(1)
 
 	tr := sq.GetTimeRange()
@@ -178,6 +182,7 @@ func (vms *VMStorage) InitSearch(qt *querytracer.Tracer, sq *storage.SearchQuery
 		return nil, fmt.Errorf("missing tag filters")
 	}
 	bi := getBlockIterator()
+	bi.marshal = marshal
 	bi.wgDone = vms.wg.Done
 	bi.sr.Init(qt, vms.s, tfss, tr, maxMetrics, deadline)
 	if err := bi.sr.Error(); err != nil {
@@ -198,11 +203,14 @@ func (vms *VMStorage) getMaxMetrics(searchQueryLimit int) int {
 	return searchQueryLimit
 }
 
+type marshalFunc func(dst []byte, src *storage.MetricBlock) []byte
+
 // blockIterator implements vmselectapi.BlockIterator
 type blockIterator struct {
-	sr     storage.Search
-	mb     storage.MetricBlock
-	wgDone func()
+	sr      storage.Search
+	mb      storage.MetricBlock
+	marshal marshalFunc
+	wgDone  func()
 }
 
 var blockIteratorsPool sync.Pool
@@ -231,7 +239,11 @@ func (bi *blockIterator) NextBlock(dst []byte) ([]byte, bool) {
 	mb := bi.mb
 	mb.MetricName = bi.sr.MetricBlockRef.MetricName
 	bi.sr.MetricBlockRef.BlockRef.MustReadBlock(&mb.Block)
-	dst = mb.Marshal(dst[:0])
+	if bi.marshal != nil {
+		dst = bi.marshal(dst[:0], &mb)
+	} else {
+		dst = mb.Marshal(dst[:0])
+	}
 	return dst, true
 }
 
