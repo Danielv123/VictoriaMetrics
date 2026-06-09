@@ -26,6 +26,8 @@ See also [LTS releases](https://docs.victoriametrics.com/victoriametrics/lts-rel
 
 ## tip
 
+* FEATURE: [vmagent](https://docs.victoriametrics.com/victoriametrics/vmagent/) and [vmalert](https://docs.victoriametrics.com/victoriametrics/vmalert/): add client side round-robin load-balancing with `DNS` discovery. See [#2388](https://github.com/VictoriaMetrics/VictoriaMetrics/issues/2388) and these [vmagent DNS URLs](https://docs.victoriametrics.com/victoriametrics/vmagent/#dns-urls), [vmalert DNS URLs](https://docs.victoriametrics.com/victoriametrics/vmalert/#dns-urls).
+
 ## [v1.145.0](https://github.com/VictoriaMetrics/VictoriaMetrics/releases/tag/v1.145.0)
 
 Released at 2026-06-08
