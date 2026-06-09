@@ -11,6 +11,7 @@ import (
 	"github.com/VictoriaMetrics/VictoriaMetrics/app/vmalert/vmalertutil"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/flagutil"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/httputil"
+	"github.com/VictoriaMetrics/VictoriaMetrics/lib/logger"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/promauth"
 )
 
@@ -94,6 +95,16 @@ func Init(extraParams url.Values) (QuerierBuilder, error) {
 		tr.MaxIdleConns = tr.MaxIdleConnsPerHost
 	}
 	tr.IdleConnTimeout = *idleConnectionTimeout
+	hc := &http.Client{Transport: tr}
+	datasourceURL, err := url.Parse(*addr)
+	if err != nil {
+		logger.Fatalf("BUG: cannot parse already parsed -datasource.url=%q: %s", *addr, err)
+	}
+	if strings.HasPrefix(datasourceURL.Host, "dns+") {
+		datasourceURL.Host = datasourceURL.Host[4:]
+		tr := httputil.NewLoadBalancerTransport(tr, datasourceURL)
+		hc.Transport = tr
+	}
 
 	if extraParams == nil {
 		extraParams = url.Values{}
@@ -120,9 +131,9 @@ func Init(extraParams url.Values) (QuerierBuilder, error) {
 	}
 
 	return &Client{
-		c:                &http.Client{Transport: tr},
+		c:                hc,
 		authCfg:          authCfg,
-		datasourceURL:    strings.TrimSuffix(*addr, "/"),
+		datasourceURL:    strings.TrimSuffix(datasourceURL.String(), "/"),
 		appendTypePrefix: *appendTypePrefix,
 		queryStep:        *queryStep,
 		extraParams:      extraParams,

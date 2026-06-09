@@ -4,12 +4,15 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/VictoriaMetrics/VictoriaMetrics/app/vmalert/datasource"
 	"github.com/VictoriaMetrics/VictoriaMetrics/app/vmalert/vmalertutil"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/flagutil"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/httputil"
+	"github.com/VictoriaMetrics/VictoriaMetrics/lib/logger"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/promauth"
 )
 
@@ -76,6 +79,15 @@ func Init() (datasource.QuerierBuilder, error) {
 		return nil, fmt.Errorf("failed to create transport for -remoteRead.url=%q: %w", *addr, err)
 	}
 	tr.IdleConnTimeout = *idleConnectionTimeout
+	c := &http.Client{Transport: tr}
+	rrURL, err := url.Parse(*addr)
+	if err != nil {
+		logger.Fatalf("BUG: cannot parse already parsed -remoteRead.url=%q: %s", *addr, err)
+	}
+	if strings.HasPrefix(rrURL.Host, "dns+") {
+		rrURL.Host = rrURL.Host[4:]
+		c.Transport = httputil.NewLoadBalancerTransport(tr, rrURL)
+	}
 
 	endpointParams, err := flagutil.ParseJSONMap(*oauth2EndpointParams)
 	if err != nil {
@@ -89,6 +101,5 @@ func Init() (datasource.QuerierBuilder, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to configure auth: %w", err)
 	}
-	c := &http.Client{Transport: tr}
-	return datasource.NewPrometheusClient(*addr, authCfg, false, c), nil
+	return datasource.NewPrometheusClient(rrURL.String(), authCfg, false, c), nil
 }

@@ -9,9 +9,9 @@ import (
 	"net/http"
 	"net/netip"
 	"net/url"
-	"sync/atomic"
+	"sync"
+	"time"
 
-	"github.com/VictoriaMetrics/VictoriaMetrics/lib/fasttime"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/logger"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/netutil"
 )
@@ -28,7 +28,7 @@ func NewLoadBalancerTransport(origin http.RoundTripper, url *url.URL) http.Round
 		port: port,
 		tr:   origin,
 	}
-	t.discoverBackends(context.Background())
+	t.discoverBackendsLocked(context.Background())
 	return t
 }
 
@@ -37,19 +37,20 @@ type loadbalancerTransport struct {
 	host string
 	port string
 
-	discovering    atomic.Bool
-	lastResolvedAt atomic.Uint64
-	dbs            atomic.Pointer[discoveredBackends]
+	// mu protects fields below
+	mu             sync.Mutex
+	lastResolvedAt time.Time
+	dbs            *discoveredBackends
 }
 
 type discoveredBackends struct {
 	backends []string
-	idx      atomic.Uint64
+	idx      uint64
 }
 
 // RoundTrip implements http.RoundTripper interface
 func (lb *loadbalancerTransport) RoundTrip(r *http.Request) (*http.Response, error) {
-	backend := lb.pickBackend(r.Context())
+	backend := lb.pickBackend(r.Context(), false)
 	if backend == "" {
 		return nil, fmt.Errorf("no backends found for hostname=%q", lb.host)
 	}
@@ -64,8 +65,7 @@ func (lb *loadbalancerTransport) RoundTrip(r *http.Request) (*http.Response, err
 		var dnsErr *net.DNSError
 		// perform a single retry for in case of dns lookup error
 		if errors.As(err, &dnsErr) && dnsErr.IsNotFound {
-			lb.lastResolvedAt.Store(0)
-			backend := lb.pickBackend(r.Context())
+			backend := lb.pickBackend(r.Context(), true)
 			if backend == "" {
 				return nil, fmt.Errorf("no backends found for hostname=%q", lb.host)
 			}
@@ -81,38 +81,41 @@ func (lb *loadbalancerTransport) RoundTrip(r *http.Request) (*http.Response, err
 	return resp, err
 }
 
-func (lb *loadbalancerTransport) pickBackend(ctx context.Context) string {
-	dbs := lb.dbs.Load()
-	if dbs == nil || fasttime.UnixTimestamp()-lb.lastResolvedAt.Load() > 30 {
-		if newDBS := lb.discoverBackends(ctx); newDBS != nil {
-			dbs = newDBS
-		}
+func (lb *loadbalancerTransport) pickBackend(ctx context.Context, forceDiscovery bool) string {
+	ct := time.Now()
+	lb.mu.Lock()
+	defer lb.mu.Unlock()
+
+	if forceDiscovery && !ct.Before(lb.lastResolvedAt) {
+		// prevent concurrent force discovery
+		lb.lastResolvedAt = time.Time{}
 	}
-	if dbs == nil || len(dbs.backends) == 0 {
+
+	if lb.dbs == nil || ct.Sub(lb.lastResolvedAt) > 30*time.Second {
+		lb.discoverBackendsLocked(ctx)
+	}
+	if lb.dbs == nil || len(lb.dbs.backends) == 0 {
 		return ""
 	}
-	idx := dbs.idx.Add(1) - 1
-	return dbs.backends[idx%uint64(len(dbs.backends))]
+	idx := lb.dbs.idx
+	lb.dbs.idx++
+	return lb.dbs.backends[idx%uint64(len(lb.dbs.backends))]
 }
 
-func (lb *loadbalancerTransport) discoverBackends(ctx context.Context) *discoveredBackends {
-	// prevent concurrent dns lookup
-	if !lb.discovering.CompareAndSwap(false, true) {
-		return lb.dbs.Load()
-	}
-	defer lb.discovering.Store(false)
-
+func (lb *loadbalancerTransport) discoverBackendsLocked(ctx context.Context) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 	addrs, err := netutil.Resolver.LookupIPAddr(ctx, lb.host)
 	if err != nil {
 		logger.Errorf("cannot discover ips for host: %q: %s", lb.host, err)
-		return lb.dbs.Load()
+		return
 	}
 	backends := make([]string, 0, len(addrs))
 	for _, addr := range addrs {
 		if !netutil.TCP6Enabled() {
 			ip, ok := netip.AddrFromSlice(addr.IP)
 			if !ok {
-				logger.Panicf("BUG: cannot build ip from slice addr: %q", addr.IP.String())
+				logger.Panicf("BUG: cannot build netip Addr from slice addr: %q", addr.IP.String())
 			}
 			if !ip.Unmap().Is4() {
 				continue
@@ -130,7 +133,6 @@ func (lb *loadbalancerTransport) discoverBackends(ctx context.Context) *discover
 	dbs := &discoveredBackends{
 		backends: backends,
 	}
-	lb.dbs.Store(dbs)
-	lb.lastResolvedAt.Store(fasttime.UnixTimestamp())
-	return dbs
+	lb.dbs = dbs
+	lb.lastResolvedAt = time.Now()
 }

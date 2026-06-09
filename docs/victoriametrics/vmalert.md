@@ -1470,6 +1470,22 @@ alert_relabel_configs:
 
 The configuration file can be [hot-reloaded](#hot-config-reload).
 
+## DNS URLs
+
+If `vmalert` encounters URLs with the `dns+` prefix in the hostname (such as `http://dns+some-addr:8428/some/path`), it resolves `some-addr` into IP addresses
+via [DNS A records](https://datatracker.ietf.org/doc/html/rfc1035#section-3.4.1). The port from the original URL is appended to each discovered IP address.
+Each discovered IP address is used for round-robin balancing of write requests.
+
+DNS URLs are supported in the following places:
+
+* In `-remoteWrite.url`, `-remoteRead.url` and `-datasource.url` command-line flags. For example, if `victoria-metrics` [DNS A Record](https://datatracker.ietf.org/doc/html/rfc1035#section-3.4.1) record contains
+  `192.168.1.15` IP address, then `-remoteWrite.url=http://dns+victoria-metrics:8428` is automatically resolved into
+  `-remoteWrite.url=http://192.168.1.15:8428`.
+
+DNS URLs are useful when client-side HTTP load balancing is needed. A good example
+is a [Kubernetes headless Service](https://kubernetes.io/docs/concepts/services-networking/service/#headless-services),
+which returns multiple IP addresses for a single hostname.
+
 ## Contributing
 
 `vmalert` is mostly designed and built by VictoriaMetrics community.
