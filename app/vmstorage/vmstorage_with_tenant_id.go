@@ -128,8 +128,8 @@ func (vmst *VMStorageWithTenantID) SearchMetricNames(qt *querytracer.Tracer, sq 
 	// have it. Therefore the tenantID needs to be appended to every metric
 	// name.
 	dst := make([]byte, 0, 8)
-	dst = encoding.MarshalUint32(dst, sq.AccountID)
-	dst = encoding.MarshalUint32(dst, sq.ProjectID)
+	dst = encoding.MarshalUint32(dst, vmst.accountID)
+	dst = encoding.MarshalUint32(dst, vmst.projectID)
 	tenantID := string(dst)
 
 	for i, metricName := range metricNames {

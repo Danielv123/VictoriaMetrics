@@ -390,22 +390,6 @@ func (t *TenantToken) Marshal(dst []byte) []byte {
 	return dst
 }
 
-// NewMultiTenantSearchQuery creates new search query for the given args.
-func NewMultiTenantSearchQuery(tenants []TenantToken, start, end int64, tagFilterss [][]TagFilter, maxMetrics int) *SearchQuery {
-	if start < 0 {
-		// This is needed for https://github.com/VictoriaMetrics/VictoriaMetrics/issues/5553
-		start = 0
-	}
-	return &SearchQuery{
-		TenantTokens:  tenants,
-		MinTimestamp:  start,
-		MaxTimestamp:  end,
-		TagFilterss:   tagFilterss,
-		MaxMetrics:    maxMetrics,
-		IsMultiTenant: true,
-	}
-}
-
 // TagFilter represents a single tag filter from SearchQuery.
 type TagFilter struct {
 	Key        []byte
