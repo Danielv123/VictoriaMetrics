@@ -49,7 +49,7 @@ func (vmst *VMStorageWithTenantID) InitSearch(qt *querytracer.Tracer, sq *storag
 	if !sq.IsMultiTenant && (sq.AccountID != vmst.accountID || sq.ProjectID != vmst.projectID) {
 		return emptyBI, nil
 	}
-	return vmst.vms.initSearch(qt, sq, marshalMetricBlock, deadline)
+	return vmst.vms.initSearch(qt, sq, vmst.marshalMetricBlock, deadline)
 }
 
 // emptyBlockIterator is an implementation of vmselectapi.BlockIterator that
@@ -74,16 +74,20 @@ var emptyBI = &emptyBlockIterator{}
 // vmselect expects metric names and data blocks to have the tenantID but
 // vmsingle does not have it. Therefore the tenantID needs to be included to
 // every metric name and block.
-func marshalMetricBlock(dst []byte, src *storage.MetricBlock) []byte {
-	// Marshal metric name.
+func (vmst *VMStorageWithTenantID) marshalMetricBlock(dst []byte, src *storage.MetricBlock) []byte {
+	// Marshal metric name:
+	// 1. Marshal metric name length + accountID length + projectID length (in
+	//    bytes).
+	// 2. Append accountID and projectID bytes
+	// 3. Finally append metric name bytes
 	dst = encoding.MarshalVarUint64(dst, uint64(len(src.MetricName))+8)
-	dst = encoding.MarshalUint32(dst, uint32(*accountID))
-	dst = encoding.MarshalUint32(dst, uint32(*projectID))
+	dst = encoding.MarshalUint32(dst, vmst.accountID)
+	dst = encoding.MarshalUint32(dst, vmst.projectID)
 	dst = append(dst, src.MetricName...)
 
 	// Marshal data block.
-	dst = encoding.MarshalUint32(dst, uint32(*accountID))
-	dst = encoding.MarshalUint32(dst, uint32(*projectID))
+	dst = encoding.MarshalUint32(dst, vmst.accountID)
+	dst = encoding.MarshalUint32(dst, vmst.projectID)
 	dst = storage.MarshalBlock(dst, &src.Block)
 
 	return dst
