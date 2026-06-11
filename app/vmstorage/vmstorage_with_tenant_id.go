@@ -19,17 +19,12 @@ var (
 	projectID = flag.Uint64("projectID", 0, "The projectID of the stored data")
 )
 
-const (
-	maxAccountID = uint64(math.MaxUint32)
-	maxProjectID = uint64(math.MaxUint32)
-)
-
 func newVMStorageWithTenantID(vms *VMStorage) *VMStorageWithTenantID {
-	if *accountID > maxAccountID {
-		logger.Fatalf("-clusternative.accountID must to be in the range [0, %d], got %d", maxAccountID, *accountID)
+	if *accountID > math.MaxUint32 {
+		logger.Fatalf("-clusternative.accountID must to be in the range [0, %d], got %d", uint32(math.MaxUint32), *accountID)
 	}
-	if *projectID > maxProjectID {
-		logger.Fatalf("-clusternative.projectID must to be in the range [0, %d], got %d", maxProjectID, *projectID)
+	if *projectID > math.MaxUint32 {
+		logger.Fatalf("-clusternative.projectID must to be in the range [0, %d], got %d", uint32(math.MaxUint32), *projectID)
 	}
 	return &VMStorageWithTenantID{
 		vms:       vms,
