@@ -8,20 +8,29 @@ func (av *sumSamplesAggrValue) pushSample(_ aggrConfig, sample *pushSample, _ st
 	av.sum += sample.value
 }
 
-func (av *sumSamplesAggrValue) flush(_ aggrConfig, ctx *flushCtx, key string, _ bool) {
-	ctx.appendSeries(key, "sum_samples", av.sum)
-	av.sum = 0
+func (av *sumSamplesAggrValue) flush(c aggrConfig, ctx *flushCtx, key string, _ bool) {
+	ac := c.(*sumSamplesAggrConfig)
+	if ac.resetTotalOnFlush {
+		ctx.appendSeries(key, "sum_samples", av.sum)
+		av.sum = 0
+		return
+	}
+	ctx.appendSeries(key, "sum_samples_total", av.sum)
 }
 
 func (*sumSamplesAggrValue) state() any {
 	return nil
 }
 
-func newSumSamplesAggrConfig() aggrConfig {
-	return &sumSamplesAggrConfig{}
+func newSumSamplesAggrConfig(resetTotalOnFlush bool) aggrConfig {
+	return &sumSamplesAggrConfig{
+		resetTotalOnFlush: resetTotalOnFlush,
+	}
 }
 
-type sumSamplesAggrConfig struct{}
+type sumSamplesAggrConfig struct {
+	resetTotalOnFlush bool
+}
 
 func (*sumSamplesAggrConfig) getValue(_ any) aggrValue {
 	return &sumSamplesAggrValue{}

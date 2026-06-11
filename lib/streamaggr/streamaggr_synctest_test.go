@@ -479,22 +479,32 @@ foo:1m_increase_prometheus{baz="qwe"} 15
 	f([]string{`
 foo 1
 foo{bar="baz"} 2
-foo 3.3
-`, ``, ``, ``, ``}, time.Minute, `foo:1m_count_series 1
+foo 1.3
+`,
+		`foo 2.7`, ``, ``, ``}, time.Minute, `foo:1m_count_series 1
+foo:1m_count_series 1
 foo:1m_count_series{bar="baz"} 1
 foo:1m_sum_samples 0
-foo:1m_sum_samples 4.3
+foo:1m_sum_samples 2.3
+foo:1m_sum_samples 2.7
+foo:1m_sum_samples_total 2.3
+foo:1m_sum_samples_total 5
+foo:1m_sum_samples_total 5
+foo:1m_sum_samples_total{bar="baz"} 2
+foo:1m_sum_samples_total{bar="baz"} 2
 foo:1m_sum_samples{bar="baz"} 0
 foo:1m_sum_samples{bar="baz"} 2
-foo:5m_by_bar_sum_samples 4.3
+foo:5m_by_bar_sum_samples 5
+foo:5m_by_bar_sum_samples_total 5
+foo:5m_by_bar_sum_samples_total{bar="baz"} 2
 foo:5m_by_bar_sum_samples{bar="baz"} 2
 `, `
 - interval: 1m
-  outputs: [count_series, sum_samples]
+  outputs: [count_series, sum_samples, sum_samples_total]
 - interval: 5m
   by: [bar]
-  outputs: [sum_samples]
-`, "111")
+  outputs: [sum_samples, sum_samples_total]
+`, "1111")
 
 	// min and max outputs
 	f([]string{`
