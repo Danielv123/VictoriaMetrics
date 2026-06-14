@@ -100,7 +100,7 @@ func TestParseSuccess(t *testing.T) {
 					Value: 762376,
 				},
 			},
-			Timestamp: 1690286061000,
+			Timestamp: 1690286061000000,
 		},
 	})
 }

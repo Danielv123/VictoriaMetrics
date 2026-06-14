@@ -42,7 +42,7 @@ func TestStreamContextRead(t *testing.T) {
 		Rows: []graphite.Row{{
 			Metric:    "aaa",
 			Value:     1123,
-			Timestamp: 345 * 1000,
+			Timestamp: 345 * 1000 * 1000,
 		}},
 	})
 	// Full line with tags
@@ -54,7 +54,7 @@ func TestStreamContextRead(t *testing.T) {
 				Value: "y",
 			}},
 			Value:     1123,
-			Timestamp: 345 * 1000,
+			Timestamp: 345 * 1000 * 1000,
 		}},
 	})
 	// missing timestamp.
@@ -63,7 +63,7 @@ func TestStreamContextRead(t *testing.T) {
 		Rows: []graphite.Row{{
 			Metric:    "aaa",
 			Value:     1123,
-			Timestamp: int64(fasttime.UnixTimestamp()) * 1000,
+			Timestamp: int64(fasttime.UnixTimestamp()) * 1000 * 1000,
 		}},
 	})
 	// -1 timestamp. See https://github.com/VictoriaMetrics/VictoriaMetrics/issues/610
@@ -72,7 +72,7 @@ func TestStreamContextRead(t *testing.T) {
 		Rows: []graphite.Row{{
 			Metric:    "aaa",
 			Value:     1123,
-			Timestamp: int64(fasttime.UnixTimestamp()) * 1000,
+			Timestamp: int64(fasttime.UnixTimestamp()) * 1000 * 1000,
 		}},
 	})
 }

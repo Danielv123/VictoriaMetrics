@@ -92,7 +92,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 					Value: 762376,
 				},
 			},
-			Timestamp: 1690286061000,
+			Timestamp: 1690286061000000,
 		},
 	})
 
@@ -159,7 +159,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 					Value: 762376,
 				},
 			},
-			Timestamp: 1690286061000,
+			Timestamp: 1690286061000000,
 		},
 		{
 			Tags: []Tag{
@@ -182,7 +182,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 					Value: 762376,
 				},
 			},
-			Timestamp: 1690286061433,
+			Timestamp: 1690286061433000,
 		},
 		{
 			Tags: []Tag{
@@ -197,7 +197,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 					Value: 1236,
 				},
 			},
-			Timestamp: 1690286061987,
+			Timestamp: 1690286061987000,
 		},
 	})
 
