@@ -13,7 +13,7 @@ type rawRow struct {
 	// TSID is time series id.
 	TSID TSID
 
-	// Timestamp is unix timestamp in milliseconds.
+	// Timestamp is unix timestamp in microseconds.
 	Timestamp int64
 
 	// Value is time series value for the given timestamp.

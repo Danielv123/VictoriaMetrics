@@ -9,36 +9,36 @@ import (
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/timeutil"
 )
 
-// GetTime returns time in milliseconds from the given argKey query arg.
+// GetTime returns time in microseconds from the given argKey query arg.
 //
-// If argKey is missing in r, then defaultMs rounded to seconds is returned.
+// If argKey is missing in r, then defaultUs rounded to seconds is returned.
 // The rounding is needed in order to align query results in Grafana
 // executed at different times. See https://github.com/VictoriaMetrics/VictoriaMetrics/issues/720
-func GetTime(r *http.Request, argKey string, defaultMs int64) (int64, error) {
+func GetTime(r *http.Request, argKey string, defaultUs int64) (int64, error) {
 	argValue := r.FormValue(argKey)
 	if len(argValue) == 0 {
-		return roundToSeconds(defaultMs), nil
+		return roundToSeconds(defaultUs), nil
 	}
 	// Handle Prometheus'-provided minTime and maxTime.
 	// See https://github.com/prometheus/client_golang/issues/614
 	switch argValue {
 	case prometheusMinTimeFormatted:
-		return minTimeMsecs, nil
+		return minTimeUsecs, nil
 	case prometheusMaxTimeFormatted:
-		return maxTimeMsecs, nil
+		return maxTimeUsecs, nil
 	}
 	// Parse argValue
-	msecs, err := timeutil.ParseTimeMsec(argValue)
+	usecs, err := timeutil.ParseTimeUsec(argValue)
 	if err != nil {
 		return 0, fmt.Errorf("cannot parse %s=%s: %w", argKey, argValue, err)
 	}
-	if msecs < minTimeMsecs {
-		msecs = 0
+	if usecs < minTimeUsecs {
+		usecs = 0
 	}
-	if msecs > maxTimeMsecs {
-		msecs = maxTimeMsecs
+	if usecs > maxTimeUsecs {
+		usecs = maxTimeUsecs
 	}
-	return msecs, nil
+	return usecs, nil
 }
 
 var (
@@ -49,11 +49,11 @@ var (
 )
 
 const (
-	// These values prevent from overflow when storing msec-precision time in int64.
-	minTimeMsecs = 0 // use 0 instead of `int64(-1<<63) / 1e6` because the storage engine doesn't actually support negative time
-	maxTimeMsecs = int64(1<<63-1) / 1e6
+	// These values prevent from overflow when storing usec-precision time in int64.
+	minTimeUsecs = 0 // use 0 instead of `int64(-1<<63) / 1e3` because the storage engine doesn't actually support negative time
+	maxTimeUsecs = int64(1<<63-1) / 1e3
 )
 
-func roundToSeconds(ms int64) int64 {
-	return ms - ms%1000
+func roundToSeconds(us int64) int64 {
+	return us - us%1e6
 }

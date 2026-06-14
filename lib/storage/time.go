@@ -18,14 +18,14 @@ func dateToString(date uint64) string {
 //
 // The returned time is in UTC timezone.
 func timestampToTime(timestamp int64) time.Time {
-	return time.Unix(timestamp/1e3, (timestamp%1e3)*1e6).UTC()
+	return time.Unix(timestamp/1e6, (timestamp%1e6)*1e3).UTC()
 }
 
 // timestampFromTime returns timestamp value for the given time.
 func timestampFromTime(t time.Time) int64 {
 	// There is no need in converting t to UTC, since UnixNano must
 	// return the same value for any timezone.
-	return t.UnixNano() / 1e6
+	return t.UnixNano() / 1e3
 }
 
 // Returns true if the timestamp (must be in seconds) is within the first hour
@@ -48,14 +48,14 @@ var (
 
 // DateRange returns the date range for the given time range.
 func (tr *TimeRange) DateRange() (uint64, uint64) {
-	minDate := uint64(tr.MinTimestamp) / msecPerDay
+	minDate := uint64(tr.MinTimestamp) / usecPerDay
 
 	// Sample at Max timestamp should be included because `End` is inclusive.
 	// According to https://prometheus.io/docs/prometheus/latest/querying/api/#range-queries
 	// However, if both timestamps are the same and point to the beginning of
 	// the day, then maxDate will be smaller that the minDate. In this case
 	// maxDate is set to minDate.
-	maxDate := max(uint64(tr.MaxTimestamp)/msecPerDay, minDate)
+	maxDate := max(uint64(tr.MaxTimestamp)/usecPerDay, minDate)
 
 	return minDate, maxDate
 }
@@ -72,7 +72,7 @@ func (tr *TimeRange) String() string {
 // TimestampToHumanReadableFormat converts the given timestamp to human-readable format.
 func TimestampToHumanReadableFormat(timestamp int64) string {
 	t := timestampToTime(timestamp).UTC()
-	return t.Format("2006-01-02T15:04:05.999Z")
+	return t.Format("2006-01-02T15:04:05.000000Z")
 }
 
 // timestampToPartitionName returns partition name for the given timestamp.
@@ -102,8 +102,8 @@ func (tr *TimeRange) fromPartitionTime(t time.Time) {
 	y, m, _ := t.UTC().Date()
 	minTime := time.Date(y, m, 1, 0, 0, 0, 0, time.UTC)
 	maxTime := time.Date(y, m+1, 1, 0, 0, 0, 0, time.UTC)
-	tr.MinTimestamp = minTime.Unix() * 1e3
-	tr.MaxTimestamp = maxTime.Unix()*1e3 - 1
+	tr.MinTimestamp = minTime.Unix() * 1e6
+	tr.MaxTimestamp = maxTime.Unix()*1e6 - 1
 }
 
 // overlapsWith returns true if the time range overlaps with the given time
@@ -118,10 +118,10 @@ func (tr *TimeRange) contains(timestamp int64) bool {
 }
 
 const (
-	msecPerDay  = 24 * 3600 * 1000
-	msecPerHour = 3600 * 1000
+	usecPerDay  = 24 * 3600 * 1000 * 1000
+	usecPerHour = 3600 * 1000 * 1000
 
-	// maxUnixMilli is the max millisecond that is allowed to be used as the
+	// maxUnixMicro is the max microsecond that is allowed to be used as the
 	// sample timestamp.
 	//
 	// Go's Duration is an int64 and is in nanoseconds. In order for time.Time
@@ -129,7 +129,7 @@ const (
 	// the max datetime must be limited to math.MaxInt64 nanoseconds, Which is
 	// time.UnixMicro(math.MaxInt64/1000) == 2262-04-11 23:47:16.854775 UTC.
 	//
-	// Round it to the last millisecond of the last complete partition:
-	// 2262-03-31 23:59:59.999 UTC.
-	maxUnixMilli = 9222422399999
+	// Round it to the last microsecond of the last complete partition:
+	// 2262-03-31 23:59:59.999999 UTC.
+	maxUnixMicro = 9222422399999999
 )

@@ -32,7 +32,7 @@ func TestTagFiltersToMetricIDsCache(t *testing.T) {
 		s := MustOpenStorage(path, OpenOptions{})
 		defer s.MustClose()
 
-		ptw := s.tb.MustGetPartition(time.Now().UnixMilli())
+		ptw := s.tb.MustGetPartition(time.Now().UnixMicro())
 		idb := ptw.pt.idb
 		defer s.tb.PutPartition(ptw)
 
@@ -62,7 +62,7 @@ func TestTagFiltersToMetricIDsCache_EmptyMetricIDList(t *testing.T) {
 	defer fs.MustRemoveDir(path)
 	s := MustOpenStorage(path, OpenOptions{})
 	defer s.MustClose()
-	ptw := s.tb.MustGetPartition(time.Now().UnixMilli())
+	ptw := s.tb.MustGetPartition(time.Now().UnixMicro())
 	idb := ptw.pt.idb
 	defer s.tb.PutPartition(ptw)
 
@@ -485,7 +485,7 @@ func TestIndexDBOpenClose(t *testing.T) {
 
 func TestIndexDB(t *testing.T) {
 	const metricGroups = 10
-	timestamp := time.Now().UnixMilli()
+	timestamp := time.Now().UnixMicro()
 
 	t.Run("serial", func(t *testing.T) {
 		const path = "TestIndexDB-serial"
@@ -563,7 +563,7 @@ func testIndexDBGetOrCreateTSIDByName(db *indexDB, metricGroups int, timestamp i
 
 	is := db.getIndexSearch(noDeadline)
 
-	date := uint64(timestamp) / msecPerDay
+	date := uint64(timestamp) / usecPerDay
 
 	var metricNameBuf []byte
 	for i := range 401 {
@@ -617,7 +617,7 @@ func testIndexDBCheckTSIDByName(db *indexDB, mns []MetricName, tsids []TSID, tim
 		metricName := mn.Marshal(nil)
 
 		is := db.getIndexSearch(noDeadline)
-		if !is.getTSIDByMetricName(&tsidLocal, metricName, uint64(timestamp)/msecPerDay) {
+		if !is.getTSIDByMetricName(&tsidLocal, metricName, uint64(timestamp)/usecPerDay) {
 			return fmt.Errorf("cannot obtain tsid #%d for mn %s", i, mn)
 		}
 		db.putIndexSearch(is)
@@ -700,8 +700,8 @@ func testIndexDBCheckTSIDByName(db *indexDB, mns []MetricName, tsids []TSID, tim
 
 	// Try tag filters.
 	tr := TimeRange{
-		MinTimestamp: timestamp - msecPerDay,
-		MaxTimestamp: timestamp + msecPerDay,
+		MinTimestamp: timestamp - usecPerDay,
+		MaxTimestamp: timestamp + usecPerDay,
 	}
 	for i := range mns {
 		mn := &mns[i]
@@ -1425,8 +1425,8 @@ func TestSearchTSIDWithTimeRange(t *testing.T) {
 	// Create a bunch of per-day time series
 	const days = 5
 	const metricsPerDay = 1000
-	timestamp := time.Date(2019, time.October, 15, 5, 1, 0, 0, time.UTC).UnixMilli()
-	baseDate := uint64(timestamp) / msecPerDay
+	timestamp := time.Date(2019, time.October, 15, 5, 1, 0, 0, time.UTC).UnixMicro()
+	baseDate := uint64(timestamp) / usecPerDay
 	var metricNameBuf []byte
 	perDayMetricIDs := make(map[uint64]*uint64set.Set)
 	var allMetricIDs uint64set.Set
@@ -1536,7 +1536,7 @@ func TestSearchTSIDWithTimeRange(t *testing.T) {
 
 	// Check SearchLabelNames with the specified time range.
 	tr := TimeRange{
-		MinTimestamp: timestamp - msecPerDay,
+		MinTimestamp: timestamp - usecPerDay,
 		MaxTimestamp: timestamp,
 	}
 	lns, err := db.SearchLabelNames(nil, nil, tr, 10000, 1e9, noDeadline)
@@ -1578,7 +1578,7 @@ func TestSearchTSIDWithTimeRange(t *testing.T) {
 	// Perform a search within a day.
 	// This should return the metrics for the day
 	tr = TimeRange{
-		MinTimestamp: timestamp - 2*msecPerHour - 1,
+		MinTimestamp: timestamp - 2*usecPerHour - 1,
 		MaxTimestamp: timestamp,
 	}
 	matchedTSIDs, err := db.SearchTSIDs(nil, []*TagFilters{tfs}, tr, 1e5, noDeadline)
@@ -1672,7 +1672,7 @@ func TestSearchTSIDWithTimeRange(t *testing.T) {
 
 	// Perform a search across all the days, should match all metrics
 	tr = TimeRange{
-		MinTimestamp: timestamp - msecPerDay*days,
+		MinTimestamp: timestamp - usecPerDay*days,
 		MaxTimestamp: timestamp,
 	}
 
@@ -1951,7 +1951,7 @@ func newTestStorage() *Storage {
 		metricIDCache:   workingsetcache.New(1234),
 		metricNameCache: workingsetcache.New(1234),
 		tsidCache:       workingsetcache.New(1234),
-		retentionMsecs:  retentionMax.Milliseconds(),
+		retentionUsecs:  retentionMax.Microseconds(),
 	}
 	return s
 }
@@ -1987,11 +1987,11 @@ func TestIndexSearchLegacyContainsTimeRange_Concurrent(t *testing.T) {
 	idb := mustOpenIndexDB(123, TimeRange{}, idbName, idbPath, s, &readOnly, noRegisterNewSeries)
 	defer idb.MustClose()
 
-	minTimestamp := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli()
+	minTimestamp := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro()
 	concurrency := int64(100)
 	var wg sync.WaitGroup
 	for i := range concurrency {
-		ts := minTimestamp + msecPerDay*i
+		ts := minTimestamp + usecPerDay*i
 		wg.Go(func() {
 			is := idb.getIndexSearch(noDeadline)
 			_ = is.legacyContainsTimeRange(TimeRange{ts, ts})
@@ -2002,7 +2002,7 @@ func TestIndexSearchLegacyContainsTimeRange_Concurrent(t *testing.T) {
 
 	key := marshalCommonPrefix(nil, nsPrefixDateToMetricID)
 	if got, want := idb.legacyMinMissingTimestampByKey[string(key)], minTimestamp; got != want {
-		t.Fatalf("unexpected min timestamp: got %v, want %v", time.UnixMilli(got).UTC(), time.UnixMilli(want).UTC())
+		t.Fatalf("unexpected min timestamp: got %v, want %v", time.UnixMicro(got).UTC(), time.UnixMicro(want).UTC())
 	}
 }
 
@@ -2011,8 +2011,8 @@ func TestSearchLabelValues(t *testing.T) {
 	// Create a bunch of per-day time series
 	const days = 5
 	const metricsPerDay = 1000
-	timestamp := time.Date(2019, time.October, 15, 5, 1, 0, 0, time.UTC).UnixMilli()
-	baseDate := uint64(timestamp) / msecPerDay
+	timestamp := time.Date(2019, time.October, 15, 5, 1, 0, 0, time.UTC).UnixMicro()
+	baseDate := uint64(timestamp) / usecPerDay
 	var metricNameBuf []byte
 	perDayMetricIDs := make(map[uint64]*uint64set.Set)
 	var allMetricIDs uint64set.Set
@@ -2099,7 +2099,7 @@ func TestSearchLabelValues(t *testing.T) {
 
 	// Check SearchLabelNames with the specified time range.
 	tr := TimeRange{
-		MinTimestamp: timestamp - msecPerDay,
+		MinTimestamp: timestamp - usecPerDay,
 		MaxTimestamp: timestamp,
 	}
 

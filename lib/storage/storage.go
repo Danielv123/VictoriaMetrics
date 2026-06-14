@@ -63,8 +63,8 @@ type Storage struct {
 
 	path                        string
 	cachePath                   string
-	retentionMsecs              int64
-	futureRetentionMsecs        int64
+	retentionUsecs              int64
+	futureRetentionUsecs        int64
 	denyQueriesOutsideRetention bool
 
 	// lock file for exclusive access to the storage on the given path.
@@ -173,7 +173,7 @@ type OpenOptions struct {
 	LogNewSeries                bool
 }
 
-// MustOpenStorage opens storage on the given path with the given retentionMsecs.
+// MustOpenStorage opens storage on the given path with the given retention.
 //
 // TODO(@rtm0): Extract legacy IndexDB initialization code into a separate
 // method and move it to storage_legacy.go.
@@ -194,8 +194,8 @@ func MustOpenStorage(path string, opts OpenOptions) *Storage {
 	s := &Storage{
 		path:                        path,
 		cachePath:                   filepath.Join(path, cacheDirname),
-		retentionMsecs:              retention.Milliseconds(),
-		futureRetentionMsecs:        futureRetention.Milliseconds(),
+		retentionUsecs:              retention.Microseconds(),
+		futureRetentionUsecs:        futureRetention.Microseconds(),
 		denyQueriesOutsideRetention: opts.DenyQueriesOutsideRetention,
 		stopCh:                      make(chan struct{}),
 		idbPrefillStartSeconds:      idbPrefillStart.Milliseconds() / 1000,
@@ -878,7 +878,7 @@ func (s *Storage) mustLoadNextDayMetricIDs(timestamp uint64) *nextDayMetricIDs {
 		// and updateNextDayMetricIDs().
 		date--
 	}
-	ptw := s.tb.MustGetPartition(int64(date+1) * msecPerDay)
+	ptw := s.tb.MustGetPartition(int64(date+1) * usecPerDay)
 	nextDayIDBID := ptw.pt.idb.id
 	s.tb.PutPartition(ptw)
 	e := &nextDayMetricIDs{
@@ -998,7 +998,7 @@ func mustGetMinTimestampForCompositeIndex(metadataDir string, isEmptyDB bool) in
 	if !os.IsNotExist(err) {
 		logger.Errorf("cannot read minTimestampForCompositeIndex, so trying to re-create it; error: %s", err)
 	}
-	date := time.Now().UnixNano() / 1e6 / msecPerDay
+	date := time.Now().UnixMicro() / usecPerDay
 	if !isEmptyDB {
 		// The current and the next day can already contain non-composite indexes,
 		// so they cannot be queried with composite indexes.
@@ -1006,7 +1006,7 @@ func mustGetMinTimestampForCompositeIndex(metadataDir string, isEmptyDB bool) in
 	} else {
 		date = 0
 	}
-	minTimestamp = date * msecPerDay
+	minTimestamp = date * usecPerDay
 	dateBuf := encoding.MarshalInt64(nil, minTimestamp)
 	fs.MustWriteAtomic(path, dateBuf, true)
 	return minTimestamp
@@ -1241,8 +1241,8 @@ func (s *Storage) checkTimeRange(tr TimeRange) error {
 		return nil
 	}
 
-	retention := time.Duration(s.retentionMsecs) * time.Millisecond
-	futureRetention := time.Duration(s.futureRetentionMsecs) * time.Millisecond
+	retention := time.Duration(s.retentionUsecs) * time.Microsecond
+	futureRetention := time.Duration(s.futureRetentionUsecs) * time.Microsecond
 	return fmt.Errorf("the given time range %s is outside the allowed -retentionPeriod=%s, -futureRetention=%s "+
 		"according to -denyQueriesOutsideRetention", &tr, retention, futureRetention)
 }
@@ -1501,7 +1501,7 @@ func replaceAlternateRegexpsWithGraphiteWildcards(b []byte) []byte {
 func (s *Storage) GetSeriesCount(deadline uint64) (uint64, error) {
 	tr := TimeRange{
 		MinTimestamp: 0,
-		MaxTimestamp: time.Now().UnixMilli(),
+		MaxTimestamp: time.Now().UnixMicro(),
 	}
 	search := func(_ *querytracer.Tracer, idb *indexDB, _ TimeRange) (uint64, error) {
 		return idb.GetSeriesCount(deadline)
@@ -1525,7 +1525,7 @@ func (s *Storage) GetTSDBStatus(qt *querytracer.Tracer, tfss []*TagFilters, date
 	qt = qt.NewChild("collect TSDB status: filters=%s, date=%s, focusLabel=%q, topN=%d, maxMetrics=%d", tfss, dateToString(date), focusLabel, topN, maxMetrics)
 	defer qt.Done()
 
-	timestamp := int64(date) * msecPerDay
+	timestamp := int64(date) * usecPerDay
 	ptw := s.tb.GetPartition(timestamp)
 	if ptw == nil {
 		// If no partition is found for the given date, then both partition and
@@ -1776,7 +1776,7 @@ func (s *Storage) RegisterMetricNames(qt *querytracer.Tracer, mrs []MetricRow) {
 			continue
 		}
 
-		date := uint64(mr.Timestamp) / msecPerDay
+		date := uint64(mr.Timestamp) / usecPerDay
 
 		if ptw == nil || !ptw.pt.HasTimestamp(mr.Timestamp) {
 			if ptw != nil {
@@ -1944,8 +1944,8 @@ func (s *Storage) add(rows []rawRow, dstMrs []*MetricRow, mrs []MetricRow, preci
 		r.Timestamp = mr.Timestamp
 		r.Value = mr.Value
 		r.PrecisionBits = precisionBits
-		date := uint64(r.Timestamp) / msecPerDay
-		hour := uint64(r.Timestamp) / msecPerHour
+		date := uint64(r.Timestamp) / usecPerDay
+		hour := uint64(r.Timestamp) / usecPerHour
 
 		if ptw == nil || !ptw.pt.HasTimestamp(r.Timestamp) {
 			if ptw != nil {
@@ -2195,7 +2195,7 @@ func (s *Storage) prefillNextIndexDB(rows []rawRow, mrs []*MetricRow) error {
 	// The probability increases from 0% to 100% proportionally to d=[nextPrefillStartSeconds .. 0].
 	pMin := d / float64(s.idbPrefillStartSeconds)
 
-	ptwNext := s.tb.MustGetPartition(nextMonth.UnixMilli())
+	ptwNext := s.tb.MustGetPartition(nextMonth.UnixMicro())
 	idbNext := ptwNext.pt.idb
 	defer s.tb.PutPartition(ptwNext)
 	isNext := idbNext.getIndexSearch(noDeadline)
@@ -2209,11 +2209,11 @@ func (s *Storage) prefillNextIndexDB(rows []rawRow, mrs []*MetricRow) error {
 	// Only prefill index for samples whose timestamp falls within the last
 	// idbPrefillStartSeconds of the current month.
 	tr := TimeRange{
-		MinTimestamp: nextMonth.UnixMilli() - s.idbPrefillStartSeconds*1000,
-		MaxTimestamp: nextMonth.UnixMilli() - 1,
+		MinTimestamp: nextMonth.UnixMicro() - s.idbPrefillStartSeconds*1e6,
+		MaxTimestamp: nextMonth.UnixMicro() - 1,
 	}
 	// Use the first date of the next month for prefilling the index.
-	date := uint64(nextMonth.UnixMilli()) / msecPerDay
+	date := uint64(nextMonth.UnixMicro()) / usecPerDay
 
 	timeseriesPreCreated := uint64(0)
 	for i := range rows {
@@ -2297,8 +2297,8 @@ func (s *Storage) updatePerDateData(rows []rawRow, mrs []*MetricRow, hmPrev, hmC
 	for i := range rows {
 		r := &rows[i]
 		if r.Timestamp != prevTimestamp {
-			date = uint64(r.Timestamp) / msecPerDay
-			hour = uint64(r.Timestamp) / msecPerHour
+			date = uint64(r.Timestamp) / usecPerDay
+			hour = uint64(r.Timestamp) / usecPerHour
 			prevTimestamp = r.Timestamp
 		}
 		metricID := r.TSID.MetricID
@@ -2411,7 +2411,7 @@ func (s *Storage) updatePerDateData(rows []rawRow, mrs []*MetricRow, hmPrev, hmC
 	for _, dmid := range pendingDateMetricIDs {
 		date := dmid.date
 		metricID := dmid.tsid.MetricID
-		timestamp := int64(date) * msecPerDay
+		timestamp := int64(date) * usecPerDay
 		if ptw == nil || !ptw.pt.HasTimestamp(timestamp) {
 			if ptw != nil {
 				if is != nil {
@@ -2486,7 +2486,7 @@ type nextDayMetricIDs struct {
 // See updatePerDateData().
 func (s *Storage) updateNextDayMetricIDs(timestamp uint64) {
 	date := timestamp / (3600 * 24)
-	ptw := s.tb.MustGetPartition(int64(date+1) * msecPerDay)
+	ptw := s.tb.MustGetPartition(int64(date+1) * usecPerDay)
 	nextDayIDBID := ptw.pt.idb.id
 	s.tb.PutPartition(ptw)
 	e := s.nextDayMetricIDs.Load()

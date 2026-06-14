@@ -159,7 +159,7 @@ func TestMergeInMemoryPartsEmptyResult(t *testing.T) {
 	defer testRemoveAll(t)
 
 	s := newTestStorage()
-	s.retentionMsecs = 1000
+	s.retentionUsecs = 1000
 	defer stopTestStorage(s)
 
 	timestamp := int64(0)
@@ -205,7 +205,7 @@ func TestMergeInMemoryPartsFinal_pwsRefCount(t *testing.T) {
 				row := rawRow{
 					TSID:          TSID{MetricID: uint64(i)},
 					Value:         float64(i),
-					Timestamp:     time.Now().UnixMilli() + int64(i),
+					Timestamp:     time.Now().UnixMicro() + int64(i),
 					PrecisionBits: 64,
 				}
 				rows = append(rows, row)
@@ -229,7 +229,7 @@ func TestMergeInMemoryPartsFinal_pwsRefCount(t *testing.T) {
 
 	s := MustOpenStorage(t.Name(), OpenOptions{})
 	defer s.MustClose()
-	ptw := s.tb.MustGetPartition(time.Now().UnixMilli())
+	ptw := s.tb.MustGetPartition(time.Now().UnixMicro())
 	defer s.tb.PutPartition(ptw)
 	pt := ptw.pt
 
@@ -267,7 +267,7 @@ func testCreatePartition(t *testing.T, timestamp int64, s *Storage) *partition {
 func TestMustCreatePartition(t *testing.T) {
 	defer testRemoveAll(t)
 
-	ts := time.Date(2025, 3, 23, 14, 07, 56, 999_999_999, time.UTC).UnixMilli()
+	ts := time.Date(2025, 3, 23, 14, 07, 56, 999_999_999, time.UTC).UnixMicro()
 	smallPath := filepath.Join(t.Name(), "small")
 	if fs.IsPathExist(smallPath) {
 		t.Errorf("small partition directory must not exist: %s", smallPath)
@@ -316,8 +316,8 @@ func TestMustCreatePartition(t *testing.T) {
 		t.Errorf("unexpected name: got %s, want %s", got.name, wantName)
 	}
 	wantTR := TimeRange{
-		MinTimestamp: time.Date(2025, 3, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2025, 3, 31, 23, 59, 59, 999_000_000, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2025, 3, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2025, 3, 31, 23, 59, 59, 999_999_000, time.UTC).UnixMicro(),
 	}
 	if got.tr != wantTR {
 		t.Errorf("unexpected time range: got %v, want %v", &got.tr, &wantTR)
@@ -362,8 +362,8 @@ func TestMustOpenPartition(t *testing.T) {
 		t.Errorf("unexpected name: got %s, want %s", got.name, wantName)
 	}
 	wantTR := TimeRange{
-		MinTimestamp: time.Date(2025, 3, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2025, 3, 31, 23, 59, 59, 999_000_000, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2025, 3, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2025, 3, 31, 23, 59, 59, 999_999_000, time.UTC).UnixMicro(),
 	}
 	if got.tr != wantTR {
 		t.Errorf("unexpected time range: got %v, want %v", &got.tr, &wantTR)

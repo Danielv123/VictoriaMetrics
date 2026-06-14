@@ -21,7 +21,7 @@ func BenchmarkDeduplicateSamples(b *testing.B) {
 	}
 	for _, minScrapeInterval := range []time.Duration{3 * time.Second, 4 * time.Second, 10 * time.Second} {
 		b.Run(fmt.Sprintf("minScrapeInterval=%s", minScrapeInterval), func(b *testing.B) {
-			dedupInterval := minScrapeInterval.Milliseconds()
+			dedupInterval := minScrapeInterval.Microseconds()
 			b.ReportAllocs()
 			b.SetBytes(blockSize)
 			b.RunParallel(func(pb *testing.PB) {
@@ -54,7 +54,7 @@ func BenchmarkDeduplicateSamplesDuringMerge(b *testing.B) {
 	}
 	for _, minScrapeInterval := range []time.Duration{3 * time.Second, 4 * time.Second, 10 * time.Second} {
 		b.Run(fmt.Sprintf("minScrapeInterval=%s", minScrapeInterval), func(b *testing.B) {
-			dedupInterval := minScrapeInterval.Milliseconds()
+			dedupInterval := minScrapeInterval.Microseconds()
 			b.ReportAllocs()
 			b.SetBytes(blockSize)
 			b.RunParallel(func(pb *testing.PB) {

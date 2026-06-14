@@ -8,7 +8,7 @@ import (
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/timeutil"
 )
 
-// GetDuration returns duration in milliseconds from the given argKey query arg.
+// GetDuration returns duration in microseconds from the given argKey query arg.
 func GetDuration(r *http.Request, argKey string, defaultValue int64) (int64, error) {
 	argValue := r.FormValue(argKey)
 	if len(argValue) == 0 {
@@ -27,11 +27,11 @@ func GetDuration(r *http.Request, argKey string, defaultValue int64) (int64, err
 		}
 		secs = d.Seconds()
 	}
-	msecs := int64(secs * 1e3)
-	if msecs <= 0 || msecs > maxDurationMsecs {
-		return 0, fmt.Errorf("%s=%dms is out of allowed range [%dms ... %dms]", argKey, msecs, 1, int64(maxDurationMsecs))
+	usecs := int64(secs * 1e6)
+	if usecs <= 0 || usecs > maxDurationUsecs {
+		return 0, fmt.Errorf("%s=%dus is out of allowed range [%dus ... %dus]", argKey, usecs, 1, int64(maxDurationUsecs))
 	}
-	return msecs, nil
+	return usecs, nil
 }
 
-const maxDurationMsecs = 100 * 365 * 24 * 3600 * 1000
+const maxDurationUsecs = 100 * 365 * 24 * 3600 * 1000 * 1000

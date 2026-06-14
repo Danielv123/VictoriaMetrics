@@ -16,8 +16,8 @@ func TestSearch_metricNamesIndifferentIndexDBs(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		const numSeries = 10
 		tr := TimeRange{
-			MinTimestamp: time.Now().UnixMilli(),
-			MaxTimestamp: time.Now().Add(23 * time.Hour).UnixMilli(),
+			MinTimestamp: time.Now().UnixMicro(),
+			MaxTimestamp: time.Now().Add(23 * time.Hour).UnixMicro(),
 		}
 		rng := rand.New(rand.NewSource(1))
 		mrsPrev := testGenerateMetricRowsWithPrefix(rng, numSeries, "legacy_prev", tr)

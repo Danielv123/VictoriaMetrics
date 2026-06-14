@@ -409,7 +409,7 @@ func (vms *VMStorage) TSDBStatus(qt *querytracer.Tracer, sq *storage.SearchQuery
 	if err != nil {
 		return nil, err
 	}
-	date := uint64(sq.MinTimestamp) / (24 * 3600 * 1000)
+	date := uint64(sq.MinTimestamp) / (24 * 3600 * 1000 * 1000)
 	return vms.s.GetTSDBStatus(qt, tfss, date, focusLabel, topN, maxMetrics, deadline)
 }
 

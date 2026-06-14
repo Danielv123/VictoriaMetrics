@@ -12,16 +12,16 @@ func TestLegacyContainsTimeRange(t *testing.T) {
 	rng := rand.New(rand.NewSource(1))
 	const numMetrics = 10000
 	trPrev := TimeRange{
-		MinTimestamp: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2025, 1, 15, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2025, 1, 15, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	trCurr := TimeRange{
-		MinTimestamp: time.Date(2025, 1, 16, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2025, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2025, 1, 16, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2025, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	trPt := TimeRange{
-		MinTimestamp: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2025, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2025, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	mrsPrev := testGenerateMetricRowsWithPrefix(rng, numMetrics, "legacy_prev", trPrev)
 	mrsCurr := testGenerateMetricRowsWithPrefix(rng, numMetrics, "legacy_curr", trCurr)
@@ -72,8 +72,8 @@ func TestLegacyContainsTimeRange(t *testing.T) {
 
 	// Fully before trPrev, trCurr, and trPt.
 	tr = TimeRange{
-		MinTimestamp: time.Date(2024, 12, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2024, 12, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2024, 12, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2024, 12, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	f(legacyIDBs.getIDBPrev(), tr, true)
 	f(legacyIDBs.getIDBCurr(), tr, true)
@@ -81,8 +81,8 @@ func TestLegacyContainsTimeRange(t *testing.T) {
 
 	// Overlaps with trPrev and trPt on the left side, fully before trCurr.
 	tr = TimeRange{
-		MinTimestamp: time.Date(2024, 12, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2025, 1, 7, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2024, 12, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2025, 1, 7, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	f(legacyIDBs.getIDBPrev(), tr, true)
 	f(legacyIDBs.getIDBCurr(), tr, true)
@@ -90,8 +90,8 @@ func TestLegacyContainsTimeRange(t *testing.T) {
 
 	// Fully inside trPrev and trPt, fully before trCurr.
 	tr = TimeRange{
-		MinTimestamp: time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2025, 1, 7, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2025, 1, 7, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	f(legacyIDBs.getIDBPrev(), tr, true)
 	f(legacyIDBs.getIDBCurr(), tr, true)
@@ -100,8 +100,8 @@ func TestLegacyContainsTimeRange(t *testing.T) {
 	// Fully inside trPt, overlaps with trPrev on the right side and trCurr on
 	// the left side.
 	tr = TimeRange{
-		MinTimestamp: time.Date(2025, 1, 7, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2025, 1, 21, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2025, 1, 7, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2025, 1, 21, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	f(legacyIDBs.getIDBPrev(), tr, true)
 	f(legacyIDBs.getIDBCurr(), tr, true)
@@ -109,8 +109,8 @@ func TestLegacyContainsTimeRange(t *testing.T) {
 
 	// Fully inside trPt and trCurr, fully after trPrev.
 	tr = TimeRange{
-		MinTimestamp: time.Date(2025, 1, 18, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2025, 1, 21, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2025, 1, 18, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2025, 1, 21, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	f(legacyIDBs.getIDBPrev(), tr, false)
 	f(legacyIDBs.getIDBCurr(), tr, true)
@@ -118,8 +118,8 @@ func TestLegacyContainsTimeRange(t *testing.T) {
 
 	// Overlaps with trPt and trCurr on the right side, fully after trPrev.
 	tr = TimeRange{
-		MinTimestamp: time.Date(2025, 1, 21, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2025, 2, 21, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2025, 1, 21, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2025, 2, 21, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	f(legacyIDBs.getIDBPrev(), tr, false)
 	f(legacyIDBs.getIDBCurr(), tr, true)
@@ -127,8 +127,8 @@ func TestLegacyContainsTimeRange(t *testing.T) {
 
 	// fully after trPrev, trCurr, and trPt.
 	tr = TimeRange{
-		MinTimestamp: time.Date(2025, 2, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2025, 3, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2025, 2, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2025, 3, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	f(legacyIDBs.getIDBPrev(), tr, false)
 	f(legacyIDBs.getIDBCurr(), tr, false)

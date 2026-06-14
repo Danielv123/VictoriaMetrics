@@ -169,7 +169,7 @@ func testPartitionSearchEx(t *testing.T, ptt int64, tr TimeRange, partsCount, ma
 
 	// Create partition from rowss and test search on it.
 	strg := newTestStorage()
-	strg.retentionMsecs = timestampFromTime(time.Now()) - ptr.MinTimestamp + 3600*1000
+	strg.retentionUsecs = timestampFromTime(time.Now()) - ptr.MinTimestamp + usecPerHour
 	pt := testCreatePartition(t, ptt, strg)
 	smallPartsPath := pt.smallPartsPath
 	bigPartsPath := pt.bigPartsPath

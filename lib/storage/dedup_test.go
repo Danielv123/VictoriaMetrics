@@ -53,12 +53,22 @@ func equalWithNans(a, b []float64) bool {
 	return true
 }
 
+func timestampsFromMsecs(timestamps []int64) []int64 {
+	result := make([]int64, len(timestamps))
+	for i, ts := range timestamps {
+		result[i] = ts * 1000
+	}
+	return result
+}
+
 func TestDeduplicateSamplesWithIdenticalTimestamps(t *testing.T) {
 	f := func(scrapeInterval time.Duration, timestamps []int64, values []float64, timestampsExpected []int64, valuesExpected []float64) {
 		t.Helper()
+		timestamps = timestampsFromMsecs(timestamps)
+		timestampsExpected = timestampsFromMsecs(timestampsExpected)
 		timestampsCopy := append([]int64{}, timestamps...)
 
-		dedupInterval := scrapeInterval.Milliseconds()
+		dedupInterval := scrapeInterval.Microseconds()
 		timestampsCopy, values = DeduplicateSamples(timestampsCopy, values, dedupInterval)
 		if !reflect.DeepEqual(timestampsCopy, timestampsExpected) {
 			t.Fatalf("invalid DeduplicateSamples(%v) timestamps;\ngot\n%v\nwant\n%v", timestamps, timestampsCopy, timestampsExpected)
@@ -97,9 +107,11 @@ func TestDeduplicateSamplesWithIdenticalTimestamps(t *testing.T) {
 func TestDeduplicateSamplesDuringMergeWithIdenticalTimestamps(t *testing.T) {
 	f := func(scrapeInterval time.Duration, timestamps, values, timestampsExpected, valuesExpected []int64) {
 		t.Helper()
+		timestamps = timestampsFromMsecs(timestamps)
+		timestampsExpected = timestampsFromMsecs(timestampsExpected)
 		timestampsCopy := append([]int64{}, timestamps...)
 
-		dedupInterval := scrapeInterval.Milliseconds()
+		dedupInterval := scrapeInterval.Microseconds()
 		timestampsCopy, values = deduplicateSamplesDuringMerge(timestampsCopy, values, dedupInterval)
 		if !reflect.DeepEqual(timestampsCopy, timestampsExpected) {
 			t.Fatalf("invalid deduplicateSamplesDuringMerge(%v) timestamps;\ngot\n%v\nwant\n%v", timestamps, timestampsCopy, timestampsExpected)
@@ -141,13 +153,15 @@ func TestDeduplicateSamples(t *testing.T) {
 
 	f := func(scrapeInterval time.Duration, timestamps, timestampsExpected []int64, valuesExpected []float64) {
 		t.Helper()
+		timestamps = timestampsFromMsecs(timestamps)
+		timestampsExpected = timestampsFromMsecs(timestampsExpected)
 		timestampsCopy := make([]int64, len(timestamps))
 		values := make([]float64, len(timestamps))
 		for i, ts := range timestamps {
 			timestampsCopy[i] = ts
 			values[i] = float64(i)
 		}
-		dedupInterval := scrapeInterval.Milliseconds()
+		dedupInterval := scrapeInterval.Microseconds()
 		timestampsCopy, values = DeduplicateSamples(timestampsCopy, values, dedupInterval)
 		if !reflect.DeepEqual(timestampsCopy, timestampsExpected) {
 			t.Fatalf("invalid DeduplicateSamples(%v) timestamps;\ngot\n%v\nwant\n%v", timestamps, timestampsCopy, timestampsExpected)
@@ -180,13 +194,15 @@ func TestDeduplicateSamplesDuringMerge(t *testing.T) {
 
 	f := func(scrapeInterval time.Duration, timestamps, timestampsExpected, valuesExpected []int64) {
 		t.Helper()
+		timestamps = timestampsFromMsecs(timestamps)
+		timestampsExpected = timestampsFromMsecs(timestampsExpected)
 		timestampsCopy := make([]int64, len(timestamps))
 		values := make([]int64, len(timestamps))
 		for i, ts := range timestamps {
 			timestampsCopy[i] = ts
 			values[i] = int64(i)
 		}
-		dedupInterval := scrapeInterval.Milliseconds()
+		dedupInterval := scrapeInterval.Microseconds()
 		timestampsCopy, values = deduplicateSamplesDuringMerge(timestampsCopy, values, dedupInterval)
 		if !reflect.DeepEqual(timestampsCopy, timestampsExpected) {
 			t.Fatalf("invalid deduplicateSamplesDuringMerge(%v) timestamps;\ngot\n%v\nwant\n%v", timestamps, timestampsCopy, timestampsExpected)
@@ -216,10 +232,12 @@ func TestDeduplicateSamplesDuringMerge(t *testing.T) {
 func TestDeduplicateSamples_KeepsFirstAndLast(t *testing.T) {
 	f := func(dedupInterval time.Duration, timestamps []int64, values []float64, timestampsExpected []int64, valuesExpected []float64) {
 		t.Helper()
+		timestamps = timestampsFromMsecs(timestamps)
+		timestampsExpected = timestampsFromMsecs(timestampsExpected)
 		tsCopy := append([]int64{}, timestamps...)
 		vCopy := append([]float64{}, values...)
 
-		tsCopy, vCopy = DeduplicateSamples(tsCopy, vCopy, dedupInterval.Milliseconds())
+		tsCopy, vCopy = DeduplicateSamples(tsCopy, vCopy, dedupInterval.Microseconds())
 
 		// Original boundary checks for clarity and safety
 		if len(tsCopy) == 0 {
@@ -293,10 +311,12 @@ func TestDeduplicateSamples_KeepsFirstAndLast(t *testing.T) {
 func TestDeduplicateSamplesDuringMerge_KeepsFirstAndLast(t *testing.T) {
 	f := func(dedupInterval time.Duration, timestamps []int64, values []int64, timestampsExpected []int64, valuesExpected []int64) {
 		t.Helper()
+		timestamps = timestampsFromMsecs(timestamps)
+		timestampsExpected = timestampsFromMsecs(timestampsExpected)
 		tsCopy := append([]int64{}, timestamps...)
 		vCopy := append([]int64{}, values...)
 
-		tsCopy, vCopy = deduplicateSamplesDuringMerge(tsCopy, vCopy, dedupInterval.Milliseconds())
+		tsCopy, vCopy = deduplicateSamplesDuringMerge(tsCopy, vCopy, dedupInterval.Microseconds())
 
 		// Original boundary checks
 		if len(tsCopy) == 0 {

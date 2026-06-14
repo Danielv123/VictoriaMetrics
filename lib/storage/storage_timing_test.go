@@ -111,74 +111,74 @@ func benchmarkStorageOpOnVariousTimeRanges(b *testing.B, op func(b *testing.B, t
 
 	b.Run("1h", func(b *testing.B) {
 		op(b, TimeRange{
-			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(2000, 1, 1, 0, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(2000, 1, 1, 0, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 		})
 	})
 	b.Run("2h", func(b *testing.B) {
 		op(b, TimeRange{
-			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(2000, 1, 1, 1, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(2000, 1, 1, 1, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 		})
 	})
 	b.Run("4h", func(b *testing.B) {
 		op(b, TimeRange{
-			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(2000, 1, 1, 3, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(2000, 1, 1, 3, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 		})
 	})
 	b.Run("1d", func(b *testing.B) {
 		op(b, TimeRange{
-			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(2000, 1, 1, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(2000, 1, 1, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 		})
 	})
 	b.Run("2d", func(b *testing.B) {
 		op(b, TimeRange{
-			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(2000, 1, 2, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(2000, 1, 2, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 		})
 	})
 	b.Run("4d", func(b *testing.B) {
 		op(b, TimeRange{
-			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(2000, 1, 4, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(2000, 1, 4, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 		})
 	})
 	b.Run("1m", func(b *testing.B) {
 		op(b, TimeRange{
-			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(2000, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(2000, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 		})
 	})
 	b.Run("2m", func(b *testing.B) {
 		op(b, TimeRange{
-			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(2000, 2, 29, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(2000, 2, 29, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 		})
 	})
 	b.Run("4m", func(b *testing.B) {
 		op(b, TimeRange{
-			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(2000, 3, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(2000, 3, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 		})
 	})
 	b.Run("1y", func(b *testing.B) {
 		op(b, TimeRange{
-			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(2000, 12, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(2000, 12, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 		})
 	})
 	b.Run("2y", func(b *testing.B) {
 		op(b, TimeRange{
-			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(2001, 12, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(2001, 12, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 		})
 	})
 	b.Run("4y", func(b *testing.B) {
 		op(b, TimeRange{
-			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(2003, 12, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(2003, 12, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 		})
 	})
 }
@@ -187,10 +187,10 @@ func BenchmarkStorageAddRows_VariousDataPatterns(b *testing.B) {
 	f := func(b *testing.B, sameSeries, sameDate bool) {
 		const numSeries = 1000
 		rng := rand.New(rand.NewSource(1))
-		start := time.Date(1990, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli()
-		end := start + numSeries*msecPerDay - 1
+		start := time.Date(1990, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro()
+		end := start + numSeries*usecPerDay - 1
 		if sameDate {
-			end = start + msecPerDay - 1
+			end = start + usecPerDay - 1
 		}
 		mrs := make([]MetricRow, numSeries)
 		for i := range numSeries {
@@ -844,8 +844,8 @@ func variableSeries() []dataConfig {
 			numSeries:        numSeries,
 			numDeletedSeries: 0,
 			tr: TimeRange{
-				MinTimestamp: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-				MaxTimestamp: time.Date(2025, 1, 1, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+				MinTimestamp: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+				MaxTimestamp: time.Date(2025, 1, 1, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 			},
 		})
 	}
@@ -866,8 +866,8 @@ func variableDeletedSeries() []dataConfig {
 			numSeries:        100_000,
 			numDeletedSeries: numDeletedSeries,
 			tr: TimeRange{
-				MinTimestamp: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-				MaxTimestamp: time.Date(2025, 1, 1, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+				MinTimestamp: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+				MaxTimestamp: time.Date(2025, 1, 1, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 			},
 		})
 	}
@@ -878,24 +878,24 @@ func variableDeletedSeries() []dataConfig {
 // series (100k), 0 deleted series, and time ranges of various duration.
 func variableTimeRange() []dataConfig {
 	tr1d := TimeRange{
-		MinTimestamp: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2025, 1, 1, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2025, 1, 1, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	tr1w := TimeRange{
-		MinTimestamp: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2025, 1, 7, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2025, 1, 7, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	tr1m := TimeRange{
-		MinTimestamp: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2025, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2025, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	tr2m := TimeRange{
-		MinTimestamp: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2025, 2, 28, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2025, 2, 28, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	tr6m := TimeRange{
-		MinTimestamp: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2025, 5, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2025, 5, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	trNames := []string{"1d", "1w", "1m", "2m", "6m"}
 	var cfgs []dataConfig

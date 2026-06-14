@@ -29,7 +29,7 @@ type partHeader struct {
 	// MaxTimestamp is the maximum timestamp in the part.
 	MaxTimestamp int64
 
-	// MinDedupInterval is minimal dedup interval in milliseconds across all the blocks in the part.
+	// MinDedupInterval is minimal dedup interval in microseconds across all the blocks in the part.
 	MinDedupInterval int64
 }
 
@@ -62,7 +62,7 @@ func (ph *partHeader) readMinDedupInterval(partPath string) error {
 	if err != nil {
 		return fmt.Errorf("cannot parse minimum dedup interval %q at %q: %w", data, filePath, err)
 	}
-	ph.MinDedupInterval = dedupInterval.Milliseconds()
+	ph.MinDedupInterval = dedupInterval.Microseconds()
 	return nil
 }
 
@@ -74,7 +74,7 @@ func fromUserReadableTimestamp(s string) (int64, error) {
 	return timestampFromTime(t), nil
 }
 
-const userReadableTimeFormat = "20060102150405.000"
+const userReadableTimeFormat = "20060102150405.000000"
 
 // ParseFromPath extracts ph info from the given path.
 func (ph *partHeader) ParseFromPath(path string) error {

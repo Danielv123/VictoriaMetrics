@@ -228,7 +228,7 @@ func (s *Search) Init(qt *querytracer.Tracer, storage *Storage, tfss []*TagFilte
 	if s.needClosing {
 		logger.Panicf("BUG: missing MustClose call before the next call to Init")
 	}
-	retentionDeadline := int64(fasttime.UnixTimestamp()*1e3) - storage.retentionMsecs
+	retentionDeadline := int64(fasttime.UnixTimestamp()*1e6) - storage.retentionUsecs
 
 	s.reset()
 	s.mns = getMetricNameSearch(storage, tr, false)

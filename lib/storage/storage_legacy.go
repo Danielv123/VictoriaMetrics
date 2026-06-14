@@ -272,7 +272,7 @@ func (s *Storage) legacyMustRotateIndexDB(currentTime time.Time) {
 	s.legacyIndexDBs.Store(rotatedLegacyIDBs)
 
 	// Update nextRotationTimestamp
-	nextRotationTimestamp := currentTime.Unix() + s.retentionMsecs/1000
+	nextRotationTimestamp := currentTime.Unix() + s.retentionUsecs/1e6
 	s.legacyNextRotationTimestamp.Store(nextRotationTimestamp)
 }
 

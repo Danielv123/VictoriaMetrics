@@ -66,8 +66,8 @@ func (ts *tableSearch) Init(tb *table, tsids []TSID, tr TimeRange) {
 
 	// Adjust tr.MinTimestamp, so it doesn't obtain data older
 	// than the tb retention.
-	now := int64(fasttime.UnixTimestamp() * 1000)
-	minTimestamp := now - tb.s.retentionMsecs
+	now := int64(fasttime.UnixTimestamp() * 1e6)
+	minTimestamp := now - tb.s.retentionUsecs
 	if tr.MinTimestamp < minTimestamp {
 		tr.MinTimestamp = minTimestamp
 	}

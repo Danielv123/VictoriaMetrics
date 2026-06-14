@@ -17,7 +17,7 @@ func TestTableOpenClose(t *testing.T) {
 
 	// Create a new table
 	strg := newTestStorage()
-	strg.retentionMsecs = retention.Milliseconds()
+	strg.retentionUsecs = retention.Microseconds()
 	tb := mustOpenTable(path, strg)
 
 	// Close it
@@ -39,7 +39,7 @@ func TestGetPartition(t *testing.T) {
 	defer s.MustClose()
 
 	var ptw *partitionWrapper
-	timestamp := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli()
+	timestamp := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro()
 
 	ptw = s.tb.GetPartition(timestamp)
 	if ptw != nil {
@@ -67,9 +67,9 @@ func TestGetPartition_concurrent(t *testing.T) {
 	s := MustOpenStorage(t.Name(), OpenOptions{})
 	defer s.MustClose()
 
-	begin := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli()
-	limit := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli()
-	for ts := begin; ts < limit; ts += msecPerDay {
+	begin := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro()
+	limit := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro()
+	for ts := begin; ts < limit; ts += usecPerDay {
 		var wg sync.WaitGroup
 		for range 100 {
 			wg.Go(func() {

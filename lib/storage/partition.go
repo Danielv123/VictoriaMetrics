@@ -852,7 +852,7 @@ func (pt *partition) mustMergeInmemoryPartsFinal(pws []*partWrapper) *partWrappe
 
 	// Merge parts.
 	// The merge shouldn't be interrupted by stopCh, so use nil stopCh.
-	ph, err := pt.mergePartsInternal("", bsw, bsrs, partInmemory, nil, time.Now().UnixMilli(), false)
+	ph, err := pt.mergePartsInternal("", bsw, bsrs, partInmemory, nil, time.Now().UnixMicro(), false)
 	putBlockStreamWriter(bsw)
 	for _, bsr := range bsrs {
 		putBlockStreamReader(bsr)
@@ -1447,7 +1447,7 @@ func (pt *partition) mergeParts(pws []*partWrapper, stopCh <-chan struct{}, isFi
 	}
 	rowsPerBlock := float64(srcRowsCount) / float64(srcBlocksCount)
 	compressLevel := getCompressLevel(rowsPerBlock)
-	currentTimestamp := startTime.UnixMilli()
+	currentTimestamp := startTime.UnixMicro()
 	bsw := getBlockStreamWriter()
 	var mpNew *inmemoryPart
 	if dstPartType == partInmemory {
@@ -1599,7 +1599,7 @@ func (pt *partition) mergePartsInternal(dstPartPath string, bsw *blockStreamWrit
 	default:
 		logger.Panicf("BUG: unknown partType=%d", dstPartType)
 	}
-	retentionDeadline := currentTimestamp - pt.s.retentionMsecs
+	retentionDeadline := currentTimestamp - pt.s.retentionUsecs
 	activeMerges.Add(1)
 	_ = useSparseCache // unused in OSS version.
 	dmis := pt.idb.getDeletedMetricIDs()
@@ -1755,7 +1755,7 @@ func (pt *partition) stalePartsRemover() {
 
 func (pt *partition) removeStaleParts() {
 	startTime := time.Now()
-	retentionDeadline := timestampFromTime(startTime) - pt.s.retentionMsecs
+	retentionDeadline := timestampFromTime(startTime) - pt.s.retentionUsecs
 
 	var pws []*partWrapper
 	pt.partsLock.Lock()

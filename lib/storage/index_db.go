@@ -2188,8 +2188,8 @@ func (is *indexSearch) searchMetricIDsWithFiltersOnDate(qt *querytracer.Tracer, 
 		tr = globalIndexTimeRange
 	} else {
 		tr = TimeRange{
-			MinTimestamp: int64(date) * msecPerDay,
-			MaxTimestamp: int64(date+1)*msecPerDay - 1,
+			MinTimestamp: int64(date) * usecPerDay,
+			MaxTimestamp: int64(date+1)*usecPerDay - 1,
 		}
 	}
 

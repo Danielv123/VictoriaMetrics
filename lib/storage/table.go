@@ -263,7 +263,7 @@ func (tb *table) UpdateMetrics(m *TableMetrics) {
 	// select current month partition as last partition
 	// because partition with biggest minTimestamp could be empty at the last day of current month
 	// when a partition for the next month is created at updateNextDayMetricIDs
-	currentMonthTimestamp := time.Now().UnixMilli()
+	currentMonthTimestamp := time.Now().UnixMicro()
 	for _, ptw := range ptws {
 		if ptw.pt.tr.contains(currentMonthTimestamp) {
 			ptw.pt.UpdateMetrics(&m.LastPartition)
@@ -401,22 +401,22 @@ func (tb *table) MustAddRows(rows []rawRow) {
 // MustGetIndexDBIDByHour returns the id of the indexDB which contains the
 // provided hour. If the indexDB does not exist it will be created.
 func (tb *table) MustGetIndexDBIDByHour(hour uint64) uint64 {
-	ts := int64(hour * msecPerHour)
+	ts := int64(hour * usecPerHour)
 	ptw := tb.MustGetPartition(ts)
 	defer tb.PutPartition(ptw)
 	return ptw.pt.idb.id
 }
 
 func (tb *table) getMinMaxTimestamps() (int64, int64) {
-	now := int64(fasttime.UnixTimestamp() * 1000)
-	minTimestamp := now - tb.s.retentionMsecs
+	now := int64(fasttime.UnixTimestamp() * 1e6)
+	minTimestamp := now - tb.s.retentionUsecs
 	if minTimestamp < 0 {
 		// Negative timestamps aren't supported by the storage.
 		minTimestamp = 0
 	}
-	maxTimestamp := int64(maxUnixMilli)
-	if maxUnixMilli-now > tb.s.futureRetentionMsecs {
-		maxTimestamp = now + tb.s.futureRetentionMsecs
+	maxTimestamp := int64(maxUnixMicro)
+	if maxUnixMicro-now > tb.s.futureRetentionUsecs {
+		maxTimestamp = now + tb.s.futureRetentionUsecs
 	}
 	return minTimestamp, maxTimestamp
 }
@@ -436,9 +436,9 @@ func (tb *table) retentionWatcher() {
 		case <-ticker.C:
 		}
 
-		nowMsecs := int64(fasttime.UnixTimestamp() * 1000)
-		minTimestamp := nowMsecs - tb.s.retentionMsecs
-		maxTimestamp := nowMsecs + tb.s.futureRetentionMsecs
+		nowUsecs := int64(fasttime.UnixTimestamp() * 1e6)
+		minTimestamp := nowUsecs - tb.s.retentionUsecs
+		maxTimestamp := nowUsecs + tb.s.futureRetentionUsecs
 		var ptwsDrop []*partitionWrapper
 		tb.ptwsLock.Lock()
 		dst := tb.ptws[:0]

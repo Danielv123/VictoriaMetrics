@@ -17,12 +17,12 @@ func TestGetTimeSuccess(t *testing.T) {
 		}
 
 		// Verify defaultValue
-		ts, err := GetTime(r, "foo", 123456)
+		ts, err := GetTime(r, "foo", 123456000)
 		if err != nil {
 			t.Fatalf("unexpected error when obtaining default time from GetTime(%q): %s", s, err)
 		}
-		if ts != 123000 {
-			t.Fatalf("unexpected default value for GetTime(%q); got %d; want %d", s, ts, 123000)
+		if ts != 123000000 {
+			t.Fatalf("unexpected default value for GetTime(%q); got %d; want %d", s, ts, 123000000)
 		}
 
 		// Verify timestampExpected
@@ -34,24 +34,28 @@ func TestGetTimeSuccess(t *testing.T) {
 			t.Fatalf("unexpected timestamp for GetTime(%q); got %d; want %d", s, ts, timestampExpected)
 		}
 	}
+	fMsec := func(s string, timestampExpectedMsec int64) {
+		t.Helper()
+		f(s, timestampExpectedMsec*1000)
+	}
 
-	f("2019Z", 1546300800000)
-	f("2019-01Z", 1546300800000)
-	f("2019-02Z", 1548979200000)
-	f("2019-02-01Z", 1548979200000)
-	f("2019-02-02Z", 1549065600000)
-	f("2019-02-02T00Z", 1549065600000)
-	f("2019-02-02T01Z", 1549069200000)
-	f("2019-02-02T01:00Z", 1549069200000)
-	f("2019-02-02T01:01Z", 1549069260000)
-	f("2019-02-02T01:01:00Z", 1549069260000)
-	f("2019-02-02T01:01:01Z", 1549069261000)
-	f("2020-02-21T16:07:49.433Z", 1582301269433)
-	f("2019-07-07T20:47:40+03:00", 1562521660000)
-	f("-292273086-05-16T16:47:06Z", minTimeMsecs)
-	f("292277025-08-18T07:12:54.999999999Z", maxTimeMsecs)
-	f("1562529662.324", 1562529662324)
-	f("1223372036.855", 1223372036855)
+	fMsec("2019Z", 1546300800000)
+	fMsec("2019-01Z", 1546300800000)
+	fMsec("2019-02Z", 1548979200000)
+	fMsec("2019-02-01Z", 1548979200000)
+	fMsec("2019-02-02Z", 1549065600000)
+	fMsec("2019-02-02T00Z", 1549065600000)
+	fMsec("2019-02-02T01Z", 1549069200000)
+	fMsec("2019-02-02T01:00Z", 1549069200000)
+	fMsec("2019-02-02T01:01Z", 1549069260000)
+	fMsec("2019-02-02T01:01:00Z", 1549069260000)
+	fMsec("2019-02-02T01:01:01Z", 1549069261000)
+	fMsec("2020-02-21T16:07:49.433Z", 1582301269433)
+	fMsec("2019-07-07T20:47:40+03:00", 1562521660000)
+	f("-292273086-05-16T16:47:06Z", minTimeUsecs)
+	f("292277025-08-18T07:12:54.999999999Z", maxTimeUsecs)
+	fMsec("1562529662.324", 1562529662324)
+	fMsec("1223372036.855", 1223372036855)
 }
 
 func TestGetTimeError(t *testing.T) {

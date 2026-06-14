@@ -376,7 +376,7 @@ func testStorageRandTimestamps(s *Storage) error {
 		for range int(rowsPerAdd) {
 			mn.MetricGroup = fmt.Appendf(nil, "metric_%d", rng.Intn(100))
 			metricNameRaw := mn.marshalRaw(nil)
-			timestamp := currentTime - int64((rng.Float64()-0.2)*float64(2*s.retentionMsecs))
+			timestamp := currentTime - int64((rng.Float64()-0.2)*float64(2*s.retentionUsecs))
 			value := rng.NormFloat64() * 1e11
 
 			mr := MetricRow{
@@ -429,7 +429,7 @@ func TestStorageDeletePendingSeries(t *testing.T) {
 		for {
 			mr := MetricRow{
 				MetricNameRaw: metricNameRaw,
-				Timestamp:     ts.UnixMilli(),
+				Timestamp:     ts.UnixMicro(),
 				Value:         1,
 			}
 			s.AddRows([]MetricRow{mr}, defaultPrecisionBits)
@@ -459,7 +459,7 @@ func TestStorageDeletePendingSeries(t *testing.T) {
 		ts := time.Unix(0, 0)
 		n := 0
 		for range numMonths {
-			lns, err := s.SearchLabelNames(nil, nil, TimeRange{ts.UnixMilli(), ts.UnixMilli()}, 1e5, 1e9, noDeadline)
+			lns, err := s.SearchLabelNames(nil, nil, TimeRange{ts.UnixMicro(), ts.UnixMicro()}, 1e5, 1e9, noDeadline)
 			if err != nil {
 				t.Fatalf("error in SearchLabelNames: %s", err)
 				return
@@ -619,7 +619,7 @@ func testStorageDeleteSeries(s *Storage, workerNum int) error {
 		metricNameRaw := mn.marshalRaw(nil)
 
 		for range rowsPerMetric {
-			timestamp := rng.Int63n(1e10)
+			timestamp := rng.Int63n(1e10) * 1000
 			value := rng.NormFloat64() * 1e6
 
 			mr := MetricRow{
@@ -654,7 +654,7 @@ func testStorageDeleteSeries(s *Storage, workerNum int) error {
 	var sr Search
 	tr := TimeRange{
 		MinTimestamp: 0,
-		MaxTimestamp: 2e10,
+		MaxTimestamp: 2e10 * 1000,
 	}
 	metricBlocksCount := func(tfs *TagFilters) int {
 		// Verify the number of blocks
@@ -740,8 +740,8 @@ func TestStorageDeleteSeries_EmptyFilters(t *testing.T) {
 	mrs := make([]MetricRow, numMetrics)
 	allMetricNames := make([]string, numMetrics)
 	tr := TimeRange{
-		MinTimestamp: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2020, 12, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2020, 12, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	step := (tr.MaxTimestamp - tr.MinTimestamp) / numMetrics
 	for i := range numMetrics {
@@ -839,8 +839,8 @@ func TestStorageDeleteSeries_TooManyTimeseries(t *testing.T) {
 	t.Run("1m", func(t *testing.T) {
 		f(t, &options{
 			tr: TimeRange{
-				MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-				MaxTimestamp: time.Date(2024, 1, 31, 0, 0, 0, 0, time.UTC).UnixMilli(),
+				MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+				MaxTimestamp: time.Date(2024, 1, 31, 0, 0, 0, 0, time.UTC).UnixMicro(),
 			},
 			numMetrics: 1000,
 			maxMetrics: 999,
@@ -856,8 +856,8 @@ func TestStorageDeleteSeries_TooManyTimeseries(t *testing.T) {
 	t.Run("2m", func(t *testing.T) {
 		f(t, &options{
 			tr: TimeRange{
-				MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-				MaxTimestamp: time.Date(2024, 2, 29, 0, 0, 0, 0, time.UTC).UnixMilli(),
+				MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+				MaxTimestamp: time.Date(2024, 2, 29, 0, 0, 0, 0, time.UTC).UnixMicro(),
 			},
 			numMetrics: 1000,
 			maxMetrics: 999,
@@ -870,12 +870,12 @@ func TestStorageDeleteSeries_CachesAreUpdatedOrReset(t *testing.T) {
 	defer testRemoveAll(t)
 
 	month1 := TimeRange{
-		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC).UnixMicro(),
 	}
 	month2 := TimeRange{
-		MinTimestamp: time.Date(2024, 2, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2024, 2, 15, 0, 0, 0, 0, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2024, 2, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2024, 2, 15, 0, 0, 0, 0, time.UTC).UnixMicro(),
 	}
 	var mn MetricName
 	mn.MetricGroup = []byte("metric1")
@@ -1276,18 +1276,18 @@ func TestStorageDeleteSeriesFromPrevAndCurrIndexDB(t *testing.T) {
 	rng := rand.New(rand.NewSource(1))
 	const numSeries = 100
 	trPrev := TimeRange{
-		MinTimestamp: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2020, 1, 1, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2020, 1, 1, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	mrsPrev := testGenerateMetricRowsWithPrefix(rng, numSeries, "prev", trPrev)
 	trCurr := TimeRange{
-		MinTimestamp: time.Date(2020, 1, 2, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2020, 1, 2, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2020, 1, 2, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2020, 1, 2, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	mrsCurr := testGenerateMetricRowsWithPrefix(rng, numSeries, "curr", trCurr)
 	trPt := TimeRange{
-		MinTimestamp: time.Date(2020, 1, 3, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2020, 1, 3, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2020, 1, 3, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2020, 1, 3, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	mrsPt := testGenerateMetricRowsWithPrefix(rng, numSeries, "pt", trPt)
 	deleteSeries := func(s *Storage, want, wantTotal int) {
@@ -1421,8 +1421,8 @@ func testStorageRegisterMetricNames(s *Storage) error {
 
 	// Verify that SearchLabelNames with the specified time range returns correct result.
 	now := timestampFromTime(time.Now())
-	start := now - msecPerDay
-	end := now + 60*1000
+	start := now - usecPerDay
+	end := now + 60*1000*1000
 	tr := TimeRange{
 		MinTimestamp: start,
 		MaxTimestamp: end,
@@ -1531,6 +1531,8 @@ func TestStorageAddRowsConcurrent(t *testing.T) {
 	fs.MustRemoveDir(path)
 }
 
+var testStorageSnapshotMu sync.Mutex
+
 func testGenerateMetricRows(rng *rand.Rand, rows uint64, timestampMin, timestampMax int64) []MetricRow {
 	return testGenerateMetricRowsWithPrefix(rng, rows, "metric", TimeRange{timestampMin, timestampMax})
 }
@@ -1563,7 +1565,7 @@ func testStorageAddRows(rng *rand.Rand, s *Storage) error {
 	const addsCount = 10
 
 	maxTimestamp := timestampFromTime(time.Now())
-	minTimestamp := maxTimestamp - s.retentionMsecs + 3600*1000
+	minTimestamp := maxTimestamp - s.retentionUsecs + usecPerHour
 	for range addsCount {
 		mrs := testGenerateMetricRows(rng, rowsPerAdd, minTimestamp, maxTimestamp)
 		s.AddRows(mrs, defaultPrecisionBits)
@@ -1576,6 +1578,9 @@ func testStorageAddRows(rng *rand.Rand, s *Storage) error {
 	if rowsCount := m.TableMetrics.TotalRowsCount(); rowsCount < minRowsExpected {
 		return fmt.Errorf("expecting at least %d rows in the table; got %d", minRowsExpected, rowsCount)
 	}
+
+	testStorageSnapshotMu.Lock()
+	defer testStorageSnapshotMu.Unlock()
 
 	// Try creating a snapshot from the storage.
 	snapshotName := s.MustCreateSnapshot()
@@ -1660,8 +1665,8 @@ func TestStorageSnapshots_CreateListDelete(t *testing.T) {
 
 	rng := rand.New(rand.NewSource(1))
 	const numRows = 10000
-	minTimestamp := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli()
-	maxTimestamp := time.Date(2024, 2, 29, 0, 0, 0, 0, time.UTC).UnixMilli()
+	minTimestamp := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro()
+	maxTimestamp := time.Date(2024, 2, 29, 0, 0, 0, 0, time.UTC).UnixMicro()
 	mrs := testGenerateMetricRows(rng, numRows, minTimestamp, maxTimestamp)
 
 	root := t.Name()
@@ -1759,7 +1764,7 @@ func TestStorageDeleteStaleSnapshots(t *testing.T) {
 	const rowsPerAdd = 1e3
 	const addsCount = 10
 	maxTimestamp := timestampFromTime(time.Now())
-	minTimestamp := maxTimestamp - s.retentionMsecs
+	minTimestamp := maxTimestamp - s.retentionUsecs
 	for range addsCount {
 		mrs := testGenerateMetricRows(rng, rowsPerAdd, minTimestamp, maxTimestamp)
 		s.AddRows(mrs, defaultPrecisionBits)
@@ -1863,7 +1868,7 @@ func TestStorageRowsNotAdded(t *testing.T) {
 	})
 
 	retention = 48 * time.Hour
-	minTimestamp = time.Now().Add(-retention - time.Hour).UnixMilli()
+	minTimestamp = time.Now().Add(-retention - time.Hour).UnixMicro()
 	maxTimestamp = minTimestamp + 1000
 	f(&options{
 		name:      "TooSmallTimestamps",
@@ -1877,7 +1882,7 @@ func TestStorageRowsNotAdded(t *testing.T) {
 	})
 
 	retention = 48 * time.Hour
-	minTimestamp = maxUnixMilli + 1
+	minTimestamp = maxUnixMicro + 1
 	maxTimestamp = minTimestamp + 1000
 	f(&options{
 		name:      "TooBigTimestamps",
@@ -1890,7 +1895,7 @@ func TestStorageRowsNotAdded(t *testing.T) {
 		},
 	})
 
-	minTimestamp = time.Now().UnixMilli()
+	minTimestamp = time.Now().UnixMicro()
 	maxTimestamp = minTimestamp + 1000
 	mrs = testGenerateMetricRows(rng, numRows, minTimestamp, maxTimestamp)
 	for i := range numRows {
@@ -1914,7 +1919,7 @@ func TestStorageRowsNotAdded_SeriesLimitExceeded(t *testing.T) {
 		t.Helper()
 
 		rng := rand.New(rand.NewSource(1))
-		minTimestamp := time.Now().UnixMilli()
+		minTimestamp := time.Now().UnixMicro()
 		maxTimestamp := minTimestamp + 1000
 		mrs := testGenerateMetricRows(rng, numRows, minTimestamp, maxTimestamp)
 
@@ -2070,8 +2075,8 @@ func TestStorageSearchMetricNames_TooManyTimeseries(t *testing.T) {
 	)
 	for i := range numDays {
 		day := TimeRange{
-			MinTimestamp: time.Date(2000, 1, i+1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(2000, 1, i+1, 23, 59, 59, 999, time.UTC).UnixMilli(),
+			MinTimestamp: time.Date(2000, 1, i+1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(2000, 1, i+1, 23, 59, 59, 999, time.UTC).UnixMicro(),
 		}
 		days = append(days, day)
 		prefix1 := fmt.Sprintf("metric1_%d", i)
@@ -2446,62 +2451,62 @@ func testStorageOpOnVariousTimeRanges(t *testing.T, op func(t *testing.T, tr Tim
 
 	t.Run("1h", func(t *testing.T) {
 		op(t, TimeRange{
-			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(2000, 1, 1, 1, 0, 0, 0, time.UTC).UnixMilli(),
+			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(2000, 1, 1, 1, 0, 0, 0, time.UTC).UnixMicro(),
 		})
 	})
 	t.Run("1d", func(t *testing.T) {
 		op(t, TimeRange{
-			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(2000, 1, 1, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(2000, 1, 1, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 		})
 	})
 	t.Run("1m", func(t *testing.T) {
 		op(t, TimeRange{
-			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(2000, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(2000, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 		})
 	})
 	t.Run("1y", func(t *testing.T) {
 		op(t, TimeRange{
-			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(2000, 12, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+			MinTimestamp: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(2000, 12, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 		})
 	})
 
 	t.Run("future-1h", func(t *testing.T) {
 		now := time.Now().UTC()
 		op(t, TimeRange{
-			MinTimestamp: time.Date(now.Year(), now.Month(), now.Day(), now.Hour()+1, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(now.Year(), now.Month(), now.Day(), now.Hour()+2, 0, 0, 0, time.UTC).UnixMilli() - 1,
+			MinTimestamp: time.Date(now.Year(), now.Month(), now.Day(), now.Hour()+1, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(now.Year(), now.Month(), now.Day(), now.Hour()+2, 0, 0, 0, time.UTC).UnixMicro() - 1,
 		})
 	})
 	t.Run("future-1d", func(t *testing.T) {
 		now := time.Now().UTC()
 		op(t, TimeRange{
-			MinTimestamp: time.Date(now.Year(), now.Month(), now.Day()+1, 1, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(now.Year(), now.Month(), now.Day()+2, 1, 0, 0, 0, time.UTC).UnixMilli() - 1,
+			MinTimestamp: time.Date(now.Year(), now.Month(), now.Day()+1, 1, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(now.Year(), now.Month(), now.Day()+2, 1, 0, 0, 0, time.UTC).UnixMicro() - 1,
 		})
 	})
 	t.Run("future-1m", func(t *testing.T) {
 		now := time.Now().UTC()
 		op(t, TimeRange{
-			MinTimestamp: time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(now.Year(), now.Month()+2, 1, 0, 0, 0, 0, time.UTC).UnixMilli() - 1,
+			MinTimestamp: time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(now.Year(), now.Month()+2, 1, 0, 0, 0, 0, time.UTC).UnixMicro() - 1,
 		})
 	})
 	t.Run("future-1y", func(t *testing.T) {
 		now := time.Now().UTC()
 		op(t, TimeRange{
-			MinTimestamp: time.Date(now.Year()+1, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(now.Year()+2, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli() - 1,
+			MinTimestamp: time.Date(now.Year()+1, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(now.Year()+2, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro() - 1,
 		})
 	})
 	t.Run("future-limit", func(t *testing.T) {
-		maxTime := time.UnixMilli(maxUnixMilli).UTC()
+		maxTime := time.UnixMicro(maxUnixMicro).UTC()
 		op(t, TimeRange{
-			MinTimestamp: maxTime.Add(-24 * time.Hour).UnixMilli(),
-			MaxTimestamp: maxTime.UnixMilli(),
+			MinTimestamp: maxTime.Add(-24 * time.Hour).UnixMicro(),
+			MaxTimestamp: maxTime.UnixMicro(),
 		})
 	})
 }
@@ -2512,8 +2517,8 @@ func TestStorageSearchLabelValues_EmptyValuesAreNotReturned(t *testing.T) {
 	const numRows = 1000
 
 	tr := TimeRange{
-		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2024, 12, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2024, 12, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	mrs := make([]MetricRow, numRows)
 	want := make([]string, numRows)
@@ -2604,8 +2609,8 @@ func TestStorageGetSeriesCount(t *testing.T) {
 	const numMetrics = 100
 	month := func(m int) TimeRange {
 		return TimeRange{
-			MinTimestamp: time.Date(2024, time.Month(m), 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(2024, time.Month(m), 20, 0, 0, 0, 0, time.UTC).UnixMilli(),
+			MinTimestamp: time.Date(2024, time.Month(m), 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(2024, time.Month(m), 20, 0, 0, 0, 0, time.UTC).UnixMicro(),
 		}
 	}
 	var want uint64
@@ -2640,10 +2645,10 @@ func TestStorageGetTSDBStatus(t *testing.T) {
 
 	mrs := make([]MetricRow, numMetricNames)
 	tr := TimeRange{
-		MinTimestamp: time.Date(2025, 1, 13, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2025, 1, 13, 23, 59, 59, 0, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2025, 1, 13, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2025, 1, 13, 23, 59, 59, 0, time.UTC).UnixMicro(),
 	}
-	date := uint64(tr.MinTimestamp / msecPerDay)
+	date := uint64(tr.MinTimestamp / usecPerDay)
 	for i := range numMetricNames {
 		metricName := fmt.Sprintf("metric_%04d", i)
 		labelName := fmt.Sprintf("label_%04d", i%numLabelNames)
@@ -2761,8 +2766,8 @@ func TestStorageAdjustTimeRange(t *testing.T) {
 		MaxTimestamp: math.MaxInt64,
 	}
 	partitionIDBTimeRange := TimeRange{
-		MinTimestamp: time.Date(2025, 2, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2025, 2, 28, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2025, 2, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2025, 2, 28, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	var searchTimeRange TimeRange
 
@@ -2780,8 +2785,8 @@ func TestStorageAdjustTimeRange(t *testing.T) {
 	// expected to be globalIndexTimeRange. Otherwise it must remain the same
 	// after the adjustment.
 	searchTimeRange = TimeRange{
-		MinTimestamp: partitionIDBTimeRange.MinTimestamp + msecPerDay,
-		MaxTimestamp: partitionIDBTimeRange.MaxTimestamp - msecPerDay,
+		MinTimestamp: partitionIDBTimeRange.MinTimestamp + usecPerDay,
+		MaxTimestamp: partitionIDBTimeRange.MaxTimestamp - usecPerDay,
 	}
 	f(false, searchTimeRange, legacyIDBTimeRange, searchTimeRange)
 	f(false, searchTimeRange, partitionIDBTimeRange, searchTimeRange)
@@ -2808,8 +2813,8 @@ func TestStorageAdjustTimeRange(t *testing.T) {
 	// - For the legacy idb: it must remain the same
 	// - For the partition idb: it must be replaced with globalIndexTimeRange.
 	searchTimeRange = TimeRange{
-		MinTimestamp: partitionIDBTimeRange.MinTimestamp - msecPerDay,
-		MaxTimestamp: partitionIDBTimeRange.MaxTimestamp + msecPerDay,
+		MinTimestamp: partitionIDBTimeRange.MinTimestamp - usecPerDay,
+		MaxTimestamp: partitionIDBTimeRange.MaxTimestamp + usecPerDay,
 	}
 	f(false, searchTimeRange, legacyIDBTimeRange, searchTimeRange)
 	f(false, searchTimeRange, partitionIDBTimeRange, globalIndexTimeRange)
@@ -2823,8 +2828,8 @@ func TestStorageAdjustTimeRange(t *testing.T) {
 	// Otherwise it must be replaced with globalIndexTimeRange for both legacy
 	// and partition idbs.
 	searchTimeRange = TimeRange{
-		MinTimestamp: partitionIDBTimeRange.MinTimestamp - msecPerDay,
-		MaxTimestamp: partitionIDBTimeRange.MinTimestamp + 41*msecPerDay,
+		MinTimestamp: partitionIDBTimeRange.MinTimestamp - usecPerDay,
+		MaxTimestamp: partitionIDBTimeRange.MinTimestamp + 41*usecPerDay,
 	}
 	f(false, searchTimeRange, legacyIDBTimeRange, globalIndexTimeRange)
 	f(false, searchTimeRange, partitionIDBTimeRange, globalIndexTimeRange)
@@ -2840,8 +2845,8 @@ func TestStorageAdjustTimeRange(t *testing.T) {
 	// - For the partition idb: the MinTimestamp must be adjusted to match the
 	// partition idb time range MinTimestamp.
 	searchTimeRange = TimeRange{
-		MinTimestamp: partitionIDBTimeRange.MinTimestamp - msecPerDay,
-		MaxTimestamp: partitionIDBTimeRange.MinTimestamp + msecPerDay,
+		MinTimestamp: partitionIDBTimeRange.MinTimestamp - usecPerDay,
+		MaxTimestamp: partitionIDBTimeRange.MinTimestamp + usecPerDay,
 	}
 	f(false, searchTimeRange, legacyIDBTimeRange, searchTimeRange)
 	f(false, searchTimeRange, partitionIDBTimeRange, TimeRange{
@@ -2860,8 +2865,8 @@ func TestStorageAdjustTimeRange(t *testing.T) {
 	// - For the partition idb: its MaxTimestamp must be adjusted to match the
 	//   partition idb time range MaxTimestamp.
 	searchTimeRange = TimeRange{
-		MinTimestamp: partitionIDBTimeRange.MaxTimestamp - msecPerDay,
-		MaxTimestamp: partitionIDBTimeRange.MaxTimestamp + msecPerDay,
+		MinTimestamp: partitionIDBTimeRange.MaxTimestamp - usecPerDay,
+		MaxTimestamp: partitionIDBTimeRange.MaxTimestamp + usecPerDay,
 	}
 	f(false, searchTimeRange, legacyIDBTimeRange, searchTimeRange)
 	f(false, searchTimeRange, partitionIDBTimeRange, TimeRange{
@@ -2984,8 +2989,8 @@ func TestStorageGetTSDBStatusWithoutPerDayIndex(t *testing.T) {
 	}
 	for day := 1; day <= days; day++ {
 		tr := TimeRange{
-			MinTimestamp: time.Date(2024, 1, day, 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(2024, 1, day, 23, 59, 59, 999, time.UTC).UnixMilli(),
+			MinTimestamp: time.Date(2024, 1, day, 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(2024, 1, day, 23, 59, 59, 999, time.UTC).UnixMicro(),
 		}
 		for row := range rows {
 			name := fmt.Sprintf("metric_%d", rows*day+row)
@@ -3005,7 +3010,7 @@ func TestStorageGetTSDBStatusWithoutPerDayIndex(t *testing.T) {
 	opts.assertSearchResult = func(t *testing.T, s *Storage, tr TimeRange, want any) {
 		t.Helper()
 
-		date := uint64(tr.MinTimestamp) / msecPerDay
+		date := uint64(tr.MinTimestamp) / usecPerDay
 		gotStatus, err := s.GetTSDBStatus(nil, nil, date, "", 10, 1e6, noDeadline)
 		if err != nil {
 			t.Fatalf("GetTSDBStatus(%v) failed unexpectedly", &tr)
@@ -3033,8 +3038,8 @@ func TestStorageSearchMetricNamesWithoutPerDayIndex(t *testing.T) {
 	}
 	for day := 1; day <= days; day++ {
 		tr := TimeRange{
-			MinTimestamp: time.Date(2024, 1, day, 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(2024, 1, day, 23, 59, 59, 999, time.UTC).UnixMilli(),
+			MinTimestamp: time.Date(2024, 1, day, 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(2024, 1, day, 23, 59, 59, 999, time.UTC).UnixMicro(),
 		}
 		var want []string
 		for row := range rows {
@@ -3094,8 +3099,8 @@ func TestStorageSearchLabelNamesWithoutPerDayIndex(t *testing.T) {
 	}
 	for day := 1; day <= days; day++ {
 		tr := TimeRange{
-			MinTimestamp: time.Date(2024, 1, day, 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(2024, 1, day, 23, 59, 59, 999, time.UTC).UnixMilli(),
+			MinTimestamp: time.Date(2024, 1, day, 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(2024, 1, day, 23, 59, 59, 999, time.UTC).UnixMicro(),
 		}
 		var want []string
 		for row := range rows {
@@ -3149,8 +3154,8 @@ func TestStorageSearchLabelValuesWithoutPerDayIndex(t *testing.T) {
 	}
 	for day := 1; day <= days; day++ {
 		tr := TimeRange{
-			MinTimestamp: time.Date(2024, 1, day, 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(2024, 1, day, 23, 59, 59, 999, time.UTC).UnixMilli(),
+			MinTimestamp: time.Date(2024, 1, day, 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(2024, 1, day, 23, 59, 59, 999, time.UTC).UnixMicro(),
 		}
 		var want []string
 		for row := range rows {
@@ -3203,8 +3208,8 @@ func TestStorageSearchTagValueSuffixesWithoutPerDayIndex(t *testing.T) {
 	}
 	for day := 1; day <= days; day++ {
 		tr := TimeRange{
-			MinTimestamp: time.Date(2024, 1, day, 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(2024, 1, day, 23, 59, 59, 999, time.UTC).UnixMilli(),
+			MinTimestamp: time.Date(2024, 1, day, 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(2024, 1, day, 23, 59, 59, 999, time.UTC).UnixMicro(),
 		}
 		for row := range rows {
 			metricName := fmt.Sprintf("%sday%d.row%d", tagValuePrefix, day, row)
@@ -3252,8 +3257,8 @@ func TestStorageSearchGraphitePathsWithoutPerDayIndex(t *testing.T) {
 	}
 	for day := 1; day <= days; day++ {
 		tr := TimeRange{
-			MinTimestamp: time.Date(2024, 1, day, 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(2024, 1, day, 23, 59, 59, 999, time.UTC).UnixMilli(),
+			MinTimestamp: time.Date(2024, 1, day, 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(2024, 1, day, 23, 59, 59, 999, time.UTC).UnixMicro(),
 		}
 		want := make([]string, rows)
 		for row := range rows {
@@ -3302,8 +3307,8 @@ func TestStorageQueryWithoutPerDayIndex(t *testing.T) {
 	}
 	for day := 1; day <= days; day++ {
 		tr := TimeRange{
-			MinTimestamp: time.Date(2024, 1, day, 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(2024, 1, day, 23, 59, 59, 999, time.UTC).UnixMilli(),
+			MinTimestamp: time.Date(2024, 1, day, 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(2024, 1, day, 23, 59, 59, 999, time.UTC).UnixMicro(),
 		}
 		var want []MetricRow
 		for row := range rows {
@@ -3353,7 +3358,7 @@ func TestStorageAddRows_SamplesWithZeroDate(t *testing.T) {
 		mn := MetricName{MetricGroup: []byte("metric")}
 		mr := MetricRow{MetricNameRaw: mn.marshalRaw(nil)}
 		for range 10 {
-			mr.Timestamp = rand.Int63n(msecPerDay)
+			mr.Timestamp = rand.Int63n(usecPerDay)
 			mr.Value = float64(rand.Intn(1000))
 			s.AddRows([]MetricRow{mr}, defaultPrecisionBits)
 			s.DebugFlush()
@@ -3365,7 +3370,7 @@ func TestStorageAddRows_SamplesWithZeroDate(t *testing.T) {
 		want := 1
 		firstUnixDay := TimeRange{
 			MinTimestamp: 0,
-			MaxTimestamp: msecPerDay - 1,
+			MaxTimestamp: usecPerDay - 1,
 		}
 		if got := s.newTimeseriesCreated.Load(); got != uint64(want) {
 			t.Errorf("unexpected new timeseries count: got %d, want %d", got, want)
@@ -3399,13 +3404,13 @@ func TestStorageAddRows_currHourMetricIDs(t *testing.T) {
 
 		now := time.Now().UTC()
 		currHourTR := TimeRange{
-			MinTimestamp: time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 59, 59, 999_999_999, time.UTC).UnixMilli(),
+			MinTimestamp: time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 59, 59, 999_999_999, time.UTC).UnixMicro(),
 		}
-		currHour := uint64(currHourTR.MinTimestamp / 1000 / 3600)
+		currHour := uint64(currHourTR.MinTimestamp / usecPerHour)
 		prevHourTR := TimeRange{
-			MinTimestamp: currHourTR.MinTimestamp - 3600*1000,
-			MaxTimestamp: currHourTR.MaxTimestamp - 3600*1000,
+			MinTimestamp: currHourTR.MinTimestamp - usecPerHour,
+			MaxTimestamp: currHourTR.MaxTimestamp - usecPerHour,
 		}
 		rng := rand.New(rand.NewSource(1))
 
@@ -3809,7 +3814,7 @@ func assertCounts(t *testing.T, s *Storage, want *counts, strict bool) {
 	}
 
 	for date, wantStatus := range want.dateTSDBStatuses {
-		dt := time.UnixMilli(int64(date) * msecPerDay).UTC()
+		dt := time.UnixMicro(int64(date) * usecPerDay).UTC()
 		gotStatus, err := s.GetTSDBStatus(nil, nil, date, "", 10, 1e6, noDeadline)
 		if err != nil {
 			t.Fatalf("GetTSDBStatus(%v) failed unexpectedly: %v", dt, err)
@@ -3861,8 +3866,8 @@ func testGenerateMetricRowBatches(opts *batchOptions) ([][]MetricRow, *counts) {
 	names := make(map[string]bool)
 
 	roundToMonth := func(ts int64) int64 {
-		t := time.UnixMilli(ts).UTC()
-		return time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC).UnixMilli()
+		t := time.UnixMicro(ts).UTC()
+		return time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC).UnixMicro()
 	}
 	// Need to count metric names per month because we now have a separate
 	// indexDB per partition.
@@ -3883,8 +3888,8 @@ func testGenerateMetricRowBatches(opts *batchOptions) ([][]MetricRow, *counts) {
 				MetricGroup: []byte(rowMetricName),
 			}
 			tr := TimeRange{
-				MinTimestamp: startTime.Add(days * 24 * time.Hour).UnixMilli(),
-				MaxTimestamp: endTime.Add(days * 24 * time.Hour).UnixMilli(),
+				MinTimestamp: startTime.Add(days * 24 * time.Hour).UnixMicro(),
+				MaxTimestamp: endTime.Add(days * 24 * time.Hour).UnixMicro(),
 			}
 			rows = append(rows, MetricRow{
 				MetricNameRaw: mn.marshalRaw(nil),
@@ -3941,7 +3946,7 @@ func testGenerateMetricRowBatches(opts *batchOptions) ([][]MetricRow, *counts) {
 		} else {
 			count = len(names)
 		}
-		date := uint64(tr.MinTimestamp / msecPerDay)
+		date := uint64(tr.MinTimestamp / usecPerDay)
 		want.timeRangeCounts[tr] = count
 		want.dateTSDBStatuses[date] = &TSDBStatus{
 			TotalSeries: uint64(count),
@@ -3954,7 +3959,7 @@ func TestStorageMetricTracker(t *testing.T) {
 	defer testRemoveAll(t)
 	rng := rand.New(rand.NewSource(1))
 	numRows := uint64(1000)
-	minTimestamp := time.Now().UnixMilli()
+	minTimestamp := time.Now().UnixMicro()
 	maxTimestamp := minTimestamp + 1000
 	mrs := testGenerateMetricRows(rng, numRows, minTimestamp, maxTimestamp)
 
@@ -4003,8 +4008,8 @@ func TestStorageSearchTagValueSuffixes_maxTagValueSuffixes(t *testing.T) {
 
 	rng := rand.New(rand.NewSource(1))
 	tr := TimeRange{
-		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2024, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2024, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	const numMetrics = 1000
 	mrs := testGenerateMetricRowsWithPrefix(rng, numMetrics, "metric.", tr)
@@ -4056,7 +4061,7 @@ func TestStorageMetrics_IndexDBBlockCaches(t *testing.T) {
 	assertMetrics := func(s *Storage) {
 		t.Helper()
 
-		ptw := s.tb.MustGetPartition(time.Now().UnixMilli())
+		ptw := s.tb.MustGetPartition(time.Now().UnixMicro())
 		defer s.tb.PutPartition(ptw)
 		idb := ptw.pt.idb
 
@@ -4087,8 +4092,8 @@ func TestStorageMetrics_IndexDBBlockCaches(t *testing.T) {
 
 	rng := rand.New(rand.NewSource(1))
 	tr := TimeRange{
-		MinTimestamp: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Now().UnixMilli(),
+		MinTimestamp: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Now().UnixMicro(),
 	}
 	mrs := testGenerateMetricRowsWithPrefix(rng, 1000, "metric", tr)
 
@@ -4285,48 +4290,48 @@ func TestStorage_futureTimestamps(t *testing.T) {
 	t.Run("future-1h", func(t *testing.T) {
 		now := time.Now().UTC()
 		f(t, TimeRange{
-			MinTimestamp: time.Date(now.Year(), now.Month(), now.Day(), now.Hour()+1, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(now.Year(), now.Month(), now.Day(), now.Hour()+2, 0, 0, 0, time.UTC).UnixMilli() - 1,
+			MinTimestamp: time.Date(now.Year(), now.Month(), now.Day(), now.Hour()+1, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(now.Year(), now.Month(), now.Day(), now.Hour()+2, 0, 0, 0, time.UTC).UnixMicro() - 1,
 		})
 	})
 
 	t.Run("future-1d", func(t *testing.T) {
 		now := time.Now().UTC()
 		f(t, TimeRange{
-			MinTimestamp: time.Date(now.Year(), now.Month(), now.Day()+1, 1, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(now.Year(), now.Month(), now.Day()+2, 1, 0, 0, 0, time.UTC).UnixMilli() - 1,
+			MinTimestamp: time.Date(now.Year(), now.Month(), now.Day()+1, 1, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(now.Year(), now.Month(), now.Day()+2, 1, 0, 0, 0, time.UTC).UnixMicro() - 1,
 		})
 	})
 
 	t.Run("future-1m", func(t *testing.T) {
 		now := time.Now().UTC()
 		f(t, TimeRange{
-			MinTimestamp: time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(now.Year(), now.Month()+2, 1, 0, 0, 0, 0, time.UTC).UnixMilli() - 1,
+			MinTimestamp: time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(now.Year(), now.Month()+2, 1, 0, 0, 0, 0, time.UTC).UnixMicro() - 1,
 		})
 	})
 
 	t.Run("future-1y", func(t *testing.T) {
 		now := time.Now().UTC()
 		f(t, TimeRange{
-			MinTimestamp: time.Date(now.Year()+1, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(now.Year()+2, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli() - 1,
+			MinTimestamp: time.Date(now.Year()+1, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(now.Year()+2, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro() - 1,
 		})
 	})
 
 	t.Run("future-10y", func(t *testing.T) {
 		now := time.Now().UTC()
 		f(t, TimeRange{
-			MinTimestamp: time.Date(now.Year()+1, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(now.Year()+11, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli() - 1,
+			MinTimestamp: time.Date(now.Year()+1, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(now.Year()+11, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro() - 1,
 		})
 	})
 
 	t.Run("future-limit", func(t *testing.T) {
-		maxTime := time.UnixMilli(maxUnixMilli).UTC()
+		maxTime := time.UnixMicro(maxUnixMicro).UTC()
 		f(t, TimeRange{
-			MinTimestamp: maxTime.Add(-24 * time.Hour).UnixMilli(),
-			MaxTimestamp: maxTime.UnixMilli(),
+			MinTimestamp: maxTime.Add(-24 * time.Hour).UnixMicro(),
+			MaxTimestamp: maxTime.UnixMicro(),
 		})
 	})
 }

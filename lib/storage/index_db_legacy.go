@@ -135,7 +135,7 @@ func (is *indexSearch) legacyContainsTimeRangeSlow(prefixBuf *bytesutil.ByteBuff
 	// This is OK, since this case isn't encountered too much in practice.
 	// The main practical case allows skipping searching in prev indexdb (`ts`) when `tr`
 	// is located above the max date stored there.
-	minDate := uint64(tr.MinTimestamp) / msecPerDay
+	minDate := uint64(tr.MinTimestamp) / usecPerDay
 	prefix := prefixBuf.B
 	prefixBuf.B = encoding.MarshalUint64(prefixBuf.B, minDate)
 	ts.Seek(prefixBuf.B)

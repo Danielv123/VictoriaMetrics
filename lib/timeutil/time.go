@@ -8,18 +8,32 @@ import (
 	"time"
 )
 
+// ParseTimeUsec parses time s in different formats.
+//
+// See https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/#timestamp-formats
+//
+// It returns unix timestamp in microseconds.
+func ParseTimeUsec(s string) (int64, error) {
+	currentTimestamp := time.Now().UnixNano()
+	nsecs, err := ParseTimeAt(s, currentTimestamp)
+	if err != nil {
+		return 0, err
+	}
+	usecs := int64(math.Round(float64(nsecs) / 1e3))
+	return usecs, nil
+}
+
 // ParseTimeMsec parses time s in different formats.
 //
 // See https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/#timestamp-formats
 //
 // It returns unix timestamp in milliseconds.
 func ParseTimeMsec(s string) (int64, error) {
-	currentTimestamp := time.Now().UnixNano()
-	nsecs, err := ParseTimeAt(s, currentTimestamp)
+	usecs, err := ParseTimeUsec(s)
 	if err != nil {
 		return 0, err
 	}
-	msecs := int64(math.Round(float64(nsecs) / 1e6))
+	msecs := int64(math.Round(float64(usecs) / 1e3))
 	return msecs, nil
 }
 

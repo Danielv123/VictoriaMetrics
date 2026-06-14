@@ -15,12 +15,12 @@ func TestTableSearch(t *testing.T) {
 
 	var trData TimeRange
 	trData.fromPartitionTime(time.Now())
-	trData.MinTimestamp -= 5 * 365 * 24 * 3600 * 1000
+	trData.MinTimestamp -= 5 * 365 * usecPerDay
 
 	t.Run("SinglePartition", func(t *testing.T) {
 		trSearch := TimeRange{
-			MinTimestamp: trData.MinTimestamp + 4e3,
-			MaxTimestamp: trData.MaxTimestamp - 4e3,
+			MinTimestamp: trData.MinTimestamp + 4e6,
+			MaxTimestamp: trData.MaxTimestamp - 4e6,
 		}
 		testTableSearchEx(t, rng, trData, trSearch, 1, 10, 1000, 10)
 	})

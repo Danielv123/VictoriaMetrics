@@ -116,37 +116,37 @@ func TestTimeRangeDateRange(t *testing.T) {
 
 	// MinTimestamp is less than MaxTimestamp, the timestamps belong to the
 	// different days. Min date must be less than the max date.
-	tr = TimeRange{1*msecPerDay + 123, 2*msecPerDay + 456}
+	tr = TimeRange{1*usecPerDay + 123, 2*usecPerDay + 456}
 	f(tr, 1, 2)
 
 	// MinTimestamp is less than MaxTimestamp and both timestamps belong to the
 	// same day. Max date must be the same as min date.
-	tr = TimeRange{1*msecPerDay + 123, 1*msecPerDay + 456}
+	tr = TimeRange{1*usecPerDay + 123, 1*usecPerDay + 456}
 	f(tr, 1, 1)
 
 	// MinTimestamp equals to MaxTimestamp. Max date must be the same as min
 	// date.
-	tr = TimeRange{1*msecPerDay + 123, 1*msecPerDay + 123}
+	tr = TimeRange{1*usecPerDay + 123, 1*usecPerDay + 123}
 	f(tr, 1, 1)
 
 	// MinTimestamp is the first millisecond of the day and equals to
 	// MaxTimestamp. Min and max dates must be the same.
-	tr = TimeRange{1 * msecPerDay, 1 * msecPerDay}
+	tr = TimeRange{1 * usecPerDay, 1 * usecPerDay}
 	f(tr, 1, 1)
 
 	// MinTimestamp is greater than MaxTimestamp MaxTimestamp. Max date must be
 	// the same as min date.
-	tr = TimeRange{2*msecPerDay + 654, 1*msecPerDay + 321}
+	tr = TimeRange{2*usecPerDay + 654, 1*usecPerDay + 321}
 	f(tr, 2, 2)
 
 	// MaxTimestamp is the last millisecond of the day.
 	// Max date should be the next date
-	tr = TimeRange{1*msecPerDay + 123, 2 * msecPerDay}
+	tr = TimeRange{1*usecPerDay + 123, 2 * usecPerDay}
 	f(tr, 1, 2)
 
 	// MaxTimestamp is the first millisecond of the day.
 	// Max date should be the next date
-	tr = TimeRange{1*msecPerDay + 123, 2*msecPerDay + 1}
+	tr = TimeRange{1*usecPerDay + 123, 2*usecPerDay + 1}
 	f(tr, 1, 2)
 }
 
@@ -177,15 +177,15 @@ func TestTimeRangeString(t *testing.T) {
 	f(TimeRange{
 		MinTimestamp: 0,
 		MaxTimestamp: 1,
-	}, "[1970-01-01T00:00:00Z..1970-01-01T00:00:00.001Z]")
+	}, "[1970-01-01T00:00:00.000000Z..1970-01-01T00:00:00.000001Z]")
 	f(TimeRange{
 		MinTimestamp: 1,
 		MaxTimestamp: 2,
-	}, "[1970-01-01T00:00:00.001Z..1970-01-01T00:00:00.002Z]")
+	}, "[1970-01-01T00:00:00.000001Z..1970-01-01T00:00:00.000002Z]")
 	f(TimeRange{
-		MinTimestamp: time.Date(2024, 9, 6, 0, 0, 0, 000, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2024, 9, 7, 0, 0, 0, 000, time.UTC).UnixMilli() - 1,
-	}, "[2024-09-06T00:00:00Z..2024-09-06T23:59:59.999Z]")
+		MinTimestamp: time.Date(2024, 9, 6, 0, 0, 0, 000, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2024, 9, 7, 0, 0, 0, 000, time.UTC).UnixMicro() - 1,
+	}, "[2024-09-06T00:00:00.000000Z..2024-09-06T23:59:59.999999Z]")
 }
 
 func TestTimeRange_fromPartitionTimestamp(t *testing.T) {
@@ -197,10 +197,10 @@ func TestTimeRange_fromPartitionTimestamp(t *testing.T) {
 		}
 	}
 
-	ts := time.Date(2025, 3, 23, 14, 07, 56, 999_999_999, time.UTC).UnixMilli()
+	ts := time.Date(2025, 3, 23, 14, 07, 56, 999_999_999, time.UTC).UnixMicro()
 	f(ts, TimeRange{
-		MinTimestamp: time.Date(2025, 3, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2025, 3, 31, 23, 59, 59, 999_000_000, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2025, 3, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2025, 3, 31, 23, 59, 59, 999_999_000, time.UTC).UnixMicro(),
 	})
 }
 
@@ -230,9 +230,9 @@ func TestIsFirstHourOfDay(t *testing.T) {
 	f(lastHourOfDay, false)
 }
 
-func TestMaxUnixMilli(t *testing.T) {
-	lastFuturePtMaxTime := time.Date(2262, 3, 31, 23, 59, 59, 999_000_000, time.UTC)
-	if got, want := lastFuturePtMaxTime.UnixMilli(), int64(maxUnixMilli); got != want {
-		t.Fatalf("unexpected maxUnixMilli: got %d, want %d", got, want)
+func TestMaxUnixMicro(t *testing.T) {
+	lastFuturePtMaxTime := time.Date(2262, 3, 31, 23, 59, 59, 999_999_000, time.UTC)
+	if got, want := lastFuturePtMaxTime.UnixMicro(), int64(maxUnixMicro); got != want {
+		t.Fatalf("unexpected maxUnixMicro: got %d, want %d", got, want)
 	}
 }

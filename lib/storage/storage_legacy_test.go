@@ -34,8 +34,8 @@ func TestLegacyStorage_SearchMetricNames(t *testing.T) {
 	}
 	const numMetrics = 1000
 	tr := TimeRange{
-		MinTimestamp: time.Date(2023, 6, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2024, 5, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2023, 6, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2024, 5, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	legacyData, wantLegacy := genData(numMetrics, "legacy", tr)
 	newData, wantNew := genData(numMetrics, "new", tr)
@@ -96,8 +96,8 @@ func TestLegacyStorage_SearchLabelNames(t *testing.T) {
 	}
 	const numMetrics = 1000
 	tr := TimeRange{
-		MinTimestamp: time.Date(2023, 6, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2024, 5, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2023, 6, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2024, 5, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	legacyData, wantLegacy := genData(numMetrics, "legacy", tr)
 	newData, wantNew := genData(numMetrics, "new", tr)
@@ -149,8 +149,8 @@ func TestLegacyStorage_SearchLabelValues(t *testing.T) {
 	}
 	const numMetrics = 1000
 	tr := TimeRange{
-		MinTimestamp: time.Date(2023, 6, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2024, 5, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2023, 6, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2024, 5, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	legacyData, wantLegacy := genData(numMetrics, "legacy", tr)
 	newData, wantNew := genData(numMetrics, "new", tr)
@@ -198,8 +198,8 @@ func TestLegacyStorage_SearchTagValueSuffixes(t *testing.T) {
 	}
 	const numMetrics = 1000
 	tr := TimeRange{
-		MinTimestamp: time.Date(2023, 6, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2024, 5, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2023, 6, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2024, 5, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	legacyData, wantLegacy := genData(numMetrics, "legacy", tr)
 	newData, wantNew := genData(numMetrics, "new", tr)
@@ -248,8 +248,8 @@ func TestLegacyStorage_SearchGraphitePaths(t *testing.T) {
 	}
 	const numMetrics = 1000
 	tr := TimeRange{
-		MinTimestamp: time.Date(2023, 6, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2024, 5, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2023, 6, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2024, 5, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	legacyData, wantLegacy := genData(numMetrics, "legacy", tr)
 	newData, wantNew := genData(numMetrics, "new", tr)
@@ -296,8 +296,8 @@ func TestLegacyStorage_Search(t *testing.T) {
 	}
 	const numMetrics = 1000
 	tr := TimeRange{
-		MinTimestamp: time.Date(2023, 6, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2024, 5, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2023, 6, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2024, 5, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	legacyData := genData(numMetrics, "legacy", tr)
 	newData := genData(numMetrics, "new", tr)
@@ -328,8 +328,8 @@ func TestLegacyStorage_Search(t *testing.T) {
 func TestLegacyStorage_GetSeriesCount(t *testing.T) {
 	const numMetrics = 1000
 	tr := TimeRange{
-		MinTimestamp: time.Date(2023, 6, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2024, 5, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2023, 6, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2024, 5, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	rng := rand.New(rand.NewSource(1))
 	legacyData := testGenerateMetricRowsWithPrefix(rng, numMetrics, "legacy", tr)
@@ -362,8 +362,8 @@ func TestLegacyStorage_GetSeriesCount(t *testing.T) {
 func TestLegacyStorage_DeleteSeries(t *testing.T) {
 	const numMetrics = 1000
 	tr := TimeRange{
-		MinTimestamp: time.Date(2023, 6, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2024, 5, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2023, 6, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2024, 5, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	rng := rand.New(rand.NewSource(1))
 	legacyData := testGenerateMetricRowsWithPrefix(rng, numMetrics, "legacy", tr)
@@ -432,8 +432,8 @@ func TestLegacyStorageSnapshots_CreateListDelete(t *testing.T) {
 
 	rng := rand.New(rand.NewSource(1))
 	const numRows = 10000
-	minTimestamp := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli()
-	maxTimestamp := time.Date(2024, 2, 29, 0, 0, 0, 0, time.UTC).UnixMilli()
+	minTimestamp := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro()
+	maxTimestamp := time.Date(2024, 2, 29, 0, 0, 0, 0, time.UTC).UnixMicro()
 	mrs := testGenerateMetricRows(rng, numRows, minTimestamp, maxTimestamp)
 
 	root := t.Name()
@@ -641,20 +641,20 @@ func TestStorageConvertToLegacy(t *testing.T) {
 	rng := rand.New(rand.NewSource(1))
 	const numSeries = 10
 	tr1 := TimeRange{
-		MinTimestamp: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2025, 1, 1, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2025, 1, 1, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	tr2 := TimeRange{
-		MinTimestamp: tr1.MinTimestamp + msecPerDay,
-		MaxTimestamp: tr1.MaxTimestamp + msecPerDay,
+		MinTimestamp: tr1.MinTimestamp + usecPerDay,
+		MaxTimestamp: tr1.MaxTimestamp + usecPerDay,
 	}
 	tr3 := TimeRange{
-		MinTimestamp: tr2.MinTimestamp + msecPerDay,
-		MaxTimestamp: tr2.MaxTimestamp + msecPerDay,
+		MinTimestamp: tr2.MinTimestamp + usecPerDay,
+		MaxTimestamp: tr2.MaxTimestamp + usecPerDay,
 	}
 	tr4 := TimeRange{
-		MinTimestamp: tr3.MinTimestamp + msecPerDay,
-		MaxTimestamp: tr3.MaxTimestamp + msecPerDay,
+		MinTimestamp: tr3.MinTimestamp + usecPerDay,
+		MaxTimestamp: tr3.MaxTimestamp + usecPerDay,
 	}
 	trAll := TimeRange{
 		MinTimestamp: tr1.MinTimestamp,
@@ -742,12 +742,12 @@ func mustConvertToLegacy(s *Storage) *Storage {
 	seenPerDayIndexEntries := make(map[dateMetricID]bool)
 	for _, ptw := range ptws {
 		idb := ptw.pt.idb
-		for ts := idb.tr.MinTimestamp; ts < idb.tr.MaxTimestamp; ts += msecPerDay {
+		for ts := idb.tr.MinTimestamp; ts < idb.tr.MaxTimestamp; ts += usecPerDay {
 			day := TimeRange{
 				MinTimestamp: ts,
-				MaxTimestamp: ts + msecPerDay - 1,
+				MaxTimestamp: ts + usecPerDay - 1,
 			}
-			date := uint64(ts / msecPerDay)
+			date := uint64(ts / usecPerDay)
 			tsids, err := idb.SearchTSIDs(nil, tfssAll, day, 1e9, noDeadline)
 			if err != nil {
 				panic(fmt.Sprintf("could not get TSIDs: %v", err))
@@ -895,8 +895,8 @@ func TestLegacyNextRetentionDeadlineSeconds(t *testing.T) {
 func TestLegacyStorageRotateIndexDB_AddRows(t *testing.T) {
 	rng := rand.New(rand.NewSource(1))
 	tr := TimeRange{
-		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2024, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2024, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	mrs := testGenerateMetricRowsWithPrefix(rng, 1000, "metric", tr)
 	op := func(s *Storage) {
@@ -909,8 +909,8 @@ func TestLegacyStorageRotateIndexDB_AddRows(t *testing.T) {
 func TestLegacyStorageRotateIndexDB_RegisterMetricNames(t *testing.T) {
 	rng := rand.New(rand.NewSource(1))
 	tr := TimeRange{
-		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2024, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2024, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	mrs := testGenerateMetricRowsWithPrefix(rng, 1000, "metric", tr)
 	op := func(s *Storage) {
@@ -923,8 +923,8 @@ func TestLegacyStorageRotateIndexDB_RegisterMetricNames(t *testing.T) {
 func TestLegacyStorageRotateIndexDB_DeleteSeries(t *testing.T) {
 	rng := rand.New(rand.NewSource(1))
 	tr := TimeRange{
-		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2024, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2024, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	mrs := testGenerateMetricRowsWithPrefix(rng, 1000, "metric", tr)
 	tfs := NewTagFilters()
@@ -943,8 +943,8 @@ func TestLegacyStorageRotateIndexDB_DeleteSeries(t *testing.T) {
 func TestLegacyStorageRotateIndexDB_CreateSnapshot(t *testing.T) {
 	rng := rand.New(rand.NewSource(1))
 	tr := TimeRange{
-		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2024, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2024, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	mrs := testGenerateMetricRowsWithPrefix(rng, 1000, "metric", tr)
 	op := func(s *Storage) {
@@ -956,8 +956,8 @@ func TestLegacyStorageRotateIndexDB_CreateSnapshot(t *testing.T) {
 func TestLegacyStorageRotateIndexDB_SearchMetricNames(t *testing.T) {
 	rng := rand.New(rand.NewSource(1))
 	tr := TimeRange{
-		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2024, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2024, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	mrs := testGenerateMetricRowsWithPrefix(rng, 1000, "metric", tr)
 	tfs := NewTagFilters()
@@ -978,8 +978,8 @@ func TestLegacyStorageRotateIndexDB_SearchMetricNames(t *testing.T) {
 func TestLegacyStorageRotateIndexDB_SearchLabelNames(t *testing.T) {
 	rng := rand.New(rand.NewSource(1))
 	tr := TimeRange{
-		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2024, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2024, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	mrs := testGenerateMetricRowsWithPrefix(rng, 1000, "metric", tr)
 
@@ -994,8 +994,8 @@ func TestLegacyStorageRotateIndexDB_SearchLabelNames(t *testing.T) {
 func TestLegacyStorageRotateIndexDB_SearchLabelValues(t *testing.T) {
 	rng := rand.New(rand.NewSource(1))
 	tr := TimeRange{
-		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2024, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2024, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	mrs := testGenerateMetricRowsWithPrefix(rng, 1000, "metric", tr)
 
@@ -1010,8 +1010,8 @@ func TestLegacyStorageRotateIndexDB_SearchLabelValues(t *testing.T) {
 func TestLegacyStorageRotateIndexDB_SearchTagValueSuffixes(t *testing.T) {
 	rng := rand.New(rand.NewSource(1))
 	tr := TimeRange{
-		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2024, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2024, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	mrs := testGenerateMetricRowsWithPrefix(rng, 1000, "metric.", tr)
 
@@ -1026,8 +1026,8 @@ func TestLegacyStorageRotateIndexDB_SearchTagValueSuffixes(t *testing.T) {
 func TestLegacyStorageRotateIndexDB_SearchGraphitePaths(t *testing.T) {
 	rng := rand.New(rand.NewSource(1))
 	tr := TimeRange{
-		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2024, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2024, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	mrs := testGenerateMetricRowsWithPrefix(rng, 1000, "metric.", tr)
 
@@ -1042,8 +1042,8 @@ func TestLegacyStorageRotateIndexDB_SearchGraphitePaths(t *testing.T) {
 func TestLegacyStorageRotateIndexDB_GetSeriesCount(t *testing.T) {
 	rng := rand.New(rand.NewSource(1))
 	tr := TimeRange{
-		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2024, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2024, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	mrs := testGenerateMetricRowsWithPrefix(rng, 1000, "metric", tr)
 
@@ -1058,11 +1058,11 @@ func TestLegacyStorageRotateIndexDB_GetSeriesCount(t *testing.T) {
 func TestLegacyStorageRotateIndexDB_GetTSDBStatus(t *testing.T) {
 	rng := rand.New(rand.NewSource(1))
 	tr := TimeRange{
-		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2024, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2024, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	mrs := testGenerateMetricRowsWithPrefix(rng, 1000, "metric", tr)
-	date := uint64(tr.MinTimestamp) / msecPerDay
+	date := uint64(tr.MinTimestamp) / usecPerDay
 
 	testLegacyRotateIndexDB(t, mrs, func(s *Storage) {
 		_, err := s.GetTSDBStatus(nil, nil, date, "", 10, 1e6, noDeadline)
@@ -1094,8 +1094,8 @@ func TestLegacyStorageRotateIndexDB_UpdateMetrics(t *testing.T) {
 func TestLegacyStorageRotateIndexDB_Search(t *testing.T) {
 	rng := rand.New(rand.NewSource(1))
 	tr := TimeRange{
-		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2024, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2024, 1, 31, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
 	mrs := testGenerateMetricRowsWithPrefix(rng, 1000, "metric", tr)
 	tfs := NewTagFilters()
@@ -1363,10 +1363,10 @@ func TestLegacyStorageGetTSDBStatus(t *testing.T) {
 	// fill previous legacy indexDB
 	const numMetricsPrev = 1234
 	trPrev := TimeRange{
-		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2024, 1, 1, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2024, 1, 1, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
-	datePrev := uint64(trPrev.MinTimestamp / msecPerDay)
+	datePrev := uint64(trPrev.MinTimestamp / usecPerDay)
 	mrsPrev := testGenerateMetricRowsWithPrefix(rng, numMetricsPrev, "legacy_prev", trPrev)
 	s.AddRows(mrsPrev, defaultPrecisionBits)
 	s.DebugFlush()
@@ -1375,10 +1375,10 @@ func TestLegacyStorageGetTSDBStatus(t *testing.T) {
 	// fill current legacy indexDB
 	const numMetricsCurr = 2345
 	trCurr := TimeRange{
-		MinTimestamp: time.Date(2024, 2, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2024, 2, 1, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2024, 2, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2024, 2, 1, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
-	dateCurr := uint64(trCurr.MinTimestamp / msecPerDay)
+	dateCurr := uint64(trCurr.MinTimestamp / usecPerDay)
 	mrsCurr := testGenerateMetricRowsWithPrefix(rng, numMetricsCurr, "legacy_curr", trCurr)
 	s.AddRows(mrsCurr, defaultPrecisionBits)
 	s.DebugFlush()
@@ -1388,10 +1388,10 @@ func TestLegacyStorageGetTSDBStatus(t *testing.T) {
 	// fill partitioned index with data
 	const numMetricsPt = 3456
 	trPt := TimeRange{
-		MinTimestamp: time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC).UnixMilli(),
-		MaxTimestamp: time.Date(2024, 3, 1, 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+		MinTimestamp: time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC).UnixMicro(),
+		MaxTimestamp: time.Date(2024, 3, 1, 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 	}
-	datePt := uint64(trPt.MinTimestamp / msecPerDay)
+	datePt := uint64(trPt.MinTimestamp / usecPerDay)
 	mrsPt := testGenerateMetricRowsWithPrefix(rng, numMetricsPt, "pt", trPt)
 	s.AddRows(mrsPt, defaultPrecisionBits)
 	s.DebugFlush()

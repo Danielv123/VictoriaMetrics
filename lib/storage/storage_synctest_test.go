@@ -25,11 +25,11 @@ func TestStorageSearchTSIDs_CorruptedIndex(t *testing.T) {
 
 		now := time.Now().UTC()
 		tr := TimeRange{
-			MinTimestamp: time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+			MinTimestamp: time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 		}
 		const numMetrics = 10
-		date := uint64(tr.MinTimestamp) / msecPerDay
+		date := uint64(tr.MinTimestamp) / usecPerDay
 		ptw := s.tb.MustGetPartition(tr.MinTimestamp)
 		idb := ptw.pt.idb
 		defer s.tb.PutPartition(ptw)
@@ -127,11 +127,11 @@ func TestStorageSearchMetricNames_CorruptedIndex(t *testing.T) {
 
 		now := time.Now().UTC()
 		tr := TimeRange{
-			MinTimestamp: time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC).UnixMilli(),
-			MaxTimestamp: time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 999_999_999, time.UTC).UnixMilli(),
+			MinTimestamp: time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC).UnixMicro(),
+			MaxTimestamp: time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 999_999_999, time.UTC).UnixMicro(),
 		}
 		const numMetrics = 10
-		date := uint64(tr.MinTimestamp) / msecPerDay
+		date := uint64(tr.MinTimestamp) / usecPerDay
 		ptw := s.tb.MustGetPartition(tr.MinTimestamp)
 		idb := ptw.pt.idb
 		defer s.tb.PutPartition(ptw)
@@ -309,8 +309,8 @@ func TestStorageRotateIndexDBPrefill(t *testing.T) {
 				rng := rand.New(rand.NewSource(1))
 				ct := time.Now().UTC()
 				tr := TimeRange{
-					MinTimestamp: ct.Add(-prefillStart).UnixMilli(),
-					MaxTimestamp: ct.UnixMilli(),
+					MinTimestamp: ct.Add(-prefillStart).UnixMicro(),
+					MaxTimestamp: ct.UnixMicro(),
 				}
 				mrs := testGenerateMetricRowsWithPrefix(rng, numSeries, "metric.", tr)
 				s.AddRows(mrs, 1)
@@ -422,12 +422,12 @@ func TestStorageAddRows_nextDayIndexPrefill(t *testing.T) {
 		// synctest starts at 2000-01-01T00:00:00Z.
 
 		today := TimeRange{
-			MinTimestamp: time.Now().UnixMilli(),
-			MaxTimestamp: time.Now().UnixMilli() + msecPerDay - 1,
+			MinTimestamp: time.Now().UnixMicro(),
+			MaxTimestamp: time.Now().UnixMicro() + usecPerDay - 1,
 		}
 		nextDay := TimeRange{
-			MinTimestamp: today.MinTimestamp + msecPerDay,
-			MaxTimestamp: today.MaxTimestamp + msecPerDay,
+			MinTimestamp: today.MinTimestamp + usecPerDay,
+			MaxTimestamp: today.MaxTimestamp + usecPerDay,
 		}
 
 		const numSeries = 1000
@@ -440,8 +440,8 @@ func TestStorageAddRows_nextDayIndexPrefill(t *testing.T) {
 		// Advance the time 1m before the last hour.
 		time.Sleep(23*time.Hour - 1*time.Minute) // 2000-01-01T22:59:00Z
 		mrs0 := testGenerateMetricRowsWithPrefix(rng, numSeries, "metric0", TimeRange{
-			MinTimestamp: time.Now().Add(-15 * time.Minute).UnixMilli(),
-			MaxTimestamp: time.Now().Add(+15 * time.Minute).UnixMilli(),
+			MinTimestamp: time.Now().Add(-15 * time.Minute).UnixMicro(),
+			MaxTimestamp: time.Now().Add(+15 * time.Minute).UnixMicro(),
 		})
 		s := MustOpenStorage(t.Name(), OpenOptions{})
 		defer s.MustClose()
@@ -476,12 +476,12 @@ func TestStorageAddRows_nextDayIndexPrefill(t *testing.T) {
 		// entries will be created.
 		time.Sleep(15 * time.Minute) // 2000-01-01T23:15:00Z
 		mrs1 := testGenerateMetricRowsWithPrefix(rng, numSeries, "metric1", TimeRange{
-			MinTimestamp: time.Now().Add(-30 * time.Minute).UnixMilli(),
-			MaxTimestamp: time.Now().Add(-15 * time.Minute).UnixMilli(),
+			MinTimestamp: time.Now().Add(-30 * time.Minute).UnixMicro(),
+			MaxTimestamp: time.Now().Add(-15 * time.Minute).UnixMicro(),
 		})
 		mrs2 := testGenerateMetricRowsWithPrefix(rng, numSeries, "metric2", TimeRange{
-			MinTimestamp: time.Now().Add(-15 * time.Minute).UnixMilli(),
-			MaxTimestamp: time.Now().UnixMilli(),
+			MinTimestamp: time.Now().Add(-15 * time.Minute).UnixMicro(),
+			MaxTimestamp: time.Now().UnixMicro(),
 		})
 		s.AddRows(mrs1, defaultPrecisionBits)
 		s.AddRows(mrs2, defaultPrecisionBits)
@@ -502,8 +502,8 @@ func TestStorageAddRows_nextDayIndexPrefill(t *testing.T) {
 
 		time.Sleep(15 * time.Minute) // 2000-01-01T23:30:00Z
 		mrs3 := testGenerateMetricRowsWithPrefix(rng, numSeries, "metric3", TimeRange{
-			MinTimestamp: time.Now().Add(-15 * time.Minute).UnixMilli(),
-			MaxTimestamp: time.Now().UnixMilli(),
+			MinTimestamp: time.Now().Add(-15 * time.Minute).UnixMicro(),
+			MaxTimestamp: time.Now().UnixMicro(),
 		})
 		s.AddRows(mrs3, defaultPrecisionBits)
 		s.DebugFlush()
@@ -517,8 +517,8 @@ func TestStorageAddRows_nextDayIndexPrefill(t *testing.T) {
 
 		time.Sleep(15 * time.Minute) // 2000-01-01T23:45:00Z
 		mrs4 := testGenerateMetricRowsWithPrefix(rng, numSeries, "metric4", TimeRange{
-			MinTimestamp: time.Now().Add(-15 * time.Minute).UnixMilli(),
-			MaxTimestamp: time.Now().UnixMilli(),
+			MinTimestamp: time.Now().Add(-15 * time.Minute).UnixMicro(),
+			MaxTimestamp: time.Now().UnixMicro(),
 		})
 		s.AddRows(mrs4, defaultPrecisionBits)
 		s.DebugFlush()
@@ -540,8 +540,8 @@ func TestStorageAddRows_nextDayIndexPrefill(t *testing.T) {
 		s.UpdateMetrics(&m)
 		currDaySlowInserts := m.SlowPerDayIndexInserts
 		mrs3NextDay := testGenerateMetricRowsWithPrefix(rng, numSeries, "metric3", TimeRange{
-			MinTimestamp: time.Now().Add(-5 * time.Minute).UnixMilli(),
-			MaxTimestamp: time.Now().UnixMilli(),
+			MinTimestamp: time.Now().Add(-5 * time.Minute).UnixMicro(),
+			MaxTimestamp: time.Now().UnixMicro(),
 		})
 
 		s.AddRows(mrs3NextDay, defaultPrecisionBits)
@@ -616,16 +616,16 @@ func TestStorageNextDayMetricIDs_updatedAsynchronously(t *testing.T) {
 		const numSeries = 1000
 		s := MustOpenStorage(t.Name(), OpenOptions{})
 		defer s.MustClose()
-		ptw := s.tb.MustGetPartition(time.Now().UnixMilli())
+		ptw := s.tb.MustGetPartition(time.Now().UnixMicro())
 		idbID := ptw.pt.idb.id
 		s.tb.PutPartition(ptw)
-		date := uint64(time.Now().UnixMilli()) / msecPerDay
+		date := uint64(time.Now().UnixMicro()) / usecPerDay
 		rng := rand.New(rand.NewSource(1))
 
 		// Insert some data.
 		mrs := testGenerateMetricRowsWithPrefix(rng, numSeries, "metric", TimeRange{
-			MinTimestamp: time.Now().Add(-15 * time.Minute).UnixMilli(),
-			MaxTimestamp: time.Now().UnixMilli(),
+			MinTimestamp: time.Now().Add(-15 * time.Minute).UnixMicro(),
+			MaxTimestamp: time.Now().UnixMicro(),
 		})
 		s.AddRows(mrs, defaultPrecisionBits)
 		s.DebugFlush()
@@ -663,17 +663,17 @@ func TestStorageNextDayMetricIDs_loadFromStoreToFile(t *testing.T) {
 
 		const numSeries = 1000
 		s := MustOpenStorage(t.Name(), OpenOptions{})
-		ptw := s.tb.MustGetPartition(time.Now().UnixMilli())
+		ptw := s.tb.MustGetPartition(time.Now().UnixMicro())
 		idbID := ptw.pt.idb.id
 		s.tb.PutPartition(ptw)
-		date := uint64(time.Now().UnixMilli()) / msecPerDay
+		date := uint64(time.Now().UnixMicro()) / usecPerDay
 
 		// Insert some data. Next day metricIDs must appear in
 		// Storage.nextDayMetricIDs.
 		rng := rand.New(rand.NewSource(1))
 		mrs := testGenerateMetricRowsWithPrefix(rng, numSeries, "metric", TimeRange{
-			MinTimestamp: time.Now().Add(-15 * time.Minute).UnixMilli(),
-			MaxTimestamp: time.Now().UnixMilli(),
+			MinTimestamp: time.Now().Add(-15 * time.Minute).UnixMicro(),
+			MaxTimestamp: time.Now().UnixMicro(),
 		})
 		s.AddRows(mrs, defaultPrecisionBits)
 		s.DebugFlush()
@@ -723,8 +723,8 @@ func TestStorageNextDayMetricIDs_loadFromStoreToFile(t *testing.T) {
 		sleepUntil(t, 2000, 1, 2, 23, 30, 0, 0)
 		s = MustOpenStorage(t.Name(), OpenOptions{})
 		mrs = testGenerateMetricRowsWithPrefix(rng, numSeries, "metric", TimeRange{
-			MinTimestamp: time.Now().Add(-15 * time.Minute).UnixMilli(),
-			MaxTimestamp: time.Now().UnixMilli(),
+			MinTimestamp: time.Now().Add(-15 * time.Minute).UnixMicro(),
+			MaxTimestamp: time.Now().UnixMicro(),
 		})
 		s.AddRows(mrs, defaultPrecisionBits)
 		s.DebugFlush()
@@ -743,8 +743,8 @@ func TestStorageNextDayMetricIDs_loadFromStoreToFile(t *testing.T) {
 
 		// Ingest some data and confirm nextDayMetricIDs is not empty.
 		mrs = testGenerateMetricRowsWithPrefix(rng, numSeries, "metric", TimeRange{
-			MinTimestamp: time.Now().Add(-15 * time.Minute).UnixMilli(),
-			MaxTimestamp: time.Now().UnixMilli(),
+			MinTimestamp: time.Now().Add(-15 * time.Minute).UnixMicro(),
+			MaxTimestamp: time.Now().UnixMicro(),
 		})
 		s.AddRows(mrs, defaultPrecisionBits)
 		s.DebugFlush()
@@ -781,17 +781,17 @@ func TestStorageNextDayMetricIDs_update(t *testing.T) {
 		const numSeries = 1000
 		s := MustOpenStorage(t.Name(), OpenOptions{})
 		defer s.MustClose()
-		ptw := s.tb.MustGetPartition(time.Now().UnixMilli())
+		ptw := s.tb.MustGetPartition(time.Now().UnixMicro())
 		idbID := ptw.pt.idb.id
 		s.tb.PutPartition(ptw)
-		date := uint64(time.Now().UnixMilli()) / msecPerDay
+		date := uint64(time.Now().UnixMicro()) / usecPerDay
 		rng := rand.New(rand.NewSource(1))
 
 		// The next day index prefill must not start before the last hour of the
 		// day. Therefore, nextDayMetricIDs must be empty.
 		mrs := testGenerateMetricRowsWithPrefix(rng, numSeries, "metric", TimeRange{
-			MinTimestamp: time.Now().Add(-15 * time.Minute).UnixMilli(),
-			MaxTimestamp: time.Now().UnixMilli(),
+			MinTimestamp: time.Now().Add(-15 * time.Minute).UnixMicro(),
+			MaxTimestamp: time.Now().UnixMicro(),
 		})
 		s.AddRows(mrs, defaultPrecisionBits)
 		s.DebugFlush()
@@ -802,8 +802,8 @@ func TestStorageNextDayMetricIDs_update(t *testing.T) {
 		// Storage.nextDayMetricIDs.
 		sleepUntil(t, 2000, 1, 1, 23, 30, 0, 0)
 		mrs = testGenerateMetricRowsWithPrefix(rng, numSeries, "metric", TimeRange{
-			MinTimestamp: time.Now().Add(-15 * time.Minute).UnixMilli(),
-			MaxTimestamp: time.Now().UnixMilli(),
+			MinTimestamp: time.Now().Add(-15 * time.Minute).UnixMicro(),
+			MaxTimestamp: time.Now().UnixMicro(),
 		})
 		s.AddRows(mrs, defaultPrecisionBits)
 		s.DebugFlush()
@@ -886,16 +886,16 @@ func TestStorageLastPartitionMetrics(t *testing.T) {
 
 		// Insert rows with future timestamps. Current partition must be empty.
 		addRows(t, s, "future", TimeRange{
-			MinTimestamp: ct.Add(365 * 24 * time.Hour).UnixMilli(),
-			MaxTimestamp: ct.Add(366 * 24 * time.Hour).UnixMilli(),
+			MinTimestamp: ct.Add(365 * 24 * time.Hour).UnixMicro(),
+			MaxTimestamp: ct.Add(366 * 24 * time.Hour).UnixMicro(),
 		})
 		assertLastPartitionEmpty(t, s)
 
 		// Insert rows with timestamps within current partition.
 		// Current partition must be not empty.
 		addRows(t, s, "current", TimeRange{
-			MinTimestamp: ct.UnixMilli(),
-			MaxTimestamp: ct.Add(time.Hour).UnixMilli(),
+			MinTimestamp: ct.UnixMicro(),
+			MaxTimestamp: ct.Add(time.Hour).UnixMicro(),
 		})
 		assertLastPartitionNonEmpty(t, s)
 
@@ -941,8 +941,8 @@ func TestStorage_futureAndHistoricalRetention(t *testing.T) {
 		for day := start; day.Before(end); {
 			prefix := fmt.Sprintf("metric_%d_%d_%d", day.Year(), day.Month(), day.Day())
 			tr := TimeRange{
-				MinTimestamp: day.UnixMilli(),
-				MaxTimestamp: day.UnixMilli() + msecPerDay - 1,
+				MinTimestamp: day.UnixMicro(),
+				MaxTimestamp: day.UnixMicro() + usecPerDay - 1,
 			}
 			mrs := testGenerateMetricRowsWithPrefix(rng, numSeries, prefix, tr)
 			wantData[tr] = mrs
@@ -963,8 +963,8 @@ func TestStorage_futureAndHistoricalRetention(t *testing.T) {
 		for now.Before(end) {
 			for day := start; day.Before(end); {
 				tr := TimeRange{
-					MinTimestamp: day.UnixMilli(),
-					MaxTimestamp: day.UnixMilli() + msecPerDay - 1,
+					MinTimestamp: day.UnixMicro(),
+					MaxTimestamp: day.UnixMicro() + usecPerDay - 1,
 				}
 				dataStart := now.Add(-retention)
 				if day.Before(dataStart) || day.After(dataEnd) {
@@ -1019,8 +1019,8 @@ func TestStorage_defaultFutureRetention(t *testing.T) {
 		for ts := start; ts.Before(end); {
 			prefix := fmt.Sprintf("metric_%04d_%02d_%02d_%02d", ts.Year(), ts.Month(), ts.Day(), ts.Hour())
 			tr := TimeRange{
-				MinTimestamp: ts.UnixMilli(),
-				MaxTimestamp: ts.UnixMilli() + msecPerHour - 1,
+				MinTimestamp: ts.UnixMicro(),
+				MaxTimestamp: ts.UnixMicro() + usecPerHour - 1,
 			}
 			mrs := testGenerateMetricRowsWithPrefix(rng, numSeries, prefix, tr)
 			wantData[tr] = mrs
@@ -1034,8 +1034,8 @@ func TestStorage_defaultFutureRetention(t *testing.T) {
 		dataEnd := dataStart.Add(2*24*time.Hour - time.Hour)
 		for ts := start; ts.Before(end); ts = ts.Add(time.Hour) {
 			tr := TimeRange{
-				MinTimestamp: ts.UnixMilli(),
-				MaxTimestamp: ts.UnixMilli() + msecPerHour - 1,
+				MinTimestamp: ts.UnixMicro(),
+				MaxTimestamp: ts.UnixMicro() + usecPerHour - 1,
 			}
 			if ts.Before(dataStart) || ts.After(dataEnd) {
 				assertData(t, s, tr, nil)
@@ -1078,8 +1078,8 @@ func TestStorage_partitionsOutsideRetentionAreRemoved(t *testing.T) {
 		// This should create the corresponding partitions.
 		rng := rand.New(rand.NewSource(1))
 		mrs := testGenerateMetricRowsWithPrefix(rng, 1000, "metric", TimeRange{
-			MinTimestamp: time.Now().Add(-retention).UnixMilli(),
-			MaxTimestamp: time.Now().Add(futureRetention - time.Second).UnixMilli(),
+			MinTimestamp: time.Now().Add(-retention).UnixMicro(),
+			MaxTimestamp: time.Now().Add(futureRetention - time.Second).UnixMicro(),
 		})
 		s.AddRows(mrs, defaultPrecisionBits)
 		s.DebugFlush()
@@ -1243,32 +1243,32 @@ func TestStorage_denyQueriesOutsideRetention(t *testing.T) {
 		futureRetention := 30 * 24 * time.Hour
 		day := 24 * time.Hour
 		trMatches := TimeRange{
-			MinTimestamp: now.Add(-retention).UnixMilli(),
-			MaxTimestamp: now.Add(futureRetention).UnixMilli(),
+			MinTimestamp: now.Add(-retention).UnixMicro(),
+			MaxTimestamp: now.Add(futureRetention).UnixMicro(),
 		}
 		trContains := TimeRange{
-			MinTimestamp: now.Add(-(retention + day)).UnixMilli(),
-			MaxTimestamp: now.Add(futureRetention + day).UnixMilli(),
+			MinTimestamp: now.Add(-(retention + day)).UnixMicro(),
+			MaxTimestamp: now.Add(futureRetention + day).UnixMicro(),
 		}
 		trInside := TimeRange{
-			MinTimestamp: now.Add(-(retention - day)).UnixMilli(),
-			MaxTimestamp: now.Add(futureRetention - day).UnixMilli(),
+			MinTimestamp: now.Add(-(retention - day)).UnixMicro(),
+			MaxTimestamp: now.Add(futureRetention - day).UnixMicro(),
 		}
 		trOverlapsLeft := TimeRange{
-			MinTimestamp: now.Add(-(retention + day)).UnixMilli(),
-			MaxTimestamp: now.Add(futureRetention - day).UnixMilli(),
+			MinTimestamp: now.Add(-(retention + day)).UnixMicro(),
+			MaxTimestamp: now.Add(futureRetention - day).UnixMicro(),
 		}
 		trOverlapsRight := TimeRange{
-			MinTimestamp: now.Add(-(retention - day)).UnixMilli(),
-			MaxTimestamp: now.Add(futureRetention + day).UnixMilli(),
+			MinTimestamp: now.Add(-(retention - day)).UnixMicro(),
+			MaxTimestamp: now.Add(futureRetention + day).UnixMicro(),
 		}
 		trOutsideLeft := TimeRange{
-			MinTimestamp: now.Add(-(retention + 2*day)).UnixMilli(),
-			MaxTimestamp: now.Add(-(retention + day)).UnixMilli(),
+			MinTimestamp: now.Add(-(retention + 2*day)).UnixMicro(),
+			MaxTimestamp: now.Add(-(retention + day)).UnixMicro(),
 		}
 		trOutsideRight := TimeRange{
-			MinTimestamp: now.Add(futureRetention + day).UnixMilli(),
-			MaxTimestamp: now.Add(futureRetention + 2*day).UnixMilli(),
+			MinTimestamp: now.Add(futureRetention + day).UnixMicro(),
+			MaxTimestamp: now.Add(futureRetention + 2*day).UnixMicro(),
 		}
 
 		mn := MetricName{
@@ -1277,7 +1277,7 @@ func TestStorage_denyQueriesOutsideRetention(t *testing.T) {
 		metricNameRaw := mn.marshalRaw(nil)
 		mr := MetricRow{
 			MetricNameRaw: metricNameRaw,
-			Timestamp:     now.UnixMilli(),
+			Timestamp:     now.UnixMicro(),
 			Value:         123,
 		}
 		wantMRs := []MetricRow{mr}
