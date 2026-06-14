@@ -308,7 +308,13 @@ func tryPushWriteRequest(wr *prompb.WriteRequest, tryPushBlock func(block []byte
 	marshalConcurrencyCh <- struct{}{}
 
 	bb := writeRequestBufPool.Get()
+	if !isVMRemoteWrite {
+		scaleWriteRequestTimestamps(wr, 1, 1e3)
+	}
 	bb.B = wr.MarshalProtobuf(bb.B[:0])
+	if !isVMRemoteWrite {
+		scaleWriteRequestTimestamps(wr, 1e3, 1)
+	}
 	if len(bb.B) <= maxUnpackedBlockSize.IntN() {
 		zb := compressBufPool.Get()
 		if isVMRemoteWrite {
@@ -411,6 +417,15 @@ func tryPushWriteRequest(wr *prompb.WriteRequest, tryPushBlock func(block []byte
 		wr.Timeseries = timeseries
 		wr.Metadata = metaData
 		return true
+	}
+}
+
+func scaleWriteRequestTimestamps(wr *prompb.WriteRequest, multiplier, divisor int64) {
+	for i := range wr.Timeseries {
+		samples := wr.Timeseries[i].Samples
+		for j := range samples {
+			samples[j].Timestamp = samples[j].Timestamp * multiplier / divisor
+		}
 	}
 }
 

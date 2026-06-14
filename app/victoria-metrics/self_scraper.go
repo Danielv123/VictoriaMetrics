@@ -53,7 +53,7 @@ func selfScraper(scrapeInterval time.Duration) {
 	var labels []prompb.Label
 	t := time.NewTicker(scrapeInterval)
 	f := func(currentTime time.Time, sendStaleMarkers bool) {
-		currentTimestamp := currentTime.UnixNano() / 1e6
+		currentTimestamp := currentTime.UnixMicro()
 		bb.Reset()
 		appmetrics.WritePrometheusMetrics(&bb)
 		s := bytesutil.ToUnsafeString(bb.B)

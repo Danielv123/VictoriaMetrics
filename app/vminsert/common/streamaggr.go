@@ -260,7 +260,7 @@ func (ctx *streamAggrCtx) push(mrs []storage.MetricRow, matchIdxs []uint32) []ui
 }
 
 func pushAggregateSeries(tss []prompb.TimeSeries) {
-	currentTimestamp := int64(fasttime.UnixTimestamp()) * 1000
+	currentTimestamp := int64(fasttime.UnixTimestamp()) * 1e6
 	var ctx InsertCtx
 	ctx.Reset(len(tss))
 	ctx.skipStreamAggr = true

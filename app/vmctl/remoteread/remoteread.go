@@ -350,7 +350,7 @@ func convertSamples(samples []prompb.Sample, labels []prompb.Label) *vm.TimeSeri
 	timestamps := make([]int64, 0, n)
 	for _, sample := range samples {
 		values = append(values, sample.Value)
-		timestamps = append(timestamps, sample.Timestamp)
+		timestamps = append(timestamps, sample.Timestamp*1e3)
 	}
 	return &vm.TimeSeries{
 		Name:       nameValue,

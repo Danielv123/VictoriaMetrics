@@ -22,8 +22,8 @@ var (
 		"See https://docs.victoriametrics.com/victoriametrics/integrations/influxdb/")
 	maxRequestSize = flagutil.NewBytes("influx.maxRequestSize", 64*1024*1024, "The maximum size in bytes of a single InfluxDB request. Applicable for batch mode only. "+
 		"See https://docs.victoriametrics.com/victoriametrics/integrations/influxdb/")
-	trimTimestamp = flag.Duration("influxTrimTimestamp", time.Millisecond, "Trim timestamps for InfluxDB line protocol data to this duration. "+
-		"Minimum practical duration is 1ms. Higher duration (i.e. 1s) may be used for reducing disk space usage for timestamp data")
+	trimTimestamp = flag.Duration("influxTrimTimestamp", time.Microsecond, "Trim timestamps for InfluxDB line protocol data to this duration. "+
+		"Minimum practical duration is 1us. Higher duration (i.e. 1ms or 1s) may be used for reducing disk space usage for timestamp data")
 	forceStreamMode = flag.Bool("influx.forceStreamMode", false, "Force stream mode parsing for ingested data. "+
 		"See https://docs.victoriametrics.com/victoriametrics/integrations/influxdb/")
 )
@@ -95,17 +95,17 @@ func parseStreamMode(r io.Reader, encoding string, tsMultiplier int64, db string
 func getTimestampMultiplier(precision string) int64 {
 	switch precision {
 	case "ns":
-		return 1e6
-	case "u", "us", "µ":
 		return 1e3
-	case "ms":
+	case "u", "us", "µ":
 		return 1
-	case "s":
+	case "ms":
 		return -1e3
+	case "s":
+		return -1e6
 	case "m":
-		return -1e3 * 60
+		return -1e6 * 60
 	case "h":
-		return -1e3 * 3600
+		return -1e6 * 3600
 	default:
 		return 0
 	}
@@ -268,19 +268,19 @@ func detectTimestamp(ts, currentTs int64) int64 {
 		return currentTs
 	}
 	if ts >= 1e17 {
-		// convert nanoseconds to milliseconds
-		return ts / 1e6
-	}
-	if ts >= 1e14 {
-		// convert microseconds to milliseconds
+		// convert nanoseconds to microseconds
 		return ts / 1e3
 	}
-	if ts >= 1e11 {
-		// the ts is in milliseconds
+	if ts >= 1e14 {
+		// the ts is in microseconds
 		return ts
 	}
-	// convert seconds to milliseconds
-	return ts * 1e3
+	if ts >= 1e11 {
+		// convert milliseconds to microseconds
+		return ts * 1e3
+	}
+	// convert seconds to microseconds
+	return ts * 1e6
 }
 
 func unmarshal(rs *influx.Rows, reqBuf []byte, tsMultiplier int64, skipInvalidLines bool) error {
@@ -292,7 +292,7 @@ func unmarshal(rs *influx.Rows, reqBuf []byte, tsMultiplier int64, skipInvalidLi
 	rowsRead.Add(len(rows))
 
 	// Adjust timestamps according to uw.tsMultiplier
-	currentTs := time.Now().UnixNano() / 1e6
+	currentTs := time.Now().UnixMicro()
 	if tsMultiplier == 0 {
 		// Default precision is 'ns'. See https://docs.influxdata.com/influxdb/v1.7/write_protocols/line_protocol_tutorial/#timestamp
 		// But it can be in ns, us, ms or s depending on the number of digits in practice.
@@ -323,7 +323,7 @@ func unmarshal(rs *influx.Rows, reqBuf []byte, tsMultiplier int64, skipInvalidLi
 	}
 
 	// Trim timestamps if required.
-	if tsTrim := trimTimestamp.Milliseconds(); tsTrim > 1 {
+	if tsTrim := trimTimestamp.Microseconds(); tsTrim > 1 {
 		for i := range rows {
 			row := &rows[i]
 			row.Timestamp -= row.Timestamp % tsTrim

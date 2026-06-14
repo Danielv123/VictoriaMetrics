@@ -73,7 +73,7 @@ func parseDate(dateStr string) (int64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("cannot parse %q: %w", dateStr, err)
 	}
-	return startTime.UnixNano() / 1e6, nil
+	return startTime.UnixMicro(), nil
 }
 
 func stringify(q influx.Query) string {

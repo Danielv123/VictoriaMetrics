@@ -79,7 +79,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 				},
 			},
 			Value:     123,
-			Timestamp: 456000,
+			Timestamp: 456000000,
 		},
 	})
 
@@ -99,7 +99,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 					},
 				},
 				Value:     2.34,
-				Timestamp: 1439237080123,
+				Timestamp: 1439237080123000,
 			},
 			{
 				Metric: "bar",
@@ -114,7 +114,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 					},
 				},
 				Value:     5.6,
-				Timestamp: 1439237080123,
+				Timestamp: 1439237080123000,
 			},
 		})
 	f("2:label:symbol,3:time:custom:2006-01-02 15:04:05.999Z,4:metric:bid,5:metric:ask",
@@ -131,7 +131,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 					},
 				},
 				Value:     0.9725,
-				Timestamp: 1439164801000,
+				Timestamp: 1439164801000000,
 			},
 			{
 				Metric: "ask",
@@ -142,7 +142,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 					},
 				},
 				Value:     0.97273,
-				Timestamp: 1439164801000,
+				Timestamp: 1439164801000000,
 			},
 			{
 				Metric: "bid",
@@ -153,7 +153,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 					},
 				},
 				Value:     0.97253,
-				Timestamp: 1439164802000,
+				Timestamp: 1439164802000000,
 			},
 			{
 				Metric: "ask",
@@ -164,7 +164,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 					},
 				},
 				Value:     0.97276,
-				Timestamp: 1439164802000,
+				Timestamp: 1439164802000000,
 			},
 		})
 
@@ -232,7 +232,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 						Value: "test",
 					},
 				},
-				Timestamp: 1671983832000,
+				Timestamp: 1671983832000000,
 				Value:     10,
 			},
 			{
@@ -243,7 +243,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 						Value: "test",
 					},
 				},
-				Timestamp: 1671983832000,
+				Timestamp: 1671983832000000,
 				Value:     20,
 			},
 			{
@@ -254,7 +254,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 						Value: "test",
 					},
 				},
-				Timestamp: 1671983832000,
+				Timestamp: 1671983832000000,
 				Value:     30,
 			},
 			{
@@ -265,7 +265,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 						Value: "test",
 					},
 				},
-				Timestamp: 1671983832000,
+				Timestamp: 1671983832000000,
 				Value:     60,
 			},
 		})
@@ -281,7 +281,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 						Value: "test",
 					},
 				},
-				Timestamp: 1671983832000,
+				Timestamp: 1671983832000000,
 				Value:     10,
 			},
 			{
@@ -292,7 +292,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 						Value: "test",
 					},
 				},
-				Timestamp: 1671983832000,
+				Timestamp: 1671983832000000,
 				Value:     20,
 			},
 			{
@@ -303,7 +303,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 						Value: "test",
 					},
 				},
-				Timestamp: 1671983832000,
+				Timestamp: 1671983832000000,
 				Value:     30,
 			},
 			{
@@ -314,7 +314,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 						Value: "test",
 					},
 				},
-				Timestamp: 1671983832000,
+				Timestamp: 1671983832000000,
 				Value:     60,
 			},
 		})
@@ -349,37 +349,37 @@ func TestHeaderDetection(t *testing.T) {
 
 	// non-numeric timestamp column
 	f("1:metric:foo,2:time:unix_s", "value,timestamp\n123,456", []Row{
-		{Metric: "foo", Value: 123, Timestamp: 456000},
+		{Metric: "foo", Value: 123, Timestamp: 456000000},
 	})
 	f("1:metric:foo,2:time:unix_ms", "value,timestamp\n10,2000", []Row{
-		{Metric: "foo", Value: 10, Timestamp: 2000},
+		{Metric: "foo", Value: 10, Timestamp: 2000000},
 	})
 	f("1:metric:foo,2:time:rfc3339", "value,timestamp\n10,2024-01-01T00:00:00Z", []Row{
-		{Metric: "foo", Value: 10, Timestamp: 1704067200000},
+		{Metric: "foo", Value: 10, Timestamp: 1704067200000000},
 	})
 
 	// header with labels
 	f("1:label:host,2:metric:cpu,3:time:unix_s",
 		"host,value,timestamp\nmyhost,99.5,1000",
 		[]Row{
-			{Metric: "cpu", Tags: []Tag{{Key: "host", Value: "myhost"}}, Value: 99.5, Timestamp: 1000000},
+			{Metric: "cpu", Tags: []Tag{{Key: "host", Value: "myhost"}}, Value: 99.5, Timestamp: 1000000000},
 		})
 
 	// header with multiple data rows
 	f("1:metric:foo,2:time:unix_s",
 		"value,timestamp\n10,100\n20,200\n30,300",
 		[]Row{
-			{Metric: "foo", Value: 10, Timestamp: 100000},
-			{Metric: "foo", Value: 20, Timestamp: 200000},
-			{Metric: "foo", Value: 30, Timestamp: 300000},
+			{Metric: "foo", Value: 10, Timestamp: 100000000},
+			{Metric: "foo", Value: 20, Timestamp: 200000000},
+			{Metric: "foo", Value: 30, Timestamp: 300000000},
 		})
 
 	// header with multiple metrics per row
 	f("1:metric:bid,2:metric:ask,3:time:unix_s",
 		"bid,ask,timestamp\n1.5,1.6,1000",
 		[]Row{
-			{Metric: "bid", Value: 1.5, Timestamp: 1000000},
-			{Metric: "ask", Value: 1.6, Timestamp: 1000000},
+			{Metric: "bid", Value: 1.5, Timestamp: 1000000000},
+			{Metric: "ask", Value: 1.6, Timestamp: 1000000000},
 		})
 
 	// one non-numeric metric column is enough to detect the header
@@ -398,7 +398,7 @@ func TestHeaderDetection(t *testing.T) {
 
 	// numeric first row
 	f("1:metric:foo,2:time:unix_s", "123,456", []Row{
-		{Metric: "foo", Value: 123, Timestamp: 456000},
+		{Metric: "foo", Value: 123, Timestamp: 456000000},
 	})
 	f("1:metric:foo", "123\n456", []Row{
 		{Metric: "foo", Value: 123},
@@ -407,22 +407,22 @@ func TestHeaderDetection(t *testing.T) {
 
 	// valid rfc3339 parses as data, not header
 	f("1:metric:foo,2:time:rfc3339", "123,2024-01-01T00:00:00Z", []Row{
-		{Metric: "foo", Value: 123, Timestamp: 1704067200000},
+		{Metric: "foo", Value: 123, Timestamp: 1704067200000000},
 	})
 
 	// No header — text label columns don't trigger detection
 	f("1:label:host,2:metric:foo,3:time:unix_s",
 		"myhost,42,1000\notherhost,99,2000",
 		[]Row{
-			{Metric: "foo", Tags: []Tag{{Key: "host", Value: "myhost"}}, Value: 42, Timestamp: 1000000},
-			{Metric: "foo", Tags: []Tag{{Key: "host", Value: "otherhost"}}, Value: 99, Timestamp: 2000000},
+			{Metric: "foo", Tags: []Tag{{Key: "host", Value: "myhost"}}, Value: 42, Timestamp: 1000000000},
+			{Metric: "foo", Tags: []Tag{{Key: "host", Value: "otherhost"}}, Value: 99, Timestamp: 2000000000},
 		})
 
 	// numeric label "404" is not a false positive
 	f("1:label:status,2:metric:count,3:time:unix_s",
 		"404,100,1704067200",
 		[]Row{
-			{Metric: "count", Tags: []Tag{{Key: "status", Value: "404"}}, Value: 100, Timestamp: 1704067200000},
+			{Metric: "count", Tags: []Tag{{Key: "status", Value: "404"}}, Value: 100, Timestamp: 1704067200000000},
 		})
 
 	// empty input
@@ -449,7 +449,7 @@ func TestUnmarshalBackwardCompatibility(t *testing.T) {
 	}
 
 	f("1:metric:foo,2:time:unix_s", "123,456", []Row{
-		{Metric: "foo", Value: 123, Timestamp: 456000},
+		{Metric: "foo", Value: 123, Timestamp: 456000000},
 	})
 	f("1:metric:foo", "10\n20\n30", []Row{
 		{Metric: "foo", Value: 10},
@@ -459,8 +459,8 @@ func TestUnmarshalBackwardCompatibility(t *testing.T) {
 	f("1:label:env,2:metric:m,3:time:unix_s",
 		"prod,42,1000\nstaging,99,2000",
 		[]Row{
-			{Metric: "m", Tags: []Tag{{Key: "env", Value: "prod"}}, Value: 42, Timestamp: 1000000},
-			{Metric: "m", Tags: []Tag{{Key: "env", Value: "staging"}}, Value: 99, Timestamp: 2000000},
+			{Metric: "m", Tags: []Tag{{Key: "env", Value: "prod"}}, Value: 42, Timestamp: 1000000000},
+			{Metric: "m", Tags: []Tag{{Key: "env", Value: "staging"}}, Value: 99, Timestamp: 2000000000},
 		})
 }
 
@@ -482,9 +482,9 @@ func TestExportImportRoundTrip(t *testing.T) {
 	var rs Rows
 	rs.UnmarshalDetectHeader(exported, cds)
 	expected := []Row{
-		{Metric: "cpu", Tags: []Tag{{Key: "host", Value: "server1"}}, Value: 85.5, Timestamp: 1704067200000},
-		{Metric: "cpu", Tags: []Tag{{Key: "host", Value: "server2"}}, Value: 92.3, Timestamp: 1704067200000},
-		{Metric: "cpu", Tags: []Tag{{Key: "host", Value: "server1"}}, Value: 88.1, Timestamp: 1704067260000},
+		{Metric: "cpu", Tags: []Tag{{Key: "host", Value: "server1"}}, Value: 85.5, Timestamp: 1704067200000000},
+		{Metric: "cpu", Tags: []Tag{{Key: "host", Value: "server2"}}, Value: 92.3, Timestamp: 1704067200000000},
+		{Metric: "cpu", Tags: []Tag{{Key: "host", Value: "server1"}}, Value: 88.1, Timestamp: 1704067260000000},
 	}
 	if !reflect.DeepEqual(rs.Rows, expected) {
 		t.Fatalf("round-trip mismatch;\ngot\n%v\nwant\n%v", rs.Rows, expected)

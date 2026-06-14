@@ -47,7 +47,7 @@ func parseData(data []byte, callback func(rows []newrelic.Row) error) error {
 	for i := range rows.Rows {
 		r := &rows.Rows[i]
 		if r.Timestamp == 0 {
-			r.Timestamp = currentTimestamp * 1e3
+			r.Timestamp = currentTimestamp * 1e6
 		}
 	}
 

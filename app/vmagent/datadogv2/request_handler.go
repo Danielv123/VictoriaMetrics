@@ -78,7 +78,7 @@ func insertRows(at *auth.Token, series []datadogv2.Series, extraLabels []prompb.
 		samplesLen := len(samples)
 		for _, pt := range ss.Points {
 			samples = append(samples, prompb.Sample{
-				Timestamp: pt.Timestamp * 1000,
+				Timestamp: pt.Timestamp * 1e6,
 				Value:     pt.Value,
 			})
 		}

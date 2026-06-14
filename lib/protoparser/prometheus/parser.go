@@ -221,10 +221,13 @@ func (r *Row) unmarshal(s string, tagsPool []Tag, noEscapes bool) ([]Tag, error)
 	}
 	if ts >= -1<<31 && ts < 1<<31 {
 		// This looks like OpenMetrics timestamp in Unix seconds.
-		// Convert it to milliseconds.
+		// Convert it to microseconds.
 		//
 		// See https://github.com/OpenObservability/OpenMetrics/blob/master/specification/OpenMetrics.md#timestamps
-		ts *= 1000
+		ts *= 1e6
+	} else {
+		// Prometheus text exposition timestamps are otherwise in milliseconds.
+		ts *= 1e3
 	}
 	r.Timestamp = int64(ts)
 	return tagsPool, nil

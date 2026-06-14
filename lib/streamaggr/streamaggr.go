@@ -435,9 +435,9 @@ type aggregator struct {
 	// aggrOutputs contains aggregate states for the given outputs
 	aggrOutputs *aggrOutputs
 
-	// flushAfterMsec is the max sample lag (in milliseconds) observed in the current flush interval.
+	// flushAfterUsec is the max sample lag (in microseconds) observed in the current flush interval.
 	// It is used to properly delay the flush time while using aggregation windows.
-	flushAfterMsec atomic.Int64
+	flushAfterUsec atomic.Int64
 
 	// suffix contains a suffix, which should be added to aggregate metric names
 	//
@@ -700,12 +700,12 @@ func newAggregator(cfg *Config, path string, pushFunc PushFunc, ms *metrics.Set,
 			minTime = minTime.Add(interval)
 		}
 	}
-	a.minDeadline.Store(minTime.UnixMilli())
+	a.minDeadline.Store(minTime.UnixMicro())
 	cs := &currentState{}
 	if a.dedupInterval > 0 {
-		cs.maxDeadline = minTime.Add(a.dedupInterval).UnixMilli()
+		cs.maxDeadline = minTime.Add(a.dedupInterval).UnixMicro()
 	} else {
-		cs.maxDeadline = minTime.Add(a.interval).UnixMilli()
+		cs.maxDeadline = minTime.Add(a.interval).UnixMicro()
 	}
 	a.cs.Store(cs)
 
@@ -793,7 +793,7 @@ func newOutputConfig(ms *metrics.Set, metricLabels, output string, outputsSeen m
 }
 
 func (a *aggregator) runFlusher(pushFunc PushFunc, alignFlushToInterval, skipFlushOnShutdown bool, ignoreFirstIntervals int) {
-	minTime := time.UnixMilli(a.minDeadline.Load())
+	minTime := time.UnixMicro(a.minDeadline.Load())
 	flushTime := minTime.Add(a.interval)
 	interval := a.interval
 	if a.dedupInterval > 0 {
@@ -829,12 +829,12 @@ func (a *aggregator) runFlusher(pushFunc PushFunc, alignFlushToInterval, skipFlu
 	for tickerWait(t) {
 		pf := pushFunc
 		if a.enableWindows {
-			delay := time.Duration(a.flushAfterMsec.Swap(0)) * time.Millisecond
+			delay := time.Duration(a.flushAfterUsec.Swap(0)) * time.Microsecond
 			time.Sleep(delay)
 		}
 
 		cs := a.cs.Load().newState()
-		deadlineTime := time.UnixMilli(cs.maxDeadline)
+		deadlineTime := time.UnixMicro(cs.maxDeadline)
 		a.dedupFlush(deadlineTime, cs)
 
 		if !flushTime.After(deadlineTime) {
@@ -850,7 +850,7 @@ func (a *aggregator) runFlusher(pushFunc PushFunc, alignFlushToInterval, skipFlu
 				flushTime = flushTime.Add(a.interval)
 			}
 			if a.dedupInterval <= 0 {
-				cs.maxDeadline = flushTime.UnixMilli()
+				cs.maxDeadline = flushTime.UnixMicro()
 			}
 		}
 		if a.enableWindows {
@@ -869,7 +869,7 @@ func (a *aggregator) runFlusher(pushFunc PushFunc, alignFlushToInterval, skipFlu
 	var dedupTime time.Time
 	if alignFlushToInterval {
 		if a.dedupInterval > 0 {
-			dedupTime = time.UnixMilli(cs.maxDeadline)
+			dedupTime = time.UnixMicro(cs.maxDeadline)
 		}
 	} else {
 		flushTime = time.Now()
@@ -896,7 +896,7 @@ func (a *aggregator) dedupFlush(dedupTime time.Time, cs *currentState) {
 	startTime := time.Now()
 	deleteDeadline := dedupTime.Add(a.stalenessInterval)
 
-	a.da.flush(a.aggrOutputs.pushSamples, deleteDeadline.UnixMilli(), cs.isGreen)
+	a.da.flush(a.aggrOutputs.pushSamples, deleteDeadline.UnixMicro(), cs.isGreen)
 
 	d := time.Since(startTime)
 	a.da.flushDuration.Update(d.Seconds())
@@ -909,7 +909,7 @@ func (a *aggregator) dedupFlush(dedupTime time.Time, cs *currentState) {
 	for time.Now().After(dedupTime) {
 		dedupTime = dedupTime.Add(a.dedupInterval)
 	}
-	cs.maxDeadline = dedupTime.UnixMilli()
+	cs.maxDeadline = dedupTime.UnixMicro()
 }
 
 // flush flushes aggregator state to pushFunc.
@@ -919,7 +919,7 @@ func (a *aggregator) flush(pushFunc PushFunc, flushTime time.Time, cs *currentSt
 	startTime := time.Now()
 	ao := a.aggrOutputs
 
-	ctx := getFlushCtx(a, ao, pushFunc, flushTime.UnixMilli(), isLast)
+	ctx := getFlushCtx(a, ao, pushFunc, flushTime.UnixMicro(), isLast)
 	if a.dedupInterval <= 0 {
 		a.minDeadline.Store(cs.maxDeadline)
 		ctx.isGreen = cs.isGreen
@@ -958,9 +958,9 @@ func (a *aggregator) Push(tss []prompb.TimeSeries, matchIdxs []uint32) {
 	inputLabels := &ctx.inputLabels
 	outputLabels := &ctx.outputLabels
 	now := time.Now()
-	nowMsec := now.UnixMilli()
+	nowUsec := now.UnixMicro()
 	deleteDeadline := now.Add(a.stalenessInterval)
-	deleteDeadlineMsec := deleteDeadline.UnixMilli()
+	deleteDeadlineUsec := deleteDeadline.UnixMicro()
 
 	minDeadline := a.minDeadline.Load()
 	dropLabels := a.dropInputLabels
@@ -968,7 +968,7 @@ func (a *aggregator) Push(tss []prompb.TimeSeries, matchIdxs []uint32) {
 	enableWindows := a.enableWindows
 	cs := a.cs.Load()
 
-	var maxLagMsec int64
+	var maxLagUsec int64
 	for idx, ts := range tss {
 		if !a.match.Match(ts.Labels) {
 			continue
@@ -1011,9 +1011,9 @@ func (a *aggregator) Push(tss []prompb.TimeSeries, matchIdxs []uint32) {
 				a.ignoredOldSamples.Inc()
 				continue
 			}
-			lagMsec := nowMsec - s.Timestamp
-			if lagMsec > maxLagMsec {
-				maxLagMsec = lagMsec
+			lagUsec := nowUsec - s.Timestamp
+			if lagUsec > maxLagUsec {
+				maxLagUsec = lagUsec
 			}
 			if enableWindows && s.Timestamp <= cs.maxDeadline == cs.isGreen {
 				ctx.green = append(ctx.green, pushSample{
@@ -1030,18 +1030,18 @@ func (a *aggregator) Push(tss []prompb.TimeSeries, matchIdxs []uint32) {
 			}
 		}
 	}
-	if enableWindows && maxLagMsec > 0 {
+	if enableWindows && maxLagUsec > 0 {
 		for {
-			old := a.flushAfterMsec.Load()
-			if maxLagMsec <= old {
+			old := a.flushAfterUsec.Load()
+			if maxLagUsec <= old {
 				break
 			}
-			if a.flushAfterMsec.CompareAndSwap(old, maxLagMsec) {
+			if a.flushAfterUsec.CompareAndSwap(old, maxLagUsec) {
 				break
 			}
 		}
 	}
-	a.samplesLag.Update(float64(maxLagMsec) / 1_000)
+	a.samplesLag.Update(float64(maxLagUsec) / 1e6)
 
 	ctx.buf = buf
 
@@ -1052,12 +1052,12 @@ func (a *aggregator) Push(tss []prompb.TimeSeries, matchIdxs []uint32) {
 
 	if len(ctx.blue) > 0 {
 		a.matchedSamples.Add(len(ctx.blue))
-		pushSamples(ctx.blue, deleteDeadlineMsec, false)
+		pushSamples(ctx.blue, deleteDeadlineUsec, false)
 	}
 
 	if len(ctx.green) > 0 {
 		a.matchedSamples.Add(len(ctx.green))
-		pushSamples(ctx.green, deleteDeadlineMsec, true)
+		pushSamples(ctx.green, deleteDeadlineUsec, true)
 	}
 }
 

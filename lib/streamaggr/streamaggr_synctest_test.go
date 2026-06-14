@@ -29,13 +29,13 @@ func TestAggregatorsSuccess(t *testing.T) {
 			if err != nil {
 				t.Fatalf("cannot initialize aggregators: %s", err)
 			}
-			offsetMsecs := time.Now().UnixMilli()
+			offsetUsecs := time.Now().UnixMicro()
 			for _, metrics := range inputMetrics {
 				// Push the inputMetrics to Aggregators
-				tssInput := prometheus.MustParsePromMetrics(metrics, offsetMsecs)
+				tssInput := prometheus.MustParsePromMetrics(metrics, offsetUsecs)
 				matchIdxs = append(matchIdxs, a.Push(tssInput, nil)...)
 				time.Sleep(interval + time.Millisecond) // shift by 1ms from flush border to avoid flaky tests
-				offsetMsecs += interval.Milliseconds()
+				offsetUsecs += interval.Microseconds()
 			}
 			a.MustStop()
 		})

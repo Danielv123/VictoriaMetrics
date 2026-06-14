@@ -6,7 +6,7 @@ import (
 	"strconv"
 )
 
-// GetTimestamp extracts unix timestamp in milliseconds from `timestamp` query arg.
+// GetTimestamp extracts unix timestamp in microseconds from `timestamp` query arg.
 //
 // It returns 0 if there is no `timestamp` query arg.
 func GetTimestamp(req *http.Request) (int64, error) {

@@ -41,7 +41,7 @@ func TestDedupAggrSerial(t *testing.T) {
 		mu.Unlock()
 	}
 
-	flushTimestamp := time.Now().UnixMilli()
+	flushTimestamp := time.Now().UnixMicro()
 	da.flush(flushSamples, flushTimestamp, false)
 
 	if !reflect.DeepEqual(expectedSamplesMap, flushedSamplesMap) {

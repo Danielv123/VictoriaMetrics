@@ -182,7 +182,7 @@ func (uw *unmarshalWork) Unmarshal() {
 	rowsRead.Add(len(rows))
 
 	// Set missing timestamps
-	currentTs := time.Now().UnixNano() / 1e6
+	currentTs := time.Now().UnixMicro()
 	for i := range rows {
 		row := &rows[i]
 		if row.Timestamp == 0 {
@@ -191,7 +191,7 @@ func (uw *unmarshalWork) Unmarshal() {
 	}
 
 	// Trim timestamps if required.
-	if tsTrim := trimTimestamp.Milliseconds(); tsTrim > 1 {
+	if tsTrim := trimTimestamp.Microseconds(); tsTrim > 1 {
 		for i := range rows {
 			row := &rows[i]
 			row.Timestamp -= row.Timestamp % tsTrim

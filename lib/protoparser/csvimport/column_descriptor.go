@@ -144,10 +144,10 @@ func parseUnixTimestampSeconds(s string) (int64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("cannot parse timestamp seconds from %q: %w", s, err)
 	}
-	if n > int64(1<<63-1)/1e3 {
-		return 0, fmt.Errorf("too big unix timestamp in seconds: %d; must be smaller than %d", n, int64(1<<63-1)/1e3)
+	if n > int64(1<<63-1)/1e6 {
+		return 0, fmt.Errorf("too big unix timestamp in seconds: %d; must be smaller than %d", n, int64(1<<63-1)/1e6)
 	}
-	return n * 1e3, nil
+	return n * 1e6, nil
 }
 
 func parseUnixTimestampMilliseconds(s string) (int64, error) {
@@ -155,7 +155,7 @@ func parseUnixTimestampMilliseconds(s string) (int64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("cannot parse timestamp milliseconds from %q: %w", s, err)
 	}
-	return n, nil
+	return n * 1e3, nil
 }
 
 func parseUnixTimestampNanoseconds(s string) (int64, error) {
@@ -163,7 +163,7 @@ func parseUnixTimestampNanoseconds(s string) (int64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("cannot parse timestamp nanoseconds from %q: %w", s, err)
 	}
-	return n / 1e6, nil
+	return n / 1e3, nil
 }
 
 func parseRFC3339(s string) (int64, error) {
@@ -171,7 +171,7 @@ func parseRFC3339(s string) (int64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("cannot parse time in RFC3339 from %q: %w", s, err)
 	}
-	return t.UnixNano() / 1e6, nil
+	return t.UnixNano() / 1e3, nil
 }
 
 func newParseCustomTimeFunc(format string) func(s string) (int64, error) {
@@ -180,6 +180,6 @@ func newParseCustomTimeFunc(format string) func(s string) (int64, error) {
 		if err != nil {
 			return 0, fmt.Errorf("cannot parse time in custom format %q from %q: %w", format, s, err)
 		}
-		return t.UnixNano() / 1e6, nil
+		return t.UnixNano() / 1e3, nil
 	}
 }

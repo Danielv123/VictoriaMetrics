@@ -30,11 +30,11 @@ func InsertHandler(at *auth.Token, req *http.Request) error {
 	}
 	isVMRemoteWrite := req.Header.Get("Content-Encoding") == "zstd"
 	return stream.Parse(req.Body, isVMRemoteWrite, func(tss []prompb.TimeSeries, mms []prompb.MetricMetadata) error {
-		return insertRows(at, tss, mms, extraLabels)
+		return insertRows(at, tss, mms, extraLabels, isVMRemoteWrite)
 	})
 }
 
-func insertRows(at *auth.Token, timeseries []prompb.TimeSeries, mms []prompb.MetricMetadata, extraLabels []prompb.Label) error {
+func insertRows(at *auth.Token, timeseries []prompb.TimeSeries, mms []prompb.MetricMetadata, extraLabels []prompb.Label, isVMRemoteWrite bool) error {
 	ctx := common.GetPushCtx()
 	defer common.PutPushCtx(ctx)
 
@@ -58,9 +58,13 @@ func insertRows(at *auth.Token, timeseries []prompb.TimeSeries, mms []prompb.Met
 		samplesLen := len(samples)
 		for i := range ts.Samples {
 			sample := &ts.Samples[i]
+			timestamp := sample.Timestamp
+			if !isVMRemoteWrite {
+				timestamp *= 1e3
+			}
 			samples = append(samples, prompb.Sample{
 				Value:     sample.Value,
-				Timestamp: sample.Timestamp,
+				Timestamp: timestamp,
 			})
 		}
 		tssDst = append(tssDst, prompb.TimeSeries{

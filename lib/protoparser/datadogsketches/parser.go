@@ -164,7 +164,7 @@ func (s *Sketch) ToSummary() []*Metric {
 	maxPoints := make([]Point, 0, len(dogsketches))
 
 	for _, d := range dogsketches {
-		timestamp := d.Ts * 1000
+		timestamp := d.Ts * 1e6
 		sumPoints = append(sumPoints, Point{
 			Timestamp: timestamp,
 			Value:     d.Sum,
@@ -186,7 +186,7 @@ func (s *Sketch) ToSummary() []*Metric {
 	for i, q := range quantiles {
 		points := make([]Point, 0, len(dogsketches))
 		for _, d := range dogsketches {
-			timestamp := d.Ts * 1000
+			timestamp := d.Ts * 1e6
 			points = append(points, Point{
 				Timestamp: timestamp,
 				Value:     d.quantile(q),

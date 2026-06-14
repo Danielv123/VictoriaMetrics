@@ -27,11 +27,11 @@ func InsertHandler(req *http.Request) error {
 	}
 	isVMRemoteWrite := req.Header.Get("Content-Encoding") == "zstd"
 	return stream.Parse(req.Body, isVMRemoteWrite, func(tss []prompb.TimeSeries, mms []prompb.MetricMetadata) error {
-		return insertRows(tss, mms, extraLabels)
+		return insertRows(tss, mms, extraLabels, isVMRemoteWrite)
 	})
 }
 
-func insertRows(timeseries []prompb.TimeSeries, mms []prompb.MetricMetadata, extraLabels []prompb.Label) error {
+func insertRows(timeseries []prompb.TimeSeries, mms []prompb.MetricMetadata, extraLabels []prompb.Label, isVMRemoteWrite bool) error {
 	ctx := common.GetInsertCtx()
 	defer common.PutInsertCtx(ctx)
 
@@ -63,7 +63,11 @@ func insertRows(timeseries []prompb.TimeSeries, mms []prompb.MetricMetadata, ext
 		samples := ts.Samples
 		for i := range samples {
 			r := &samples[i]
-			metricNameRaw, err = ctx.WriteDataPointExt(metricNameRaw, ctx.Labels, r.Timestamp, r.Value)
+			timestamp := r.Timestamp
+			if !isVMRemoteWrite {
+				timestamp *= 1e3
+			}
+			metricNameRaw, err = ctx.WriteDataPointExt(metricNameRaw, ctx.Labels, timestamp, r.Value)
 			if err != nil {
 				return err
 			}

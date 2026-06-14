@@ -164,17 +164,19 @@ func (uw *unmarshalWork) Unmarshal() {
 		}
 	}
 
-	// Convert timestamps in seconds to milliseconds if needed.
+	// Convert timestamps to microseconds.
 	// See http://opentsdb.net/docs/javadoc/net/opentsdb/core/Const.html#SECOND_MASK
 	for i := range rows {
 		r := &rows[i]
 		if r.Timestamp&secondMask == 0 {
+			r.Timestamp *= 1e6
+		} else {
 			r.Timestamp *= 1e3
 		}
 	}
 
 	// Trim timestamps if required.
-	if tsTrim := trimTimestamp.Milliseconds(); tsTrim > 1000 {
+	if tsTrim := trimTimestamp.Microseconds(); tsTrim > 1e6 {
 		for i := range rows {
 			row := &rows[i]
 			row.Timestamp -= row.Timestamp % tsTrim

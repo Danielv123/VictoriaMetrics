@@ -10,10 +10,10 @@ import (
 //
 // Metrics must be delimited with newlines.
 //
-// offsetMsecs is added to every timestamp in parsed metrics.
+// offsetUsecs is added to every timestamp in parsed metrics.
 //
 // This function is for testing purposes only. Do not use it in non-test code.
-func MustParsePromMetrics(s string, offsetMsecs int64) []prompb.TimeSeries {
+func MustParsePromMetrics(s string, offsetUsecs int64) []prompb.TimeSeries {
 	var rows Rows
 	errLogger := func(s string) {
 		panic(fmt.Errorf("unexpected error when parsing Prometheus metrics: %s", s))
@@ -35,7 +35,7 @@ func MustParsePromMetrics(s string, offsetMsecs int64) []prompb.TimeSeries {
 		}
 		samples = append(samples, prompb.Sample{
 			Value:     row.Value,
-			Timestamp: row.Timestamp + offsetMsecs,
+			Timestamp: row.Timestamp + offsetUsecs,
 		})
 		ts := prompb.TimeSeries{
 			Labels:  labels,

@@ -236,7 +236,7 @@ type scrapeWork struct {
 	// It is used as a hint in order to reduce memory usage when working with the last scraped response.
 	lastScrapeLen int
 
-	// nextErrorLogTime is the timestamp in millisecond when the next scrape error should be logged.
+	// nextErrorLogTime is the timestamp in microseconds when the next scrape error should be logged.
 	nextErrorLogTime int64
 
 	// failureRequestsCount is the number of suppressed scrape errors during the last suppressScrapeErrorsDelay
@@ -321,15 +321,15 @@ func (sw *scrapeWork) run(stopCh <-chan struct{}, globalStopCh <-chan struct{}) 
 	case <-timer.C:
 		timerpool.Put(timer)
 		ticker = time.NewTicker(scrapeInterval)
-		timestamp = time.Now().UnixMilli()
+		timestamp = time.Now().UnixMicro()
 		sw.scrapeAndLogError(timestamp, timestamp)
 	}
 	defer ticker.Stop()
 	for {
-		timestamp += scrapeInterval.Milliseconds()
+		timestamp += scrapeInterval.Microseconds()
 		select {
 		case <-stopCh:
-			t := time.Now().UnixMilli()
+			t := time.Now().UnixMicro()
 			select {
 			case <-globalStopCh:
 				// Do not send staleness markers on graceful shutdown as Prometheus does.
@@ -359,8 +359,8 @@ func (sw *scrapeWork) run(stopCh <-chan struct{}, globalStopCh <-chan struct{}) 
 			}
 			return
 		case tt := <-ticker.C:
-			t := tt.UnixMilli()
-			if d := math.Abs(float64(t - timestamp)); d > 0 && d/float64(scrapeInterval.Milliseconds()) > 0.1 {
+			t := tt.UnixMicro()
+			if d := math.Abs(float64(t - timestamp)); d > 0 && d/float64(scrapeInterval.Microseconds()) > 0.1 {
 				// Too big jitter. Adjust timestamp
 				timestamp = t
 			}
@@ -388,7 +388,7 @@ func (sw *scrapeWork) scrapeAndLogError(scrapeTimestamp, realTimestamp int64) {
 	}
 	sw.failureRequestsCount++
 	if sw.nextErrorLogTime == 0 {
-		sw.nextErrorLogTime = realTimestamp + suppressScrapeErrorsDelay.Milliseconds()
+		sw.nextErrorLogTime = realTimestamp + suppressScrapeErrorsDelay.Microseconds()
 	}
 	if realTimestamp < sw.nextErrorLogTime {
 		return
@@ -398,7 +398,7 @@ func (sw *scrapeWork) scrapeAndLogError(scrapeTimestamp, realTimestamp int64) {
 		logger.Warnf("cannot scrape target %q (%s) %d out of %d times during -promscrape.suppressScrapeErrorsDelay=%s; the last error: %s",
 			sw.Config.ScrapeURL, sw.Config.Labels.String(), sw.failureRequestsCount, totalRequests, *suppressScrapeErrorsDelay, err)
 	}
-	sw.nextErrorLogTime = realTimestamp + suppressScrapeErrorsDelay.Milliseconds()
+	sw.nextErrorLogTime = realTimestamp + suppressScrapeErrorsDelay.Microseconds()
 	sw.failureRequestsCount = 0
 	sw.successRequestsCount = 0
 }
@@ -448,8 +448,8 @@ func (sw *scrapeWork) scrapeInternal(scrapeTimestamp, realTimestamp int64) error
 	isGzipped, err := sw.ReadData(cb)
 
 	// Measure scrape duration.
-	endTimestamp := time.Now().UnixMilli()
-	scrapeDurationSeconds := float64(endTimestamp-realTimestamp) / 1e3
+	endTimestamp := time.Now().UnixMicro()
+	scrapeDurationSeconds := float64(endTimestamp-realTimestamp) / 1e6
 	scrapeDuration.Update(scrapeDurationSeconds)
 
 	// The code below is CPU-bound, while it may allocate big amounts of memory.

@@ -116,7 +116,7 @@ func TestScrapeWorkScrapeInternalFailure(t *testing.T) {
 		pushDataCalls++
 	}
 
-	timestamp := int64(123000)
+	timestamp := int64(123000000)
 	tsmGlobal.Register(&sw)
 	if err := sw.scrapeInternal(timestamp, timestamp); err == nil {
 		t.Fatalf("expecting non-nil error")
@@ -201,7 +201,7 @@ func testScrapeWorkScrapeInternalSuccess(t *testing.T, streamParse bool) {
 			defer protoparserutil.StopUnmarshalWorkers()
 		}
 
-		timestamp := int64(123000)
+		timestamp := int64(123000000)
 		tsmGlobal.Register(&sw)
 		if err := sw.scrapeInternal(timestamp, timestamp); err != nil {
 			if !strings.Contains(err.Error(), "sample_limit") && !strings.Contains(err.Error(), "label_limit") {
@@ -634,7 +634,7 @@ func TestScrapeWorkScrapeInternalStreamConcurrency(t *testing.T) {
 		protoparserutil.StartUnmarshalWorkers()
 		defer protoparserutil.StopUnmarshalWorkers()
 
-		timestamp := int64(123000)
+		timestamp := int64(123000000)
 		tsmGlobal.Register(&sw)
 		if err := sw.scrapeInternal(timestamp, timestamp); err != nil {
 			if !strings.Contains(err.Error(), "sample_limit") {
@@ -721,7 +721,7 @@ func TestScrapeWorkScrapeInternalWithMaxScrapeSize(t *testing.T) {
 
 	var sw scrapeWork
 	sw.PushData = func(_ *auth.Token, wr *prompb.WriteRequest) {}
-	timestamp := int64(123000)
+	timestamp := int64(123000000)
 	sw.Config = &ScrapeWork{}
 	tsmGlobal.Register(&sw)
 

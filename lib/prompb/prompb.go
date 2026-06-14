@@ -35,7 +35,8 @@ type Sample struct {
 	// Value is sample value.
 	Value float64
 
-	// Timestamp is unix timestamp for the sample in milliseconds.
+	// Timestamp is unix timestamp for the sample in microseconds inside VictoriaMetrics.
+	// Prometheus remote write boundaries convert this field to/from milliseconds.
 	Timestamp int64
 }
 

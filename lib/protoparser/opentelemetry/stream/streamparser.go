@@ -156,7 +156,7 @@ func (wctx *writeRequestContext) PushSample(mm *pb.MetricMetadata, suffix string
 		value = decimal.StaleNaN
 	}
 
-	timestamp := int64(timestampNsecs / 1e6)
+	timestamp := int64(timestampNsecs / 1e3)
 
 	wctx.samplesBuf = append(wctx.samplesBuf, prompb.Sample{
 		Value:     value,

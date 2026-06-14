@@ -171,13 +171,13 @@ func (uw *unmarshalWork) Unmarshal() {
 		}
 	}
 
-	// Convert timestamps from seconds to milliseconds.
+	// Convert timestamps from seconds to microseconds.
 	for i := range rows {
-		rows[i].Timestamp *= 1e3
+		rows[i].Timestamp *= 1e6
 	}
 
 	// Trim timestamps if required.
-	if tsTrim := trimTimestamp.Milliseconds(); tsTrim > 1000 {
+	if tsTrim := trimTimestamp.Microseconds(); tsTrim > 1e6 {
 		for i := range rows {
 			row := &rows[i]
 			row.Timestamp -= row.Timestamp % tsTrim

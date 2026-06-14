@@ -115,7 +115,7 @@ func (r *Row) unmarshal(o *fastjson.Value) error {
 	// ns - Number of nanoseconds to be added to clock to get a precise value collection time.
 	//
 	// See https://www.zabbix.com/documentation/current/en/manual/appendix/protocols/real_time_export#item-values
-	r.Timestamp = cl*1e3 + ns/1e6
+	r.Timestamp = cl*1e6 + ns/1e3
 
 	groupValue := bytesutil.ToUnsafeBytes(*addGroupsValue)
 	if len(groupValue) != 0 {

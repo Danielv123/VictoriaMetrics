@@ -72,7 +72,7 @@ func insertRows(series []datadogv2.Series, extraLabels []prompb.Label) error {
 		var metricNameRaw []byte
 		var err error
 		for _, pt := range ss.Points {
-			timestamp := pt.Timestamp * 1000
+			timestamp := pt.Timestamp * 1e6
 			value := pt.Value
 			metricNameRaw, err = ctx.WriteDataPointExt(metricNameRaw, ctx.Labels, timestamp, value)
 			if err != nil {

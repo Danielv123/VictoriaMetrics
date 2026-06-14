@@ -118,8 +118,8 @@ func TestParseUnixTimestampSeconds(t *testing.T) {
 		}
 	}
 	f("0", 0)
-	f("123", 123000)
-	f("-123", -123000)
+	f("123", 123000000)
+	f("-123", -123000000)
 }
 
 func TestParseUnixTimestampMilliseconds(t *testing.T) {
@@ -134,8 +134,8 @@ func TestParseUnixTimestampMilliseconds(t *testing.T) {
 		}
 	}
 	f("0", 0)
-	f("123", 123)
-	f("-123", -123)
+	f("123", 123000)
+	f("-123", -123000)
 }
 
 func TestParseUnixTimestampNanoseconds(t *testing.T) {
@@ -151,8 +151,8 @@ func TestParseUnixTimestampNanoseconds(t *testing.T) {
 	}
 	f("0", 0)
 	f("123", 0)
-	f("12343567", 12)
-	f("-12343567", -12)
+	f("12343567", 12343)
+	f("-12343567", -12343)
 }
 
 func TestParseRFC3339(t *testing.T) {
@@ -166,8 +166,8 @@ func TestParseRFC3339(t *testing.T) {
 			t.Fatalf("unexpected ts when parsing %q; got %d; want %d", s, ts, tsExpected)
 		}
 	}
-	f("2006-01-02T15:04:05Z", 1136214245000)
-	f("2020-03-11T18:23:46Z", 1583951026000)
+	f("2006-01-02T15:04:05Z", 1136214245000000)
+	f("2020-03-11T18:23:46Z", 1583951026000000)
 }
 
 func TestParseCustomTimeFunc(t *testing.T) {
@@ -182,8 +182,8 @@ func TestParseCustomTimeFunc(t *testing.T) {
 			t.Fatalf("unexpected ts when parsing %q; got %d; want %d", s, ts, tsExpected)
 		}
 	}
-	f(time.RFC1123, "Mon, 29 Oct 2018 07:50:37 GMT", 1540799437000)
-	f("2006-01-02 15:04:05.999Z", "2015-08-10 20:04:40.123Z", 1439237080123)
+	f(time.RFC1123, "Mon, 29 Oct 2018 07:50:37 GMT", 1540799437000000)
+	f("2006-01-02 15:04:05.999Z", "2015-08-10 20:04:40.123Z", 1439237080123000)
 }
 
 func equalColumnDescriptors(a, b []ColumnDescriptor) bool {

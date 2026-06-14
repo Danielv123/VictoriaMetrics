@@ -236,7 +236,7 @@ func (rr *RecordingRule) exec(ctx context.Context, ts time.Time, limit int) ([]p
 		tss = append(tss, prompb.TimeSeries{
 			Labels: stringToLabels(k),
 			Samples: []prompb.Sample{
-				{Value: decimal.StaleNaN, Timestamp: ts.UnixNano() / 1e6},
+				{Value: decimal.StaleNaN, Timestamp: ts.UnixMicro()},
 			},
 		})
 	}

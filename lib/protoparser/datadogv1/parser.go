@@ -87,9 +87,9 @@ func (s *Series) reset() {
 // Point represents a point from DataDog POST request to /api/v1/series
 type Point [2]float64
 
-// Timestamp returns timestamp in milliseconds from the given pt.
+// Timestamp returns timestamp in microseconds from the given pt.
 func (pt *Point) Timestamp() int64 {
-	return int64(pt[0] * 1000)
+	return int64(pt[0] * 1e6)
 }
 
 // Value returns value from the given pt.

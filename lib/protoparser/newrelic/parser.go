@@ -167,7 +167,10 @@ func (r *Row) unmarshal(o *fastjson.Object) (err error) {
 					return
 				}
 				if ts < (1 << 32) {
-					// The timestamp is in seconds. Convert it to milliseconds.
+					// The timestamp is in seconds. Convert it to microseconds.
+					ts *= 1e6
+				} else {
+					// The timestamp is in milliseconds. Convert it to microseconds.
 					ts *= 1e3
 				}
 				r.Timestamp = int64(ts)

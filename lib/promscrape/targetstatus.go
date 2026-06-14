@@ -278,7 +278,7 @@ func (tsm *targetStatusMap) WriteActiveTargetsJSON(w io.Writer, scrapePoolFilter
 			errMsg = ts.err.Error()
 		}
 		fmt.Fprintf(w, `,"lastError":%s`, stringsutil.JSONString(errMsg))
-		fmt.Fprintf(w, `,"lastScrape":"%s"`, time.Unix(ts.scrapeTime/1000, (ts.scrapeTime%1000)*1e6).Format(time.RFC3339Nano))
+		fmt.Fprintf(w, `,"lastScrape":"%s"`, time.Unix(ts.scrapeTime/1e6, (ts.scrapeTime%1e6)*1e3).Format(time.RFC3339Nano))
 		fmt.Fprintf(w, `,"lastScrapeDuration":%g`, (time.Millisecond * time.Duration(ts.scrapeDuration)).Seconds())
 		fmt.Fprintf(w, `,"lastSamplesScraped":%d`, ts.samplesScraped)
 		state := "up"
@@ -319,7 +319,7 @@ func (ts *targetStatus) getDurationFromLastScrape() string {
 	if ts.scrapeTime <= 0 {
 		return "never scraped"
 	}
-	d := time.Since(time.Unix(ts.scrapeTime/1000, (ts.scrapeTime%1000)*1e6))
+	d := time.Since(time.Unix(ts.scrapeTime/1e6, (ts.scrapeTime%1e6)*1e3))
 	return fmt.Sprintf("%.3fs ago", d.Seconds())
 }
 

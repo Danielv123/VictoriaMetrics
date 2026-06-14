@@ -141,7 +141,7 @@ func (av *rateAggrValue) flush(c aggrConfig, ctx *flushCtx, key string, isLast b
 		}
 		state = sv.getState(av.isGreen)
 		if state.timestamp > 0 {
-			d := float64(state.timestamp-sv.prevTimestamp) / 1000
+			d := float64(state.timestamp-sv.prevTimestamp) / 1e6
 			if d > 0 {
 				rate += state.increase / d
 				countSeries++

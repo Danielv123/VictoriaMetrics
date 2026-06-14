@@ -87,8 +87,8 @@ func newBenchSeries(seriesCount int) []prompb.TimeSeries {
 		a = append(a, s)
 	}
 	metrics := strings.Join(a, "\n")
-	offsetMsecs := time.Now().UnixMilli()
-	return prometheus.MustParsePromMetrics(metrics, offsetMsecs)
+	offsetUsecs := time.Now().UnixMicro()
+	return prometheus.MustParsePromMetrics(metrics, offsetUsecs)
 }
 
 const seriesCount = 10_000

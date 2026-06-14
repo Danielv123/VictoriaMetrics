@@ -18,7 +18,7 @@ func TestDeduplicator(t *testing.T) {
 		tssResultLock.Unlock()
 	}
 
-	offsetMsecs := time.Now().Add(time.Minute).UnixMilli()
+	offsetUsecs := time.Now().Add(time.Minute).UnixMicro()
 	tss := prometheus.MustParsePromMetrics(`
 foo{instance="x",job="aaa",pod="sdfd-dfdfdfs",node="aosijjewrerfd",namespace="asdff",container="ohohffd"} 123
 bar{instance="x",job="aaa",pod="sdfd-dfdfdfs",node="aosijjewrerfd",namespace="asdff",container="ohohffd"} 34.54
@@ -29,7 +29,7 @@ x 433 1
 asfjkldsf{instance="x",job="aaa",pod="sdfd-dfdfdfs",node="aosijjewrerfd",namespace="asdff",container="ohohffd"} 12322
 foo{instance="x",job="aaa",pod="sdfd-dfdfdfs",node="aosijjewrerfd",namespace="asdff",container="ohohffd"} 894
 baz_aaa_aaa_fdd{instance="x",job="aaa",pod="sdfd-dfdfdfs",node="aosijjewrerfd",namespace="asdff",container="ohohffd"} -2.3
-`, offsetMsecs)
+`, offsetUsecs)
 
 	dedupInterval := time.Hour
 	d := NewDeduplicator(pushFunc, true, dedupInterval, []string{"node", "instance"}, "global")

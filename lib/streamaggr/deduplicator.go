@@ -28,8 +28,8 @@ type Deduplicator struct {
 	stopCh chan struct{}
 
 	ms *metrics.Set
-	// flushAfterMsec is the max sample lag (in milliseconds) observed in the current flush interval.
-	flushAfterMsec atomic.Int64
+	// flushAfterUsec is the max sample lag (in microseconds) observed in the current flush interval.
+	flushAfterUsec atomic.Int64
 }
 
 // NewDeduplicator returns new deduplicator, which deduplicates samples per each time series.
@@ -53,11 +53,11 @@ func NewDeduplicator(pushFunc PushFunc, enableWindows bool, interval time.Durati
 	}
 	startTime := time.Now()
 	cs := &currentState{
-		maxDeadline: startTime.Add(interval).UnixMilli(),
+		maxDeadline: startTime.Add(interval).UnixMicro(),
 	}
 	d.cs.Store(cs)
 	if enableWindows {
-		d.minDeadline.Store(startTime.UnixMilli())
+		d.minDeadline.Store(startTime.UnixMicro())
 	}
 	d.cs.Store(cs)
 
@@ -99,9 +99,9 @@ func (d *Deduplicator) Push(tss []prompb.TimeSeries) {
 	labels := &ctx.labels
 	buf := ctx.buf
 	cs := d.cs.Load()
-	nowMsec := time.Now().UnixMilli()
+	nowUsec := time.Now().UnixMicro()
 	minDeadline := d.minDeadline.Load()
-	var maxLagMsec int64
+	var maxLagUsec int64
 
 	dropLabels := d.dropLabels
 	for _, ts := range tss {
@@ -134,20 +134,20 @@ func (d *Deduplicator) Push(tss []prompb.TimeSeries) {
 					timestamp: s.Timestamp,
 				})
 			}
-			lagMsec := nowMsec - s.Timestamp
-			if lagMsec > maxLagMsec {
-				maxLagMsec = lagMsec
+			lagUsec := nowUsec - s.Timestamp
+			if lagUsec > maxLagUsec {
+				maxLagUsec = lagUsec
 			}
 		}
 	}
 
-	if d.enableWindows && maxLagMsec > 0 {
+	if d.enableWindows && maxLagUsec > 0 {
 		for {
-			old := d.flushAfterMsec.Load()
-			if maxLagMsec <= old {
+			old := d.flushAfterUsec.Load()
+			if maxLagUsec <= old {
 				break
 			}
-			if d.flushAfterMsec.CompareAndSwap(old, maxLagMsec) {
+			if d.flushAfterUsec.CompareAndSwap(old, maxLagUsec) {
 				break
 			}
 		}
@@ -182,7 +182,7 @@ func (d *Deduplicator) runFlusher(pushFunc PushFunc) {
 			return
 		case <-t.C:
 			if d.enableWindows {
-				delay := time.Duration(d.flushAfterMsec.Swap(0)) * time.Millisecond
+				delay := time.Duration(d.flushAfterUsec.Swap(0)) * time.Microsecond
 				time.Sleep(delay)
 			}
 			d.flush(pushFunc)
@@ -194,7 +194,7 @@ func (d *Deduplicator) flush(pushFunc PushFunc) {
 	cs := d.cs.Load().newState()
 	d.minDeadline.Store(cs.maxDeadline)
 	startTime := time.Now()
-	deadlineTime := time.UnixMilli(cs.maxDeadline)
+	deadlineTime := time.UnixMicro(cs.maxDeadline)
 	d.da.flush(func(samples []pushSample, _ int64, _ bool) {
 		ctx := getDeduplicatorFlushCtx()
 
@@ -235,7 +235,7 @@ func (d *Deduplicator) flush(pushFunc PushFunc) {
 	for time.Now().After(deadlineTime) {
 		deadlineTime = deadlineTime.Add(d.interval)
 	}
-	cs.maxDeadline = deadlineTime.UnixMilli()
+	cs.maxDeadline = deadlineTime.UnixMicro()
 	if d.enableWindows {
 		cs.isGreen = !cs.isGreen
 	}

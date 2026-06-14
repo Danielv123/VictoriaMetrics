@@ -298,14 +298,14 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 		Rows: []Row{{
 			Metric:    "foobar",
 			Value:     123.456,
-			Timestamp: 789000,
+			Timestamp: 789000000,
 		}},
 	})
 	f("foobar{} 123.456 789.4354\n", &Rows{
 		Rows: []Row{{
 			Metric:    "foobar",
 			Value:     123.456,
-			Timestamp: 789435,
+			Timestamp: 789435400,
 		}},
 	})
 	f(`#                                    _                                            _
@@ -344,7 +344,7 @@ cassandra_token_ownership_ratio 78.9`, &Rows{
 				Value: "#1 az",
 			}},
 			Value:     24,
-			Timestamp: 456000,
+			Timestamp: 456000000,
 		}},
 	})
 
@@ -357,7 +357,7 @@ cassandra_token_ownership_ratio 78.9`, &Rows{
 				Value: "#1 az",
 			}},
 			Value:     24,
-			Timestamp: 456000,
+			Timestamp: 456000000,
 		}},
 	})
 
@@ -401,7 +401,7 @@ cassandra_token_ownership_ratio 78.9`, &Rows{
 			{
 				Metric:    "abc",
 				Value:     123,
-				Timestamp: 456000,
+				Timestamp: 456000000,
 			},
 			{
 				Metric: "foo",
@@ -456,7 +456,7 @@ cassandra_token_ownership_ratio 78.9`, &Rows{
 		Rows: []Row{{
 			Metric:    "aaa",
 			Value:     1123,
-			Timestamp: 429496729600,
+			Timestamp: 429496729600000,
 		}},
 	})
 
@@ -465,7 +465,7 @@ cassandra_token_ownership_ratio 78.9`, &Rows{
 		Rows: []Row{{
 			Metric:    "aaa",
 			Value:     1123,
-			Timestamp: 42949567,
+			Timestamp: 42949567000,
 		}},
 	})
 
@@ -478,7 +478,7 @@ cassandra_token_ownership_ratio 78.9`, &Rows{
 				Value: "baz",
 			}},
 			Value:     1,
-			Timestamp: 2000,
+			Timestamp: 2000000,
 		}},
 	})
 	// UTF8 Quoted tags
@@ -490,7 +490,7 @@ cassandra_token_ownership_ratio 78.9`, &Rows{
 				Value: "baz",
 			}},
 			Value:     1,
-			Timestamp: 2000,
+			Timestamp: 2000000,
 		}},
 	})
 	f(`{"foo", "bar"="baz"} 1 2`, &Rows{
@@ -501,7 +501,7 @@ cassandra_token_ownership_ratio 78.9`, &Rows{
 				Value: "baz",
 			}},
 			Value:     1,
-			Timestamp: 2000,
+			Timestamp: 2000000,
 		}},
 	})
 	f(`{"foo", "bar"="baf\"y"} 1 2`, &Rows{
@@ -512,7 +512,7 @@ cassandra_token_ownership_ratio 78.9`, &Rows{
 				Value: `baf"y`,
 			}},
 			Value:     1,
-			Timestamp: 2000,
+			Timestamp: 2000000,
 		}},
 	})
 	f(`{bar="baz", "foo"} 1 2`, &Rows{
@@ -523,14 +523,14 @@ cassandra_token_ownership_ratio 78.9`, &Rows{
 				Value: "baz",
 			}},
 			Value:     1,
-			Timestamp: 2000,
+			Timestamp: 2000000,
 		}},
 	})
 	f(`{"foo"} 1 2`, &Rows{
 		Rows: []Row{{
 			Metric:    "foo",
 			Value:     1,
-			Timestamp: 2000,
+			Timestamp: 2000000,
 		}},
 	})
 	// Special character quoted UTF8 tests
@@ -538,7 +538,7 @@ cassandra_token_ownership_ratio 78.9`, &Rows{
 		Rows: []Row{{
 			Metric:    "温度{房间",
 			Value:     1,
-			Timestamp: 2000,
+			Timestamp: 2000000,
 		}},
 	})
 	f(`{"foo", "温度{房间=\"水电费"="baz"} 1 2`, &Rows{
@@ -549,7 +549,7 @@ cassandra_token_ownership_ratio 78.9`, &Rows{
 				Value: "baz",
 			}},
 			Value:     1,
-			Timestamp: 2000,
+			Timestamp: 2000000,
 		}},
 	})
 	f(`foo{bar="b\"a\\z"} -1.2`, &Rows{
@@ -581,7 +581,7 @@ cassandra_token_ownership_ratio 78.9`, &Rows{
 				},
 			},
 			Value:     1,
-			Timestamp: 2000,
+			Timestamp: 2000000,
 		}},
 	})
 
@@ -595,7 +595,7 @@ cassandra_token_ownership_ratio 78.9`, &Rows{
 				Value: "baz",
 			}},
 			Value:     1,
-			Timestamp: 2000,
+			Timestamp: 2000000,
 		}},
 	})
 
@@ -605,7 +605,7 @@ cassandra_token_ownership_ratio 78.9`, &Rows{
 			{
 				Metric:    "foo",
 				Value:     0.3,
-				Timestamp: 2000,
+				Timestamp: 2000000,
 			},
 			{
 				Metric: "aaa",
@@ -614,7 +614,7 @@ cassandra_token_ownership_ratio 78.9`, &Rows{
 			{
 				Metric:    "bar.baz",
 				Value:     0.34,
-				Timestamp: 43000,
+				Timestamp: 43000000,
 			},
 		},
 	})
@@ -625,12 +625,12 @@ cassandra_token_ownership_ratio 78.9`, &Rows{
 			{
 				Metric:    "foo",
 				Value:     0.3,
-				Timestamp: 2000,
+				Timestamp: 2000000,
 			},
 			{
 				Metric:    "bar.baz",
 				Value:     0.34,
-				Timestamp: 43000,
+				Timestamp: 43000000,
 			},
 		},
 	})
@@ -842,14 +842,14 @@ func TestUnmarshalWithMetadata(t *testing.T) {
 		Rows: []Row{{
 			Metric:    "foobar",
 			Value:     123.456,
-			Timestamp: 789000,
+			Timestamp: 789000000,
 		}},
 	}, &MetadataRows{})
 	f("foobar{} 123.456 789.4354\n", &Rows{
 		Rows: []Row{{
 			Metric:    "foobar",
 			Value:     123.456,
-			Timestamp: 789435,
+			Timestamp: 789435400,
 		}},
 	}, &MetadataRows{})
 	f(`#                                    _                                            _
@@ -898,7 +898,7 @@ cassandra_token_ownership_ratio 78.9
 				Value: "#1 az",
 			}},
 			Value:     24,
-			Timestamp: 456000,
+			Timestamp: 456000000,
 		}},
 	}, &MetadataRows{})
 
@@ -911,7 +911,7 @@ cassandra_token_ownership_ratio 78.9
 				Value: "#1 az",
 			}},
 			Value:     24,
-			Timestamp: 456000,
+			Timestamp: 456000000,
 		}},
 	}, &MetadataRows{})
 
@@ -955,7 +955,7 @@ cassandra_token_ownership_ratio 78.9
 			{
 				Metric:    "abc",
 				Value:     123,
-				Timestamp: 456000,
+				Timestamp: 456000000,
 			},
 			{
 				Metric: "foo",
@@ -1010,7 +1010,7 @@ cassandra_token_ownership_ratio 78.9
 		Rows: []Row{{
 			Metric:    "aaa",
 			Value:     1123,
-			Timestamp: 429496729600,
+			Timestamp: 429496729600000,
 		}},
 	}, &MetadataRows{})
 
@@ -1019,7 +1019,7 @@ cassandra_token_ownership_ratio 78.9
 		Rows: []Row{{
 			Metric:    "aaa",
 			Value:     1123,
-			Timestamp: 42949567,
+			Timestamp: 42949567000,
 		}},
 	}, &MetadataRows{})
 
@@ -1032,7 +1032,7 @@ cassandra_token_ownership_ratio 78.9
 				Value: "baz",
 			}},
 			Value:     1,
-			Timestamp: 2000,
+			Timestamp: 2000000,
 		}},
 	}, &MetadataRows{})
 	// UTF8 Quoted tags
@@ -1044,7 +1044,7 @@ cassandra_token_ownership_ratio 78.9
 				Value: "baz",
 			}},
 			Value:     1,
-			Timestamp: 2000,
+			Timestamp: 2000000,
 		}},
 	}, &MetadataRows{})
 	f(`{"foo", "bar"="baz"} 1 2`, &Rows{
@@ -1055,7 +1055,7 @@ cassandra_token_ownership_ratio 78.9
 				Value: "baz",
 			}},
 			Value:     1,
-			Timestamp: 2000,
+			Timestamp: 2000000,
 		}},
 	}, &MetadataRows{})
 	f(`{"foo", "bar"="baf\"y"} 1 2`, &Rows{
@@ -1066,7 +1066,7 @@ cassandra_token_ownership_ratio 78.9
 				Value: `baf"y`,
 			}},
 			Value:     1,
-			Timestamp: 2000,
+			Timestamp: 2000000,
 		}},
 	}, &MetadataRows{})
 	f(`{bar="baz", "foo"} 1 2`, &Rows{
@@ -1077,14 +1077,14 @@ cassandra_token_ownership_ratio 78.9
 				Value: "baz",
 			}},
 			Value:     1,
-			Timestamp: 2000,
+			Timestamp: 2000000,
 		}},
 	}, &MetadataRows{})
 	f(`{"foo"} 1 2`, &Rows{
 		Rows: []Row{{
 			Metric:    "foo",
 			Value:     1,
-			Timestamp: 2000,
+			Timestamp: 2000000,
 		}},
 	}, &MetadataRows{})
 	// Special character quoted UTF8 tests
@@ -1092,7 +1092,7 @@ cassandra_token_ownership_ratio 78.9
 		Rows: []Row{{
 			Metric:    "温度{房间",
 			Value:     1,
-			Timestamp: 2000,
+			Timestamp: 2000000,
 		}},
 	}, &MetadataRows{})
 	f(`{"foo", "温度{房间=\"水电费"="baz"} 1 2`, &Rows{
@@ -1103,7 +1103,7 @@ cassandra_token_ownership_ratio 78.9
 				Value: "baz",
 			}},
 			Value:     1,
-			Timestamp: 2000,
+			Timestamp: 2000000,
 		}},
 	}, &MetadataRows{})
 	f(`foo{bar="b\"a\\z"} -1.2`, &Rows{
@@ -1135,7 +1135,7 @@ cassandra_token_ownership_ratio 78.9
 				},
 			},
 			Value:     1,
-			Timestamp: 2000,
+			Timestamp: 2000000,
 		}},
 	}, &MetadataRows{})
 
@@ -1149,7 +1149,7 @@ cassandra_token_ownership_ratio 78.9
 				Value: "baz",
 			}},
 			Value:     1,
-			Timestamp: 2000,
+			Timestamp: 2000000,
 		}},
 	}, &MetadataRows{})
 
@@ -1159,7 +1159,7 @@ cassandra_token_ownership_ratio 78.9
 			{
 				Metric:    "foo",
 				Value:     0.3,
-				Timestamp: 2000,
+				Timestamp: 2000000,
 			},
 			{
 				Metric: "aaa",
@@ -1168,7 +1168,7 @@ cassandra_token_ownership_ratio 78.9
 			{
 				Metric:    "bar.baz",
 				Value:     0.34,
-				Timestamp: 43000,
+				Timestamp: 43000000,
 			},
 		},
 	}, &MetadataRows{})
@@ -1179,12 +1179,12 @@ cassandra_token_ownership_ratio 78.9
 			{
 				Metric:    "foo",
 				Value:     0.3,
-				Timestamp: 2000,
+				Timestamp: 2000000,
 			},
 			{
 				Metric:    "bar.baz",
 				Value:     0.34,
-				Timestamp: 43000,
+				Timestamp: 43000000,
 			},
 		},
 	}, &MetadataRows{})
