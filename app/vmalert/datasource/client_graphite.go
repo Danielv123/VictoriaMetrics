@@ -24,7 +24,7 @@ func (r graphiteResponse) metrics() []Metric {
 		// add only last value to the result.
 		last := res.DataPoints[len(res.DataPoints)-1]
 		m.Values = append(m.Values, last[0])
-		m.Timestamps = append(m.Timestamps, int64(last[1]))
+		m.Timestamps = append(m.Timestamps, int64(last[1]*1e6))
 		for k, v := range res.Tags {
 			m.AddLabel(k, v)
 		}

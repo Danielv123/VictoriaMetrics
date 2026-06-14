@@ -99,5 +99,5 @@ func durationToTime(pd *promutil.Duration) time.Time {
 	if pd == nil {
 		return time.Time{}
 	}
-	return time.UnixMilli(pd.Duration().Milliseconds())
+	return time.UnixMicro(pd.Duration().Microseconds())
 }

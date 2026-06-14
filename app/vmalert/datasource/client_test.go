@@ -152,12 +152,12 @@ func TestVMInstantQuery(t *testing.T) {
 	expected := []Metric{
 		{
 			Labels:     []prompb.Label{{Value: "vm_rows", Name: "__name__"}, {Value: "bar", Name: "foo"}},
-			Timestamps: []int64{1583786142},
+			Timestamps: []int64{1583786142000000},
 			Values:     []float64{13763},
 		},
 		{
 			Labels:     []prompb.Label{{Value: "vm_requests", Name: "__name__"}, {Value: "baz", Name: "foo"}},
-			Timestamps: []int64{1583786140},
+			Timestamps: []int64{1583786140000000},
 			Values:     []float64{2000},
 		},
 	}
@@ -175,7 +175,7 @@ func TestVMInstantQuery(t *testing.T) {
 	}
 	expected = []Metric{
 		{
-			Timestamps: []int64{1583786142},
+			Timestamps: []int64{1583786142000000},
 			Values:     []float64{1},
 		},
 	}
@@ -197,7 +197,7 @@ func TestVMInstantQuery(t *testing.T) {
 	}
 	expected = []Metric{
 		{
-			Timestamps: []int64{1583786142},
+			Timestamps: []int64{1583786142000000},
 			Values:     []float64{1},
 		},
 	}
@@ -230,7 +230,7 @@ func TestVMInstantQuery(t *testing.T) {
 	exp := []Metric{
 		{
 			Labels:     []prompb.Label{{Value: "constantLine(10)", Name: "name"}},
-			Timestamps: []int64{1611758403},
+			Timestamps: []int64{1611758403000000},
 			Values:     []float64{10},
 		},
 	}
@@ -252,12 +252,12 @@ func TestVMInstantQuery(t *testing.T) {
 	expected = []Metric{
 		{
 			Labels:     []prompb.Label{{Value: "total", Name: "stats_result"}, {Value: "bar", Name: "foo"}},
-			Timestamps: []int64{1583786142},
+			Timestamps: []int64{1583786142000000},
 			Values:     []float64{13763},
 		},
 		{
 			Labels:     []prompb.Label{{Value: "total", Name: "stats_result"}, {Value: "baz", Name: "foo"}},
-			Timestamps: []int64{1583786140},
+			Timestamps: []int64{1583786140000000},
 			Values:     []float64{2000},
 		},
 	}
@@ -319,7 +319,7 @@ func TestVMInstantQueryWithRetry(t *testing.T) {
 		}
 		expected := []Metric{
 			{
-				Timestamps: []int64{1583786142},
+				Timestamps: []int64{1583786142000000},
 				Values:     []float64{v},
 			},
 		}
@@ -462,7 +462,7 @@ func TestVMRangeQuery(t *testing.T) {
 	}
 	expected := Metric{
 		Labels:     []prompb.Label{{Value: "vm_rows", Name: "__name__"}},
-		Timestamps: []int64{1583786142},
+		Timestamps: []int64{1583786142000000},
 		Values:     []float64{13763},
 	}
 	if !reflect.DeepEqual(m[0], expected) {
@@ -496,7 +496,7 @@ func TestVMRangeQuery(t *testing.T) {
 	}
 	expected = Metric{
 		Labels:     []prompb.Label{{Value: "total", Name: "stats_result"}},
-		Timestamps: []int64{1583786142},
+		Timestamps: []int64{1583786142000000},
 		Values:     []float64{10},
 	}
 	if !reflect.DeepEqual(m[0], expected) {

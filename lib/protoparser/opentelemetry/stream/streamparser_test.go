@@ -760,7 +760,9 @@ func generateOTLPSamples(srcs []*pb.Metric) *pb.ResourceMetrics {
 func newTimeSeries(metricName string, t int64, v float64, extraLabels ...prompb.Label) prompb.TimeSeries {
 	if t <= 0 {
 		// Set the current timestamp if t isn't set.
-		t = int64(fasttime.UnixTimestamp()) * 1000
+		t = int64(fasttime.UnixTimestamp()) * 1000 * 1000
+	} else {
+		t *= 1000
 	}
 	ts := prompb.TimeSeries{
 		Labels: []prompb.Label{

@@ -24,7 +24,7 @@ func TestPromInstant_UnmarshalPositive(t *testing.T) {
 	f(`[{"metric":{"__name__":"up"},"value":[1583780000,"42"]}]`, []Metric{
 		{
 			Labels:     []prompb.Label{{Name: "__name__", Value: "up"}},
-			Timestamps: []int64{1583780000},
+			Timestamps: []int64{1583780000000000},
 			Values:     []float64{42},
 		},
 	})
@@ -34,17 +34,17 @@ func TestPromInstant_UnmarshalPositive(t *testing.T) {
 {"metric":{"__name__":"baz", "instance":"bar"},"value":[1583780002,"8"]}]`, []Metric{
 		{
 			Labels:     []prompb.Label{{Name: "__name__", Value: "up"}},
-			Timestamps: []int64{1583780000},
+			Timestamps: []int64{1583780000000000},
 			Values:     []float64{42},
 		},
 		{
 			Labels:     []prompb.Label{{Name: "__name__", Value: "foo"}},
-			Timestamps: []int64{1583780001},
+			Timestamps: []int64{1583780001000000},
 			Values:     []float64{7},
 		},
 		{
 			Labels:     []prompb.Label{{Name: "__name__", Value: "baz"}, {Name: "instance", Value: "bar"}},
-			Timestamps: []int64{1583780002},
+			Timestamps: []int64{1583780002000000},
 			Values:     []float64{8},
 		},
 	})

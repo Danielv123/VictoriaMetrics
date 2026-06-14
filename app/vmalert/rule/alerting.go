@@ -595,7 +595,7 @@ func (ar *AlertingRule) exec(ctx context.Context, ts time.Time, limit int) ([]pr
 		curState.Err = fmt.Errorf("exec exceeded limit of %d with %d alerts", limit, numActivePending)
 		return nil, curState.Err
 	}
-	return append(tss, ar.toTimeSeries(ts.Unix())...), nil
+	return append(tss, ar.toTimeSeries(ts.UnixMicro())...), nil
 }
 
 func (ar *AlertingRule) expandLabelTemplates(m datasource.Metric, qFn templates.QueryFn) (*labelSet, error) {

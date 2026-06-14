@@ -109,7 +109,7 @@ func (pi *promInstant) Unmarshal(b []byte) error {
 		if len(sample) != 2 {
 			return fmt.Errorf("object `value` in %q should contain 2 values, but contains %d instead", row, len(sample))
 		}
-		r.Timestamps = []int64{sample[0].GetInt64()}
+		r.Timestamps = []int64{int64(sample[0].GetFloat64() * 1e6)}
 		val, err := sample[1].StringBytes()
 		if err != nil {
 			return fmt.Errorf("error when parsing `value` object %q: %w", sample[1], err)
@@ -140,7 +140,7 @@ func (r promRange) metrics() ([]Metric, error) {
 				return nil, fmt.Errorf("metric %v, unable to parse float64 from %s: %w", res, tv[1], err)
 			}
 			m.Values = append(m.Values, f)
-			m.Timestamps = append(m.Timestamps, int64(tv[0].(float64)))
+			m.Timestamps = append(m.Timestamps, int64(tv[0].(float64)*1e6))
 		}
 		if len(m.Values) < 1 || len(m.Timestamps) < 1 {
 			return nil, fmt.Errorf("metric %v contains no values", res)
@@ -163,7 +163,7 @@ func (r promScalar) metrics() ([]Metric, error) {
 		return nil, fmt.Errorf("metric %v, unable to parse float64 from %s: %w", r, r[1], err)
 	}
 	m.Values = append(m.Values, f)
-	m.Timestamps = append(m.Timestamps, int64(r[0].(float64)))
+	m.Timestamps = append(m.Timestamps, int64(r[0].(float64)*1e6))
 	return []Metric{m}, nil
 }
 

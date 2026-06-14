@@ -83,13 +83,13 @@ func TestParse(t *testing.T) {
 	f("foo 123 456", []prometheus.Row{{
 		Metric:    "foo",
 		Value:     123,
-		Timestamp: 456000,
+		Timestamp: 456000000,
 	}})
 	f(`foo{bar="baz"} 1 2`+"\n"+`aaa{} 3 4`, []prometheus.Row{
 		{
 			Metric:    "aaa",
 			Value:     3,
-			Timestamp: 4000,
+			Timestamp: 4000000,
 		},
 		{
 			Metric: "foo",
@@ -98,7 +98,7 @@ func TestParse(t *testing.T) {
 				Value: "baz",
 			}},
 			Value:     1,
-			Timestamp: 2000,
+			Timestamp: 2000000,
 		},
 	})
 	f("foo 23", []prometheus.Row{{
