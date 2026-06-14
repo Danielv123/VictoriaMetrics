@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/VictoriaMetrics/VictoriaMetrics/app/vmalert/datasource"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/prompb"
@@ -22,7 +21,7 @@ func newTimeSeries(values []float64, timestamps []int64, labels []prompb.Label) 
 	for i := range values {
 		ts.Samples[i] = prompb.Sample{
 			Value:     values[i],
-			Timestamp: time.Unix(timestamps[i], 0).UnixMicro(),
+			Timestamp: timestamps[i],
 		}
 	}
 	return ts

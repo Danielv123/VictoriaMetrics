@@ -69,7 +69,7 @@ func TestRecordingRule_Exec(t *testing.T) {
 	}, [][]datasource.Metric{{
 		metricWithValueAndLabels(t, 10, "__name__", "bar"),
 	}}, [][]prompb.TimeSeries{{
-		newTimeSeries([]float64{10}, []int64{ts.UnixNano()}, []prompb.Label{
+		newTimeSeries([]float64{10}, []int64{ts.UnixMicro()}, []prompb.Label{
 			{
 				Name:  "__name__",
 				Value: "foo",
@@ -92,7 +92,7 @@ func TestRecordingRule_Exec(t *testing.T) {
 		},
 	}, [][]prompb.TimeSeries{
 		{
-			newTimeSeries([]float64{1}, []int64{ts.UnixNano()}, []prompb.Label{
+			newTimeSeries([]float64{1}, []int64{ts.UnixMicro()}, []prompb.Label{
 				{
 					Name:  "__name__",
 					Value: "foobarbaz",
@@ -102,7 +102,7 @@ func TestRecordingRule_Exec(t *testing.T) {
 					Value: "foo",
 				},
 			}),
-			newTimeSeries([]float64{2}, []int64{ts.UnixNano()}, []prompb.Label{
+			newTimeSeries([]float64{2}, []int64{ts.UnixMicro()}, []prompb.Label{
 				{
 					Name:  "__name__",
 					Value: "foobarbaz",
@@ -114,7 +114,7 @@ func TestRecordingRule_Exec(t *testing.T) {
 			}),
 		},
 		{
-			newTimeSeries([]float64{10}, []int64{ts.Add(defaultStep).UnixNano()}, []prompb.Label{
+			newTimeSeries([]float64{10}, []int64{ts.Add(defaultStep).UnixMicro()}, []prompb.Label{
 				{
 					Name:  "__name__",
 					Value: "foobarbaz",
@@ -125,7 +125,7 @@ func TestRecordingRule_Exec(t *testing.T) {
 				},
 			}),
 			// stale time series
-			newTimeSeries([]float64{decimal.StaleNaN}, []int64{ts.Add(defaultStep).UnixNano()}, []prompb.Label{
+			newTimeSeries([]float64{decimal.StaleNaN}, []int64{ts.Add(defaultStep).UnixMicro()}, []prompb.Label{
 				{
 					Name:  "__name__",
 					Value: "foobarbaz",
@@ -137,7 +137,7 @@ func TestRecordingRule_Exec(t *testing.T) {
 			}),
 		},
 		{
-			newTimeSeries([]float64{10}, []int64{ts.Add(2 * defaultStep).UnixNano()}, []prompb.Label{
+			newTimeSeries([]float64{10}, []int64{ts.Add(2 * defaultStep).UnixMicro()}, []prompb.Label{
 				{
 					Name:  "__name__",
 					Value: "foobarbaz",
@@ -147,7 +147,7 @@ func TestRecordingRule_Exec(t *testing.T) {
 					Value: "bar",
 				},
 			}),
-			newTimeSeries([]float64{decimal.StaleNaN}, []int64{ts.Add(2 * defaultStep).UnixNano()}, []prompb.Label{
+			newTimeSeries([]float64{decimal.StaleNaN}, []int64{ts.Add(2 * defaultStep).UnixMicro()}, []prompb.Label{
 				{
 					Name:  "__name__",
 					Value: "foobarbaz",
@@ -172,7 +172,7 @@ func TestRecordingRule_Exec(t *testing.T) {
 		metricWithValueAndLabels(t, 1, "__name__", "bar", "job", "bar", "source", "origin", "pod", "vmalert-1"),
 		metricWithValueAndLabels(t, 1, "__name__", "baz", "job", "baz", "source", "test"),
 	}}, [][]prompb.TimeSeries{{
-		newTimeSeries([]float64{2}, []int64{ts.UnixNano()}, []prompb.Label{
+		newTimeSeries([]float64{2}, []int64{ts.UnixMicro()}, []prompb.Label{
 			{
 				Name:  "__name__",
 				Value: "job:foo",
@@ -186,7 +186,7 @@ func TestRecordingRule_Exec(t *testing.T) {
 				Value: "test",
 			},
 		}),
-		newTimeSeries([]float64{1}, []int64{ts.UnixNano()},
+		newTimeSeries([]float64{1}, []int64{ts.UnixMicro()},
 			[]prompb.Label{
 				{
 					Name:  "__name__",
@@ -205,7 +205,7 @@ func TestRecordingRule_Exec(t *testing.T) {
 					Value: "origin",
 				},
 			}),
-		newTimeSeries([]float64{1}, []int64{ts.UnixNano()},
+		newTimeSeries([]float64{1}, []int64{ts.UnixMicro()},
 			[]prompb.Label{
 				{
 					Name:  "__name__",
@@ -246,7 +246,7 @@ func TestRecordingRule_ExecRange(t *testing.T) {
 	}, []datasource.Metric{
 		metricWithValuesAndLabels(t, []float64{10, 20, 30}, "__name__", "bar"),
 	}, []prompb.TimeSeries{
-		newTimeSeries([]float64{10, 20, 30}, []int64{timestamp.UnixNano(), timestamp.UnixNano(), timestamp.UnixNano()},
+		newTimeSeries([]float64{10, 20, 30}, []int64{timestamp.UnixMicro(), timestamp.UnixMicro(), timestamp.UnixMicro()},
 			[]prompb.Label{
 				{
 					Name:  "__name__",
@@ -262,7 +262,7 @@ func TestRecordingRule_ExecRange(t *testing.T) {
 		metricWithValuesAndLabels(t, []float64{2, 3}, "__name__", "bar", "job", "bar"),
 		metricWithValuesAndLabels(t, []float64{4, 5, 6}, "__name__", "baz", "job", "baz"),
 	}, []prompb.TimeSeries{
-		newTimeSeries([]float64{1}, []int64{timestamp.UnixNano()}, []prompb.Label{
+		newTimeSeries([]float64{1}, []int64{timestamp.UnixMicro()}, []prompb.Label{
 			{
 				Name:  "__name__",
 				Value: "foobarbaz",
@@ -272,7 +272,7 @@ func TestRecordingRule_ExecRange(t *testing.T) {
 				Value: "foo",
 			},
 		}),
-		newTimeSeries([]float64{2, 3}, []int64{timestamp.UnixNano(), timestamp.UnixNano()}, []prompb.Label{
+		newTimeSeries([]float64{2, 3}, []int64{timestamp.UnixMicro(), timestamp.UnixMicro()}, []prompb.Label{
 			{
 				Name:  "__name__",
 				Value: "foobarbaz",
@@ -283,7 +283,7 @@ func TestRecordingRule_ExecRange(t *testing.T) {
 			},
 		}),
 		newTimeSeries([]float64{4, 5, 6},
-			[]int64{timestamp.UnixNano(), timestamp.UnixNano(), timestamp.UnixNano()}, []prompb.Label{
+			[]int64{timestamp.UnixMicro(), timestamp.UnixMicro(), timestamp.UnixMicro()}, []prompb.Label{
 				{
 					Name:  "__name__",
 					Value: "foobarbaz",
@@ -304,7 +304,7 @@ func TestRecordingRule_ExecRange(t *testing.T) {
 		metricWithValueAndLabels(t, 2, "__name__", "foo", "job", "foo"),
 		metricWithValueAndLabels(t, 1, "__name__", "bar", "job", "bar"),
 	}, []prompb.TimeSeries{
-		newTimeSeries([]float64{2}, []int64{timestamp.UnixNano()}, []prompb.Label{
+		newTimeSeries([]float64{2}, []int64{timestamp.UnixMicro()}, []prompb.Label{
 			{
 				Name:  "__name__",
 				Value: "job:foo",
@@ -318,7 +318,7 @@ func TestRecordingRule_ExecRange(t *testing.T) {
 				Value: "test",
 			},
 		}),
-		newTimeSeries([]float64{1}, []int64{timestamp.UnixNano()},
+		newTimeSeries([]float64{1}, []int64{timestamp.UnixMicro()},
 			[]prompb.Label{
 				{
 					Name:  "__name__",
@@ -483,7 +483,7 @@ func TestRecordingRuleExec_Partial(t *testing.T) {
 	rule.q = fq
 	got, err := rule.exec(context.TODO(), ts, 0)
 	want := []prompb.TimeSeries{
-		newTimeSeries([]float64{10}, []int64{ts.UnixNano()}, []prompb.Label{
+		newTimeSeries([]float64{10}, []int64{ts.UnixMicro()}, []prompb.Label{
 			{
 				Name:  "__name__",
 				Value: "foo",

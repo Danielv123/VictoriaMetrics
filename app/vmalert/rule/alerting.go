@@ -395,7 +395,7 @@ func (ar *AlertingRule) execRange(ctx context.Context, start, end time.Time) ([]
 
 		prevT := time.Time{}
 		for i := range s.Values {
-			at := time.Unix(s.Timestamps[i], 0)
+			at := time.UnixMicro(s.Timestamps[i])
 			// try to restore alert's state on the first iteration
 			if at.Equal(start) {
 				if _, ok := ar.alerts[alertID]; ok {
@@ -550,7 +550,7 @@ func (ar *AlertingRule) exec(ctx context.Context, ts time.Time, limit int) ([]pr
 			if a.State == notifier.StatePending {
 				// alert was in Pending state - it is not active anymore
 				// add stale time series
-				tss = append(tss, pendingAlertStaleTimeSeries(a.Labels, ts.Unix(), true)...)
+				tss = append(tss, pendingAlertStaleTimeSeries(a.Labels, ts.UnixMicro(), true)...)
 
 				delete(ar.alerts, h)
 				ar.logDebugf(ts, a, "PENDING => DELETED: is absent in current evaluation round")
@@ -570,7 +570,7 @@ func (ar *AlertingRule) exec(ctx context.Context, ts time.Time, limit int) ([]pr
 					a.State = notifier.StateInactive
 					a.ResolvedAt = ts
 					// add stale time series
-					tss = append(tss, firingAlertStaleTimeSeries(a.Labels, ts.Unix())...)
+					tss = append(tss, firingAlertStaleTimeSeries(a.Labels, ts.UnixMicro())...)
 
 					ar.logDebugf(ts, a, "FIRING => INACTIVE: is absent in current evaluation round")
 					continue
@@ -585,7 +585,7 @@ func (ar *AlertingRule) exec(ctx context.Context, ts time.Time, limit int) ([]pr
 			alertsFired.Inc()
 			if ar.For > 0 {
 				// add stale time series
-				tss = append(tss, pendingAlertStaleTimeSeries(a.Labels, ts.Unix(), false)...)
+				tss = append(tss, pendingAlertStaleTimeSeries(a.Labels, ts.UnixMicro(), false)...)
 			}
 			ar.logDebugf(ts, a, "PENDING => FIRING: %s since becoming active at %v", ts.Sub(a.ActiveAt), a.ActiveAt)
 		}

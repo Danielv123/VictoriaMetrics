@@ -243,7 +243,7 @@ func (t *Tracer) toSpanInternal(prevTime time.Time) (*span, time.Time) {
 		}
 		return s, prevTime
 	}
-	if t.doneTime.Equal(t.startTime) {
+	if t.doneTime.Equal(t.startTime) && len(t.children) == 0 {
 		// a single-line trace
 		d := t.startTime.Sub(prevTime)
 		s := &span{

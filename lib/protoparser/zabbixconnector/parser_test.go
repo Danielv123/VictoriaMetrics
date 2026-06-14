@@ -173,7 +173,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 						},
 					},
 					Value:     1,
-					Timestamp: 1712417868425,
+					Timestamp: 1712417868425677,
 				},
 			},
 		})
@@ -210,7 +210,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 						},
 					},
 					Value:     1,
-					Timestamp: 1712417868425,
+					Timestamp: 1712417868425677,
 				},
 			},
 		})
@@ -235,7 +235,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 						},
 					},
 					Value:     1,
-					Timestamp: 1712417868425,
+					Timestamp: 1712417868425677,
 				},
 			},
 		})
@@ -274,7 +274,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 						},
 					},
 					Value:     1,
-					Timestamp: 1712417868425,
+					Timestamp: 1712417868425677,
 				},
 				{
 					Tags: []Tag{
@@ -300,7 +300,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 						},
 					},
 					Value:     1.5,
-					Timestamp: 1712417868425,
+					Timestamp: 1712417868425677,
 				},
 			},
 		})
@@ -340,7 +340,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 						},
 					},
 					Value:     1,
-					Timestamp: 1712417868425,
+					Timestamp: 1712417868425677,
 				},
 				{
 					Tags: []Tag{
@@ -366,7 +366,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 						},
 					},
 					Value:     1.5,
-					Timestamp: 1712417868425,
+					Timestamp: 1712417868425677,
 				},
 			},
 		})
@@ -404,7 +404,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 						},
 					},
 					Value:     1,
-					Timestamp: 1712417868425,
+					Timestamp: 1712417868425677,
 				},
 				{
 					Tags: []Tag{
@@ -430,7 +430,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 						},
 					},
 					Value:     1.5,
-					Timestamp: 1712417868425,
+					Timestamp: 1712417868425677,
 				},
 			},
 		})
@@ -471,7 +471,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 						},
 					},
 					Value:     1,
-					Timestamp: 1712417868425,
+					Timestamp: 1712417868425677,
 				},
 				{
 					Tags: []Tag{
@@ -493,7 +493,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 						},
 					},
 					Value:     1.5,
-					Timestamp: 1712417868425,
+					Timestamp: 1712417868425677,
 				},
 			},
 		})
@@ -534,7 +534,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 						},
 					},
 					Value:     1,
-					Timestamp: 1712417868425,
+					Timestamp: 1712417868425677,
 				},
 				{
 					Tags: []Tag{
@@ -560,7 +560,7 @@ func TestRowsUnmarshalSuccess(t *testing.T) {
 						},
 					},
 					Value:     1.5,
-					Timestamp: 1712417868425,
+					Timestamp: 1712417868425677,
 				},
 			},
 		})
@@ -597,7 +597,7 @@ failed line
 						},
 					},
 					Value:     1,
-					Timestamp: 1712417868425,
+					Timestamp: 1712417868425677,
 				},
 				{
 					Tags: []Tag{
@@ -619,7 +619,7 @@ failed line
 						},
 					},
 					Value:     1.5,
-					Timestamp: 1712417868425,
+					Timestamp: 1712417868425677,
 				},
 			},
 		})
@@ -661,7 +661,7 @@ failed line
 						},
 					},
 					Value:     1,
-					Timestamp: 1712417868425,
+					Timestamp: 1712417868425677,
 				},
 			},
 		})
