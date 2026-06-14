@@ -34,7 +34,7 @@
 	{% endfor %}
 {% endfunc %}
 
-{%code const rfc3339Milli = "2006-01-02T15:04:05.999Z07:00" %}
+{%code const rfc3339Micro = "2006-01-02T15:04:05.999999Z07:00" %}
 {% func exportCSVField(mn *storage.MetricName, fieldName string, timestamp int64, value float64) %}
 	{% if fieldName == "__value__" %}
 		{%f= value %}
@@ -48,15 +48,15 @@
 		{% code timeFormat := fieldName[len("__timestamp__:"):] %}
 		{% switch timeFormat %}
 		{% case "unix_s" %}
-			{%dl= timestamp/1000 %}
+			{%dl= timestamp/1e6 %}
 		{% case "unix_ms" %}
-			{%dl= timestamp %}
+			{%dl= timestamp/1e3 %}
 		{% case "unix_ns" %}
-			{%dl= timestamp*1e6 %}
+			{%dl= timestamp*1e3 %}
 		{% case "rfc3339" %}
 			{% code
 				bb := quicktemplate.AcquireByteBuffer()
-				bb.B = time.Unix(timestamp/1000, (timestamp%1000)*1e6).AppendFormat(bb.B[:0], rfc3339Milli)
+				bb.B = time.Unix(timestamp/1e6, (timestamp%1e6)*1e3).AppendFormat(bb.B[:0], rfc3339Micro)
 			%}
 			{%z= bb.B %}
 			{% code
@@ -67,7 +67,7 @@
 				{% code
 					layout := timeFormat[len("custom:"):]
 					bb := quicktemplate.AcquireByteBuffer()
-					bb.B = time.Unix(timestamp/1000, (timestamp%1000)*1e6).AppendFormat(bb.B[:0], layout)
+					bb.B = time.Unix(timestamp/1e6, (timestamp%1e6)*1e3).AppendFormat(bb.B[:0], layout)
 				%}
 				{% if bytes.ContainsAny(bb.B, `"`+",\n") %}
 					{%qz bb.B %}

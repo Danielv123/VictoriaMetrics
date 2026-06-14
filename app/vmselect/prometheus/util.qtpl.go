@@ -96,7 +96,7 @@ func streammetricRow(qw422016 *qt422016.Writer, timestamp int64, value float64) 
 //line app/vmselect/prometheus/util.qtpl:20
 	qw422016.N().S(`[`)
 //line app/vmselect/prometheus/util.qtpl:21
-	qw422016.N().F(float64(timestamp) / 1e3)
+	qw422016.N().F(float64(timestamp) / 1e6)
 //line app/vmselect/prometheus/util.qtpl:21
 	qw422016.N().S(`,"`)
 //line app/vmselect/prometheus/util.qtpl:21
@@ -150,7 +150,7 @@ func streamvaluesWithTimestamps(qw422016 *qt422016.Writer, values []float64, tim
 //line app/vmselect/prometheus/util.qtpl:30
 	qw422016.N().S(`[`)
 //line app/vmselect/prometheus/util.qtpl:31
-	qw422016.N().F(float64(timestamps[0]) / 1e3)
+	qw422016.N().F(float64(timestamps[0]) / 1e6)
 //line app/vmselect/prometheus/util.qtpl:31
 	qw422016.N().S(`,"`)
 //line app/vmselect/prometheus/util.qtpl:31
@@ -175,7 +175,7 @@ func streamvaluesWithTimestamps(qw422016 *qt422016.Writer, values []float64, tim
 //line app/vmselect/prometheus/util.qtpl:42
 			qw422016.N().S(`,[`)
 //line app/vmselect/prometheus/util.qtpl:43
-			qw422016.N().F(float64(timestamps[i]) / 1e3)
+			qw422016.N().F(float64(timestamps[i]) / 1e6)
 //line app/vmselect/prometheus/util.qtpl:43
 			qw422016.N().S(`,"`)
 //line app/vmselect/prometheus/util.qtpl:43

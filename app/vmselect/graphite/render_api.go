@@ -39,7 +39,7 @@ func RenderHandler(startTime time.Time, w http.ResponseWriter, r *http.Request) 
 		xFilesFactor = f
 	}
 	from := r.FormValue("from")
-	fromTime := startTime.UnixNano()/1e6 - 24*3600*1000
+	fromTime := startTime.UnixMicro() - 24*3600*1000*1000
 	if len(from) != 0 {
 		fv, err := parseTime(startTime, from)
 		if err != nil {
@@ -48,7 +48,7 @@ func RenderHandler(startTime time.Time, w http.ResponseWriter, r *http.Request) 
 		fromTime = fv
 	}
 	until := r.FormValue("until")
-	untilTime := startTime.UnixNano() / 1e6
+	untilTime := startTime.UnixMicro()
 	if len(until) != 0 {
 		uv, err := parseTime(startTime, until)
 		if err != nil {
@@ -149,7 +149,7 @@ func RenderHandler(startTime time.Time, w http.ResponseWriter, r *http.Request) 
 
 var renderDuration = metrics.NewSummary(`vm_request_duration_seconds{path="/render"}`)
 
-const msecsPerDay = 24 * 3600 * 1000
+const usecsPerDay = 24 * 3600 * 1000 * 1000
 
 // parseTime parses Graphite time in s.
 //
@@ -157,50 +157,50 @@ const msecsPerDay = 24 * 3600 * 1000
 func parseTime(startTime time.Time, s string) (int64, error) {
 	switch s {
 	case "now":
-		return startTime.UnixNano() / 1e6, nil
+		return startTime.UnixMicro(), nil
 	case "today":
-		ts := startTime.UnixNano() / 1e6
-		return ts - ts%msecsPerDay, nil
+		ts := startTime.UnixMicro()
+		return ts - ts%usecsPerDay, nil
 	case "yesterday":
-		ts := startTime.UnixNano() / 1e6
-		return ts - (ts % msecsPerDay) - msecsPerDay, nil
+		ts := startTime.UnixMicro()
+		return ts - (ts % usecsPerDay) - usecsPerDay, nil
 	}
 	// Attempt to parse RFC3339 (YYYY-MM-DDTHH:mm:SSZTZ:00)
 	if t, err := time.Parse(time.RFC3339, s); err == nil {
-		return t.UnixNano() / 1e6, nil
+		return t.UnixMicro(), nil
 	}
 	// Attempt to parse HH:MM_YYYYMMDD
 	if t, err := time.Parse("15:04_20060102", s); err == nil {
-		return t.UnixNano() / 1e6, nil
+		return t.UnixMicro(), nil
 	}
 	// Attempt to parse HH:MMYYYYMMDD
 	if t, err := time.Parse("15:0420060102", s); err == nil {
-		return t.UnixNano() / 1e6, nil
+		return t.UnixMicro(), nil
 	}
 	// Attempt to parse YYYYMMDD
 	if t, err := time.Parse("20060102", s); err == nil {
-		return t.UnixNano() / 1e6, nil
+		return t.UnixMicro(), nil
 	}
 	// Attempt to parse HH:MM YYYYMMDD
 	if t, err := time.Parse("15:04 20060102", s); err == nil {
-		return t.UnixNano() / 1e6, nil
+		return t.UnixMicro(), nil
 	}
 	// Attempt to parse YYYY-MM-DD
 	if t, err := time.Parse("2006-01-02", s); err == nil {
-		return t.UnixNano() / 1e6, nil
+		return t.UnixMicro(), nil
 	}
 	// Attempt to parse MM/DD/YY
 	if t, err := time.Parse("01/02/06", s); err == nil {
-		return t.UnixNano() / 1e6, nil
+		return t.UnixMicro(), nil
 	}
 
 	// Attempt to parse time as unix timestamp
 	if n, err := strconv.ParseInt(s, 10, 64); err == nil {
-		return n * 1000, nil
+		return n * 1e6, nil
 	}
 	// Attempt to parse interval
 	if interval, err := parseInterval(s); err == nil {
-		return startTime.UnixNano()/1e6 + interval, nil
+		return startTime.UnixMicro() + interval, nil
 	}
 	return 0, fmt.Errorf("unsupported time %q", s)
 }
@@ -228,22 +228,22 @@ func parseInterval(s string) (int64, error) {
 	var m float64
 	switch {
 	case strings.HasPrefix(suffix, "ms"):
-		m = 1
-	case strings.HasPrefix(suffix, "s"):
 		m = 1000
+	case strings.HasPrefix(suffix, "s"):
+		m = 1000 * 1000
 	case strings.HasPrefix(suffix, "mi"),
 		strings.HasPrefix(suffix, "m") && !strings.HasPrefix(suffix, "mo"):
-		m = 60 * 1000
+		m = 60 * 1000 * 1000
 	case strings.HasPrefix(suffix, "h"):
-		m = 3600 * 1000
+		m = 3600 * 1000 * 1000
 	case strings.HasPrefix(suffix, "d"):
-		m = 24 * 3600 * 1000
+		m = 24 * 3600 * 1000 * 1000
 	case strings.HasPrefix(suffix, "w"):
-		m = 7 * 24 * 3600 * 1000
+		m = 7 * 24 * 3600 * 1000 * 1000
 	case strings.HasPrefix(suffix, "mo"):
-		m = 30 * 24 * 3600 * 1000
+		m = 30 * 24 * 3600 * 1000 * 1000
 	case strings.HasPrefix(suffix, "y"):
-		m = 365 * 24 * 3600 * 1000
+		m = 365 * 24 * 3600 * 1000 * 1000
 	default:
 		return 0, fmt.Errorf("unsupported interval %q", s)
 	}
@@ -256,7 +256,7 @@ func getStorageStep(r *http.Request) (int64, error) {
 		s = r.Header.Get("Storage-Step")
 	}
 	if len(s) == 0 {
-		step := int64(storageStep.Seconds() * 1000)
+		step := storageStep.Microseconds()
 		if step <= 0 {
 			return 0, fmt.Errorf("the `-search.graphiteStorageStep` command-line flag value must be positive; got %s", storageStep.String())
 		}

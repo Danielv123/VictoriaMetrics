@@ -1525,7 +1525,7 @@ func transformRangeLinearRegression(tfa *transformFuncArg) ([]*timeseries, error
 		interceptTimestamp := timestamps[0]
 		v, k := linearRegression(values, timestamps, interceptTimestamp)
 		for i, t := range timestamps {
-			values[i] = v + k*float64(t-interceptTimestamp)/1e3
+			values[i] = v + k*float64(t-interceptTimestamp)/1e6
 		}
 	}
 	return rvs, nil
@@ -2760,7 +2760,7 @@ func transformTimezoneOffset(tfa *transformFuncArg) ([]*timeseries, error) {
 	tss := evalNumber(tfa.ec, nan)
 	ts := tss[0]
 	for i, timestamp := range ts.Timestamps {
-		_, offset := time.Unix(timestamp/1000, 0).In(loc).Zone()
+		_, offset := time.Unix(timestamp/1e6, 0).In(loc).Zone()
 		ts.Values[i] = float64(offset)
 	}
 	return tss, nil
@@ -2797,15 +2797,15 @@ func newTransformFuncZeroArgs(f func(tfa *transformFuncArg) float64) transformFu
 }
 
 func transformStep(tfa *transformFuncArg) float64 {
-	return float64(tfa.ec.Step) / 1e3
+	return float64(tfa.ec.Step) / 1e6
 }
 
 func transformStart(tfa *transformFuncArg) float64 {
-	return float64(tfa.ec.Start) / 1e3
+	return float64(tfa.ec.Start) / 1e6
 }
 
 func transformEnd(tfa *transformFuncArg) float64 {
-	return float64(tfa.ec.End) / 1e3
+	return float64(tfa.ec.End) / 1e6
 }
 
 // copyTimeseries returns a copy of tss.

@@ -1535,7 +1535,7 @@ func transformExponentialMovingAverage(ec *evalConfig, fe *graphiteql.FuncExpr) 
 		if err != nil {
 			return nil, fmt.Errorf("cannot parse windowSize: %w", err)
 		}
-		c = 2 / (float64(ws)/1000 + 1)
+		c = 2 / (float64(ws)/1e6 + 1)
 		windowSize = ws
 	case *graphiteql.NumberExpr:
 		c = 2 / (t.N + 1)
@@ -2051,7 +2051,7 @@ func transformHitcount(ec *evalConfig, fe *graphiteql.FuncExpr) (nextSeriesFunc,
 		return nil, err
 	}
 	if interval <= 0 {
-		return nil, fmt.Errorf("interval must be positive; got %dms", interval)
+		return nil, fmt.Errorf("interval must be positive; got %dus", interval)
 	}
 	alignToInterval, err := getOptionalBool(args, "alignToInterval", 2, false)
 	if err != nil {
@@ -2061,15 +2061,15 @@ func transformHitcount(ec *evalConfig, fe *graphiteql.FuncExpr) (nextSeriesFunc,
 	if alignToInterval {
 		startTime := ecCopy.startTime
 		tz := ecCopy.currentTime.Location()
-		t := time.Unix(startTime/1e3, (startTime%1000)*1e6).In(tz)
-		if interval >= 24*3600*1000 {
+		t := time.Unix(startTime/1e6, (startTime%1e6)*1e3).In(tz)
+		if interval >= 24*3600*1000*1000 {
 			t = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, tz)
-		} else if interval >= 3600*1000 {
+		} else if interval >= 3600*1000*1000 {
 			t = time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), 0, 0, 0, tz)
-		} else if interval >= 60*1000 {
+		} else if interval >= 60*1000*1000 {
 			t = time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), 0, 0, tz)
 		}
-		ecCopy.startTime = t.UnixNano() / 1e6
+		ecCopy.startTime = t.UnixMicro()
 	}
 	nextSeries, err := evalSeriesList(&ecCopy, args, "seriesList", 0)
 	if err != nil {
@@ -2087,7 +2087,7 @@ func transformHitcount(ec *evalConfig, fe *graphiteql.FuncExpr) (nextSeriesFunc,
 			tsPrev := ts
 			hitcount := float64(0)
 			if i < len(timestamps) && !math.IsNaN(vPrev) {
-				hitcount = vPrev * float64(timestamps[i]-tsPrev) / 1000
+				hitcount = vPrev * float64(timestamps[i]-tsPrev) / 1e6
 			}
 			tsEnd := ts + interval
 			for i < len(timestamps) {
@@ -2097,7 +2097,7 @@ func transformHitcount(ec *evalConfig, fe *graphiteql.FuncExpr) (nextSeriesFunc,
 				}
 				v := values[i]
 				if !math.IsNaN(v) {
-					hitcount += v * (float64(tsCurr-tsPrev) / 1000)
+					hitcount += v * (float64(tsCurr-tsPrev) / 1e6)
 				}
 				tsPrev = tsCurr
 				vPrev = v
@@ -2135,12 +2135,12 @@ func transformIdentity(ec *evalConfig, fe *graphiteql.FuncExpr) (nextSeriesFunc,
 	if err != nil {
 		return nil, err
 	}
-	const step = 60e3
+	const step = 60e6
 	var dstValues []float64
 	var dstTimestamps []int64
 	ts := ec.startTime
 	for ts < ec.endTime {
-		dstValues = append(dstValues, float64(ts)/1000)
+		dstValues = append(dstValues, float64(ts)/1e6)
 		dstTimestamps = append(dstTimestamps, ts)
 		ts += step
 	}
@@ -2937,7 +2937,7 @@ func transformRandomWalk(ec *evalConfig, fe *graphiteql.FuncExpr) (nextSeriesFun
 	if step <= 0 {
 		return nil, fmt.Errorf("step must be positive; got %g", step)
 	}
-	stepMsecs := int64(step * 1000)
+	stepUsecs := int64(step * 1e6)
 	var dstValues []float64
 	var dstTimestamps []int64
 	ts := ec.startTime
@@ -2946,7 +2946,7 @@ func transformRandomWalk(ec *evalConfig, fe *graphiteql.FuncExpr) (nextSeriesFun
 		dstValues = append(dstValues, v)
 		dstTimestamps = append(dstTimestamps, ts)
 		v += rand.Float64() - 0.5
-		ts += stepMsecs
+		ts += stepUsecs
 	}
 	s := &series{
 		Name:           name,
@@ -2955,7 +2955,7 @@ func transformRandomWalk(ec *evalConfig, fe *graphiteql.FuncExpr) (nextSeriesFun
 		Values:         dstValues,
 		expr:           fe,
 		pathExpression: name,
-		step:           stepMsecs,
+		step:           stepUsecs,
 	}
 	return singleSeriesFunc(s), nil
 }
@@ -3439,14 +3439,14 @@ func transformTimeFunction(ec *evalConfig, fe *graphiteql.FuncExpr) (nextSeriesF
 	if err != nil {
 		return nil, err
 	}
-	stepMsecs := int64(step * 1000)
+	stepUsecs := int64(step * 1e6)
 	var values []float64
 	var timestamps []int64
 	ts := ec.startTime
 	for ts <= ec.endTime {
 		timestamps = append(timestamps, ts)
-		values = append(values, float64(ts/1000))
-		ts += stepMsecs
+		values = append(values, float64(ts)/1e6)
+		ts += stepUsecs
 	}
 	s := &series{
 		Name:           name,
@@ -3455,7 +3455,7 @@ func transformTimeFunction(ec *evalConfig, fe *graphiteql.FuncExpr) (nextSeriesF
 		Values:         values,
 		expr:           fe,
 		pathExpression: name,
-		step:           stepMsecs,
+		step:           stepUsecs,
 	}
 	return singleSeriesFunc(s), nil
 }
@@ -4334,8 +4334,8 @@ func transformTimeSlice(ec *evalConfig, fe *graphiteql.FuncExpr) (nextSeriesFunc
 	if err != nil {
 		return nil, err
 	}
-	startSecsStr := fmt.Sprintf("%d", start/1000)
-	endSecsStr := fmt.Sprintf("%d", end/1000)
+	startSecsStr := fmt.Sprintf("%d", start/1e6)
+	endSecsStr := fmt.Sprintf("%d", end/1e6)
 	f := nextSeriesConcurrentWrapper(nextSeries, func(s *series) (*series, error) {
 		values := s.Values
 		timestamps := s.Timestamps
@@ -4559,7 +4559,7 @@ func transformPerSecond(ec *evalConfig, fe *graphiteql.FuncExpr) (nextSeriesFunc
 			delta, prev = nonNegativeDelta(v, prev, maxValue, minValue)
 			stepSecs := nan
 			if i > 0 {
-				stepSecs = float64(timestamps[i]-timestamps[i-1]) / 1000
+				stepSecs = float64(timestamps[i]-timestamps[i-1]) / 1e6
 			}
 			values[i] = delta / stepSecs
 		}
@@ -5015,7 +5015,7 @@ func transformSmartSummarize(ec *evalConfig, fe *graphiteql.FuncExpr) (nextSerie
 }
 
 func alignTimeUnit(startTime int64, s string, tz *time.Location) (int64, error) {
-	t := time.Unix(startTime/1e3, (startTime%1000)*1e6).In(tz)
+	t := time.Unix(startTime/1e6, (startTime%1e6)*1e3).In(tz)
 	switch {
 	case strings.HasPrefix(s, "ms"):
 		t = time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), (t.Nanosecond()/1e6)*1e6, tz)
@@ -5046,7 +5046,7 @@ func alignTimeUnit(startTime int64, s string, tz *time.Location) (int64, error) 
 	default:
 		return 0, fmt.Errorf("unsupported interval %q", s)
 	}
-	return t.UnixNano() / 1e6, nil
+	return t.UnixMicro(), nil
 }
 
 // https://graphite.readthedocs.io/en/stable/functions.html#graphite.render.functions.sinFunction
@@ -5070,15 +5070,15 @@ func transformSinFunction(ec *evalConfig, fe *graphiteql.FuncExpr) (nextSeriesFu
 	if step <= 0 {
 		return nil, fmt.Errorf("step must be positive; got %g", step)
 	}
-	stepMsecs := int64(step * 1000)
-	values := make([]float64, 0, ec.pointsLen(stepMsecs))
-	timestamps := make([]int64, 0, ec.pointsLen(stepMsecs))
+	stepUsecs := int64(step * 1e6)
+	values := make([]float64, 0, ec.pointsLen(stepUsecs))
+	timestamps := make([]int64, 0, ec.pointsLen(stepUsecs))
 	ts := ec.startTime
 	for ts < ec.endTime {
-		v := amplitude * math.Sin(float64(ts)/1000)
+		v := amplitude * math.Sin(float64(ts)/1e6)
 		values = append(values, v)
 		timestamps = append(timestamps, ts)
-		ts += stepMsecs
+		ts += stepUsecs
 	}
 	s := &series{
 		Name:           name,
@@ -5087,7 +5087,7 @@ func transformSinFunction(ec *evalConfig, fe *graphiteql.FuncExpr) (nextSeriesFu
 		Values:         values,
 		expr:           fe,
 		pathExpression: name,
-		step:           stepMsecs,
+		step:           stepUsecs,
 	}
 	return singleSeriesFunc(s), nil
 }
@@ -5136,11 +5136,11 @@ func transformScaleToSeconds(ec *evalConfig, fe *graphiteql.FuncExpr) (nextSerie
 		values := s.Values
 		step := nan
 		if len(timestamps) > 1 {
-			step = float64(timestamps[1]-timestamps[0]) / 1000
+			step = float64(timestamps[1]-timestamps[0]) / 1e6
 		}
 		for i, v := range values {
 			if i > 0 {
-				step = float64(timestamps[i]-timestamps[i-1]) / 1000
+				step = float64(timestamps[i]-timestamps[i-1]) / 1e6
 			}
 			values[i] = v * (seconds / step)
 		}
@@ -5247,9 +5247,9 @@ func linearRegressionForSeries(ec *evalConfig, fe *graphiteql.FuncExpr, ss, sour
 	for i := range ss {
 		source := sourceSeries[i]
 		s := ss[i]
-		s.Tags["linearRegressions"] = fmt.Sprintf("%d, %d", ec.startTime/1e3, ec.endTime/1e3)
+		s.Tags["linearRegressions"] = fmt.Sprintf("%d, %d", ec.startTime/1e6, ec.endTime/1e6)
 		s.Tags["name"] = s.Name
-		s.Name = fmt.Sprintf("linearRegression(%s, %d, %d)", s.Name, ec.startTime/1e3, ec.endTime/1e3)
+		s.Name = fmt.Sprintf("linearRegression(%s, %d, %d)", s.Name, ec.startTime/1e6, ec.endTime/1e6)
 		s.expr = fe
 		s.pathExpression = s.Name
 		ok, factor, offset := linearRegressionAnalysis(source, float64(s.step))
@@ -5279,7 +5279,7 @@ func getTimeFromArgExpr(originT int64, currentT time.Time, expr *graphiteql.ArgE
 		}
 		originT = t
 	case *graphiteql.NumberExpr:
-		originT = int64(data.N * 1e3)
+		originT = int64(data.N * 1e6)
 	}
 	return originT, nil
 }

@@ -73,11 +73,11 @@ func TestExportCSVLine(t *testing.T) {
 	f(mn, []int64{1000}, []float64{1.5}, []string{}, "")
 
 	f(mn, []int64{1000}, []float64{42.5}, []string{"__value__"}, "42.5\n")
-	f(mn, []int64{1704067200000}, []float64{1}, []string{"__timestamp__"}, "1704067200000\n")
-	f(mn, []int64{1704067200000}, []float64{1}, []string{"__timestamp__:unix_s"}, "1704067200\n")
-	f(mn, []int64{1704067200000}, []float64{1}, []string{"__timestamp__:unix_ms"}, "1704067200000\n")
-	f(mn, []int64{1704067200000}, []float64{1}, []string{"__timestamp__:unix_ns"}, "1704067200000000000\n")
-	f(mn, []int64{1704067200000}, []float64{1}, []string{"__timestamp__:rfc3339"}, "2024-01-01T00:00:00Z\n")
+	f(mn, []int64{1704067200000000}, []float64{1}, []string{"__timestamp__"}, "1704067200000000\n")
+	f(mn, []int64{1704067200000000}, []float64{1}, []string{"__timestamp__:unix_s"}, "1704067200\n")
+	f(mn, []int64{1704067200000000}, []float64{1}, []string{"__timestamp__:unix_ms"}, "1704067200000\n")
+	f(mn, []int64{1704067200000000}, []float64{1}, []string{"__timestamp__:unix_ns"}, "1704067200000000000\n")
+	f(mn, []int64{1704067200000000}, []float64{1}, []string{"__timestamp__:rfc3339"}, "2024-01-01T00:00:00Z\n")
 
 	f(mn, []int64{1000}, []float64{1}, []string{"__name__"}, "cpu_usage\n")
 	f(mn, []int64{1000}, []float64{1}, []string{"job"}, "node\n")
@@ -85,7 +85,7 @@ func TestExportCSVLine(t *testing.T) {
 	f(mn, []int64{1000}, []float64{1}, []string{"missing_label"}, "\n")
 
 	// multiple fields
-	f(mn, []int64{1704067200000}, []float64{99.9},
+	f(mn, []int64{1704067200000000}, []float64{99.9},
 		[]string{"__timestamp__:unix_s", "__value__", "job"},
 		"1704067200,99.9,node\n")
 
@@ -93,7 +93,7 @@ func TestExportCSVLine(t *testing.T) {
 	f(mn, []int64{1000, 2000}, []float64{1.1, 2.2},
 		[]string{"__value__", "__timestamp__"},
 		"1.1,1000\n2.2,2000\n")
-	f(mn, []int64{1000, 2000, 3000}, []float64{10, 20, 30},
+	f(mn, []int64{1000000, 2000000, 3000000}, []float64{10, 20, 30},
 		[]string{"__timestamp__:unix_s", "__value__"},
 		"1,10\n2,20\n3,30\n")
 
@@ -118,7 +118,7 @@ func TestExportCSVLine(t *testing.T) {
 	header := ExportCSVHeader(fieldNames)
 	line := ExportCSVLine(&exportBlock{
 		mn:         mn,
-		timestamps: []int64{1704067200000},
+		timestamps: []int64{1704067200000000},
 		values:     []float64{99.9},
 	}, fieldNames)
 	headerCommas := strings.Count(header, ",")

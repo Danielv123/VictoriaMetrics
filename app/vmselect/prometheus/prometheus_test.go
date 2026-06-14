@@ -212,8 +212,8 @@ func TestGetLatencyOffsetMillisecondsSuccess(t *testing.T) {
 			t.Fatalf("unexpected offset got %d; want %d", offset, expectedOffset)
 		}
 	}
-	f("http://localhost", latencyOffset.Milliseconds())
-	f("http://localhost?latency_offset=1.234s", 1234)
+	f("http://localhost", latencyOffset.Microseconds())
+	f("http://localhost?latency_offset=1.234s", 1234000)
 }
 
 func TestGetLatencyOffsetMillisecondsFailure(t *testing.T) {

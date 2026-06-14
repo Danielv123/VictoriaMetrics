@@ -480,7 +480,7 @@ func getRollupConfigs(funcName string, rf rollupFunc, expr metricsql.Expr, start
 			// Calculate intervals in seconds between samples.
 			tsSecsPrev := nan
 			for i, ts := range timestamps {
-				tsSecs := float64(ts) / 1000
+				tsSecs := float64(ts) / 1e6
 				values[i] = tsSecs - tsSecsPrev
 				tsSecsPrev = tsSecs
 			}
@@ -731,7 +731,7 @@ func (rc *rollupConfig) doInternal(dstValues []float64, tsm *timeseriesMap, valu
 		maxPrevInterval = rc.LookbackDelta
 	}
 	if *minStalenessInterval > 0 {
-		if msi := minStalenessInterval.Milliseconds(); msi > 0 && maxPrevInterval < msi {
+		if msi := minStalenessInterval.Microseconds(); msi > 0 && maxPrevInterval < msi {
 			maxPrevInterval = msi
 		}
 	}
@@ -900,19 +900,19 @@ func getMaxPrevInterval(scrapeInterval int64) int64 {
 	// Increase scrapeInterval more for smaller scrape intervals in order to hide possible gaps
 	// when high jitter is present.
 	// See https://github.com/VictoriaMetrics/VictoriaMetrics/issues/139 .
-	if scrapeInterval <= 2*1000 {
+	if scrapeInterval <= 2*1e6 {
 		return scrapeInterval + 4*scrapeInterval
 	}
-	if scrapeInterval <= 4*1000 {
+	if scrapeInterval <= 4*1e6 {
 		return scrapeInterval + 2*scrapeInterval
 	}
-	if scrapeInterval <= 8*1000 {
+	if scrapeInterval <= 8*1e6 {
 		return scrapeInterval + scrapeInterval
 	}
-	if scrapeInterval <= 16*1000 {
+	if scrapeInterval <= 16*1e6 {
 		return scrapeInterval + scrapeInterval/2
 	}
-	if scrapeInterval <= 32*1000 {
+	if scrapeInterval <= 32*1e6 {
 		return scrapeInterval + scrapeInterval/4
 	}
 	return scrapeInterval + scrapeInterval/8
@@ -989,7 +989,7 @@ func derivValues(values []float64, timestamps []int64) {
 			values[i] = prevDeriv
 			continue
 		}
-		dt := float64(ts-prevTs) / 1e3
+		dt := float64(ts-prevTs) / 1e6
 		prevDeriv = (v - prevValue) / dt
 		values[i] = prevDeriv
 		prevValue = v
@@ -1114,7 +1114,7 @@ func linearRegression(values []float64, timestamps []int64, interceptTime int64)
 		if math.IsNaN(v) {
 			continue
 		}
-		dt := float64(timestamps[i]-interceptTime) / 1e3
+		dt := float64(timestamps[i]-interceptTime) / 1e6
 		vSum += v
 		tSum += dt
 		tvSum += dt * v
@@ -1165,7 +1165,7 @@ func newRollupDurationOverTime(args []any) (rollupFunc, error) {
 		}
 		tPrev := timestamps[0]
 		dSum := int64(0)
-		dMax := int64(dMaxs[rfa.idx] * 1000)
+		dMax := int64(dMaxs[rfa.idx] * 1e6)
 		for _, t := range timestamps {
 			d := t - tPrev
 			if d <= dMax {
@@ -1173,7 +1173,7 @@ func newRollupDurationOverTime(args []any) (rollupFunc, error) {
 			}
 			tPrev = t
 		}
-		return float64(dSum) / 1000
+		return float64(dSum) / 1e6
 	}
 	return rf, nil
 }
@@ -1617,7 +1617,7 @@ func rollupTmin(rfa *rollupFuncArg) float64 {
 			minTimestamp = timestamps[i]
 		}
 	}
-	return float64(minTimestamp) / 1e3
+	return float64(minTimestamp) / 1e6
 }
 
 func rollupTmax(rfa *rollupFuncArg) float64 {
@@ -1637,7 +1637,7 @@ func rollupTmax(rfa *rollupFuncArg) float64 {
 			maxTimestamp = timestamps[i]
 		}
 	}
-	return float64(maxTimestamp) / 1e3
+	return float64(maxTimestamp) / 1e6
 }
 
 func rollupTfirst(rfa *rollupFuncArg) float64 {
@@ -1650,7 +1650,7 @@ func rollupTfirst(rfa *rollupFuncArg) float64 {
 		// with irregular data points.
 		return nan
 	}
-	return float64(timestamps[0]) / 1e3
+	return float64(timestamps[0]) / 1e6
 }
 
 func rollupTlast(rfa *rollupFuncArg) float64 {
@@ -1663,7 +1663,7 @@ func rollupTlast(rfa *rollupFuncArg) float64 {
 		// with irregular data points.
 		return nan
 	}
-	return float64(timestamps[len(timestamps)-1]) / 1e3
+	return float64(timestamps[len(timestamps)-1]) / 1e6
 }
 
 func rollupTlastChange(rfa *rollupFuncArg) float64 {
@@ -1678,11 +1678,11 @@ func rollupTlastChange(rfa *rollupFuncArg) float64 {
 	values = values[:len(values)-1]
 	for i := len(values) - 1; i >= 0; i-- {
 		if values[i] != lastValue {
-			return float64(timestamps[i+1]) / 1e3
+			return float64(timestamps[i+1]) / 1e6
 		}
 	}
 	if math.IsNaN(rfa.prevValue) || rfa.prevValue != lastValue {
-		return float64(timestamps[0]) / 1e3
+		return float64(timestamps[0]) / 1e6
 	}
 	return nan
 }
@@ -1715,7 +1715,7 @@ func rollupRateOverSum(rfa *rollupFuncArg) float64 {
 	for _, v := range rfa.values {
 		sum += v
 	}
-	return sum / (float64(rfa.window) / 1e3)
+	return sum / (float64(rfa.window) / 1e6)
 }
 
 func rollupRange(rfa *rollupFuncArg) float64 {
@@ -1948,7 +1948,7 @@ func rollupDerivFastPrometheus(rfa *rollupFuncArg) float64 {
 	if math.IsNaN(delta) || rfa.window == 0 {
 		return nan
 	}
-	return delta / (float64(rfa.window) / 1e3)
+	return delta / (float64(rfa.window) / 1e6)
 }
 
 func rollupDerivFast(rfa *rollupFuncArg) float64 {
@@ -1984,7 +1984,7 @@ func rollupDerivFast(rfa *rollupFuncArg) float64 {
 	vEnd := values[len(values)-1]
 	tEnd := timestamps[len(timestamps)-1]
 	dv := vEnd - prevValue
-	dt := float64(tEnd-prevTimestamp) / 1e3
+	dt := float64(tEnd-prevTimestamp) / 1e6
 	return dv / dt
 }
 
@@ -2010,7 +2010,7 @@ func rollupIderiv(rfa *rollupFuncArg) float64 {
 			// So just return nan
 			return nan
 		}
-		return (values[0] - rfa.prevValue) / (float64(timestamps[0]-rfa.prevTimestamp) / 1e3)
+		return (values[0] - rfa.prevValue) / (float64(timestamps[0]-rfa.prevTimestamp) / 1e6)
 	}
 	vEnd := values[len(values)-1]
 	tEnd := timestamps[len(timestamps)-1]
@@ -2034,7 +2034,7 @@ func rollupIderiv(rfa *rollupFuncArg) float64 {
 	}
 	dv := vEnd - vStart
 	dt := tEnd - tStart
-	return dv / (float64(dt) / 1e3)
+	return dv / (float64(dt) / 1e6)
 }
 
 func rollupLifetime(rfa *rollupFuncArg) float64 {
@@ -2044,12 +2044,12 @@ func rollupLifetime(rfa *rollupFuncArg) float64 {
 		if len(timestamps) < 2 {
 			return nan
 		}
-		return float64(timestamps[len(timestamps)-1]-timestamps[0]) / 1e3
+		return float64(timestamps[len(timestamps)-1]-timestamps[0]) / 1e6
 	}
 	if len(timestamps) == 0 {
 		return nan
 	}
-	return float64(timestamps[len(timestamps)-1]-rfa.prevTimestamp) / 1e3
+	return float64(timestamps[len(timestamps)-1]-rfa.prevTimestamp) / 1e6
 }
 
 func rollupLag(rfa *rollupFuncArg) float64 {
@@ -2059,9 +2059,9 @@ func rollupLag(rfa *rollupFuncArg) float64 {
 		if math.IsNaN(rfa.prevValue) {
 			return nan
 		}
-		return float64(rfa.currTimestamp-rfa.prevTimestamp) / 1e3
+		return float64(rfa.currTimestamp-rfa.prevTimestamp) / 1e6
 	}
-	return float64(rfa.currTimestamp-timestamps[len(timestamps)-1]) / 1e3
+	return float64(rfa.currTimestamp-timestamps[len(timestamps)-1]) / 1e6
 }
 
 func rollupScrapeInterval(rfa *rollupFuncArg) float64 {
@@ -2071,12 +2071,12 @@ func rollupScrapeInterval(rfa *rollupFuncArg) float64 {
 		if len(timestamps) < 2 {
 			return nan
 		}
-		return (float64(timestamps[len(timestamps)-1]-timestamps[0]) / 1e3) / float64(len(timestamps)-1)
+		return (float64(timestamps[len(timestamps)-1]-timestamps[0]) / 1e6) / float64(len(timestamps)-1)
 	}
 	if len(timestamps) == 0 {
 		return nan
 	}
-	return (float64(timestamps[len(timestamps)-1]-rfa.prevTimestamp) / 1e3) / float64(len(timestamps))
+	return (float64(timestamps[len(timestamps)-1]-rfa.prevTimestamp) / 1e6) / float64(len(timestamps))
 }
 
 func rollupChangesPrometheus(rfa *rollupFuncArg) float64 {
@@ -2434,7 +2434,7 @@ func rollupIntegrate(rfa *rollupFuncArg) float64 {
 	var sum float64
 	for i, v := range values {
 		timestamp := timestamps[i]
-		dt := float64(timestamp-prevTimestamp) / 1e3
+		dt := float64(timestamp-prevTimestamp) / 1e6
 		sum += prevValue * dt
 		prevTimestamp = timestamp
 		prevValue = v
@@ -2445,7 +2445,7 @@ func rollupIntegrate(rfa *rollupFuncArg) float64 {
 	// past it would overcount the integral.
 	// See https://github.com/VictoriaMetrics/VictoriaMetrics/issues/9474
 	if !math.IsNaN(rfa.realNextValue) {
-		dt := float64(rfa.currTimestamp-prevTimestamp) / 1e3
+		dt := float64(rfa.currTimestamp-prevTimestamp) / 1e6
 		sum += prevValue * dt
 	}
 	return sum

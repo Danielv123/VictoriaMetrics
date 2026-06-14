@@ -67,7 +67,7 @@ func MetricsFindHandler(startTime time.Time, w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		return err
 	}
-	ct := startTime.UnixNano() / 1e6
+	ct := startTime.UnixMicro()
 	until, err := httputil.GetTime(r, "until", ct)
 	if err != nil {
 		return err
@@ -141,7 +141,7 @@ func MetricsExpandHandler(startTime time.Time, w http.ResponseWriter, r *http.Re
 	if err != nil {
 		return err
 	}
-	ct := startTime.UnixNano() / 1e6
+	ct := startTime.UnixMicro()
 	until, err := httputil.GetTime(r, "until", ct)
 	if err != nil {
 		return err

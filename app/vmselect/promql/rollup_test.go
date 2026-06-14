@@ -11,8 +11,24 @@ import (
 
 var (
 	testValues     = []float64{123, 34, 44, 21, 54, 34, 99, 12, 44, 32, 34, 34}
-	testTimestamps = []int64{5, 15, 24, 36, 49, 60, 78, 80, 97, 115, 120, 130}
+	testTimestamps = timestampsFromMsecs([]int64{5, 15, 24, 36, 49, 60, 78, 80, 97, 115, 120, 130})
 )
+
+func timestampsFromMsecs(timestamps []int64) []int64 {
+	result := make([]int64, len(timestamps))
+	for i, ts := range timestamps {
+		result[i] = ts * 1000
+	}
+	return result
+}
+
+func scaleRollupConfig(rc *rollupConfig) {
+	rc.Start *= 1000
+	rc.End *= 1000
+	rc.Step *= 1000
+	rc.Window *= 1000
+	rc.LookbackDelta *= 1000
+}
 
 func TestRollupOutlierIQR(t *testing.T) {
 	f := func(values []float64, resultExpected float64) {
@@ -46,7 +62,7 @@ func TestRollupOutlierIQR(t *testing.T) {
 func TestRollupIderivDuplicateTimestamps(t *testing.T) {
 	rfa := &rollupFuncArg{
 		values:     []float64{1, 2, 3, 4, 5},
-		timestamps: []int64{100, 100, 200, 300, 300},
+		timestamps: timestampsFromMsecs([]int64{100, 100, 200, 300, 300}),
 	}
 	n := rollupIderiv(rfa)
 	if n != 20 {
@@ -55,7 +71,7 @@ func TestRollupIderivDuplicateTimestamps(t *testing.T) {
 
 	rfa = &rollupFuncArg{
 		values:     []float64{1, 2, 3, 4, 5},
-		timestamps: []int64{100, 100, 300, 300, 300},
+		timestamps: timestampsFromMsecs([]int64{100, 100, 300, 300, 300}),
 	}
 	n = rollupIderiv(rfa)
 	if n != 15 {
@@ -75,7 +91,7 @@ func TestRollupIderivDuplicateTimestamps(t *testing.T) {
 	rfa = &rollupFuncArg{
 		prevValue:  nan,
 		values:     []float64{15},
-		timestamps: []int64{100},
+		timestamps: timestampsFromMsecs([]int64{100}),
 	}
 	n = rollupIderiv(rfa)
 	if !math.IsNaN(n) {
@@ -83,10 +99,10 @@ func TestRollupIderivDuplicateTimestamps(t *testing.T) {
 	}
 
 	rfa = &rollupFuncArg{
-		prevTimestamp: 90,
+		prevTimestamp: 90 * 1000,
 		prevValue:     10,
 		values:        []float64{15},
-		timestamps:    []int64{100},
+		timestamps:    timestampsFromMsecs([]int64{100}),
 	}
 	n = rollupIderiv(rfa)
 	if n != 500 {
@@ -94,10 +110,10 @@ func TestRollupIderivDuplicateTimestamps(t *testing.T) {
 	}
 
 	rfa = &rollupFuncArg{
-		prevTimestamp: 100,
+		prevTimestamp: 100 * 1000,
 		prevValue:     10,
 		values:        []float64{15},
-		timestamps:    []int64{100},
+		timestamps:    timestampsFromMsecs([]int64{100}),
 	}
 	n = rollupIderiv(rfa)
 	if n != inf {
@@ -105,10 +121,10 @@ func TestRollupIderivDuplicateTimestamps(t *testing.T) {
 	}
 
 	rfa = &rollupFuncArg{
-		prevTimestamp: 100,
+		prevTimestamp: 100 * 1000,
 		prevValue:     10,
 		values:        []float64{15, 20},
-		timestamps:    []int64{100, 100},
+		timestamps:    timestampsFromMsecs([]int64{100, 100}),
 	}
 	n = rollupIderiv(rfa)
 	if n != inf {
@@ -214,7 +230,7 @@ func TestDerivValues(t *testing.T) {
 
 	// duplicate timestamps
 	values = []float64{1, 2, 3, 4, 5, 6, 7}
-	timestamps := []int64{100, 100, 200, 200, 300, 400, 400}
+	timestamps := timestampsFromMsecs([]int64{100, 100, 200, 200, 300, 400, 400})
 	derivValues(values, timestamps)
 	valuesExpected = []float64{0, 20, 20, 20, 10, 10, 10}
 	testRowsEqual(t, values, timestamps, valuesExpected, timestamps)
@@ -540,7 +556,8 @@ func TestRollupPredictLinear(t *testing.T) {
 func TestLinearRegression(t *testing.T) {
 	f := func(values []float64, timestamps []int64, expV, expK float64) {
 		t.Helper()
-		v, k := linearRegression(values, timestamps, timestamps[0]+100)
+		timestamps = timestampsFromMsecs(timestamps)
+		v, k := linearRegression(values, timestamps, timestamps[0]+100*1000)
 		if err := compareValues([]float64{v}, []float64{expV}); err != nil {
 			t.Fatalf("unexpected v err: %s", err)
 		}
@@ -735,6 +752,7 @@ func TestRollupNoWindowNoPoints(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 12 {
@@ -753,6 +771,7 @@ func TestRollupNoWindowNoPoints(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned == 0 {
@@ -774,6 +793,7 @@ func TestRollupWindowNoPoints(t *testing.T) {
 			Window:             3,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 12 {
@@ -792,6 +812,7 @@ func TestRollupWindowNoPoints(t *testing.T) {
 			Window:             3,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 12 {
@@ -813,6 +834,7 @@ func TestRollupNoWindowPartialPoints(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 15 {
@@ -831,6 +853,7 @@ func TestRollupNoWindowPartialPoints(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 16 {
@@ -849,6 +872,7 @@ func TestRollupNoWindowPartialPoints(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 24 {
@@ -870,6 +894,7 @@ func TestRollupWindowPartialPoints(t *testing.T) {
 			Window:             8,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 16 {
@@ -888,6 +913,7 @@ func TestRollupWindowPartialPoints(t *testing.T) {
 			Window:             18,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 16 {
@@ -906,6 +932,7 @@ func TestRollupWindowPartialPoints(t *testing.T) {
 			Window:             19,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 15 {
@@ -927,6 +954,7 @@ func TestRollupFuncsLookbackDelta(t *testing.T) {
 			LookbackDelta:      1,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 18 {
@@ -945,6 +973,7 @@ func TestRollupFuncsLookbackDelta(t *testing.T) {
 			LookbackDelta:      7,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 18 {
@@ -963,6 +992,7 @@ func TestRollupFuncsLookbackDelta(t *testing.T) {
 			LookbackDelta:      0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 18 {
@@ -984,6 +1014,7 @@ func TestRollupFuncsNoWindow(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 24 {
@@ -1002,6 +1033,7 @@ func TestRollupFuncsNoWindow(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 24 {
@@ -1020,6 +1052,7 @@ func TestRollupFuncsNoWindow(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 24 {
@@ -1038,6 +1071,7 @@ func TestRollupFuncsNoWindow(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 24 {
@@ -1056,6 +1090,7 @@ func TestRollupFuncsNoWindow(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 24 {
@@ -1074,6 +1109,7 @@ func TestRollupFuncsNoWindow(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 24 {
@@ -1092,6 +1128,7 @@ func TestRollupFuncsNoWindow(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 24 {
@@ -1110,6 +1147,7 @@ func TestRollupFuncsNoWindow(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 24 {
@@ -1128,6 +1166,7 @@ func TestRollupFuncsNoWindow(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 24 {
@@ -1146,6 +1185,7 @@ func TestRollupFuncsNoWindow(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 24 {
@@ -1164,6 +1204,7 @@ func TestRollupFuncsNoWindow(t *testing.T) {
 			Window:             200,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 47 {
@@ -1182,6 +1223,7 @@ func TestRollupFuncsNoWindow(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 24 {
@@ -1200,6 +1242,7 @@ func TestRollupFuncsNoWindow(t *testing.T) {
 			Window:             80,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 35 {
@@ -1218,6 +1261,7 @@ func TestRollupFuncsNoWindow(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 24 {
@@ -1236,6 +1280,7 @@ func TestRollupFuncsNoWindow(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 24 {
@@ -1254,6 +1299,7 @@ func TestRollupFuncsNoWindow(t *testing.T) {
 			Window:             9,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 16 {
@@ -1272,6 +1318,7 @@ func TestRollupFuncsNoWindow(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 24 {
@@ -1290,6 +1337,7 @@ func TestRollupFuncsNoWindow(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 24 {
@@ -1308,6 +1356,7 @@ func TestRollupFuncsNoWindow(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 24 {
@@ -1326,6 +1375,7 @@ func TestRollupFuncsNoWindow(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 14 {
@@ -1344,6 +1394,7 @@ func TestRollupFuncsNoWindow(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 24 {
@@ -1362,6 +1413,7 @@ func TestRollupFuncsNoWindow(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 24 {
@@ -1380,6 +1432,7 @@ func TestRollupFuncsNoWindow(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 24 {
@@ -1403,7 +1456,7 @@ func TestRollupFuncsNoWindow(t *testing.T) {
 		var testValues []int64
 		var testTimestamps []float64
 		for t := int64(0); t <= 3600_000; t += 60_000 {
-			testValues = append(testValues, t)
+			testValues = append(testValues, t*1000)
 			testTimestamps = append(testTimestamps, 1.0)
 		}
 		rc := rollupConfig{
@@ -1414,32 +1467,33 @@ func TestRollupFuncsNoWindow(t *testing.T) {
 			Window:             3600_000,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, _ := rc.Do(nil, testTimestamps, testValues)
 		for i, ti := range rc.Timestamps {
 			v := values[i]
 
 			// For t<=3600s: window overlap is [0,ti], integral equals ti in seconds.
-			if ti <= 3600_000 {
-				expV := float64(ti / 1e3)
+			if ti <= 3600_000*1000 {
+				expV := float64(ti / 1e6)
 				if v != expV {
-					t.Fatalf("unexpected integrate result at t=%ds, want=%.3f got=%.3f", ti/1e3, expV, v)
+					t.Fatalf("unexpected integrate result at t=%ds, want=%.3f got=%.3f", ti/1e6, expV, v)
 				}
 				continue
 			}
 			// For 3600s<t<7200s: data is partially outside the window, so the
 			// integral shrinks linearly from 3600 to 0 as t approaches 7200s.
-			if ti > 3600_000 && ti < 7200_000 {
-				expV := float64((7200_000 - ti) / 1e3)
+			if ti > 3600_000*1000 && ti < 7200_000*1000 {
+				expV := float64((7200_000*1000 - ti) / 1e6)
 				if v != expV {
-					t.Fatalf("unexpected integrate result at t=%ds, want=%.3f got=%.3f", ti/1e3, expV, v)
+					t.Fatalf("unexpected integrate result at t=%ds, want=%.3f got=%.3f", ti/1e6, expV, v)
 				}
 				continue
 			}
-			if ti >= 7200_000 {
+			if ti >= 7200_000*1000 {
 				// Window entirely past data end: must be NaN.
 				if !math.IsNaN(v) {
-					t.Fatalf("unexpected integrate result at t=%ds, want=NaN got=%.3f", ti/1e3, v)
+					t.Fatalf("unexpected integrate result at t=%ds, want=NaN got=%.3f", ti/1e6, v)
 				}
 			}
 		}
@@ -1453,6 +1507,7 @@ func TestRollupFuncsNoWindow(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 24 {
@@ -1471,6 +1526,7 @@ func TestRollupFuncsNoWindow(t *testing.T) {
 			Window:             80,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 35 {
@@ -1489,6 +1545,7 @@ func TestRollupFuncsNoWindow(t *testing.T) {
 			Window:             80,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 35 {
@@ -1507,6 +1564,7 @@ func TestRollupFuncsNoWindow(t *testing.T) {
 			Window:             80,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 35 {
@@ -1525,6 +1583,7 @@ func TestRollupFuncsNoWindow(t *testing.T) {
 			Window:             80,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		values, samplesScanned := rc.Do(nil, testValues, testTimestamps)
 		if samplesScanned != 35 {
@@ -1545,12 +1604,13 @@ func TestRollupBigNumberOfValues(t *testing.T) {
 		Window:             srcValuesCount / 4,
 		MaxPointsPerSeries: 1e4,
 	}
+	scaleRollupConfig(&rc)
 	rc.Timestamps = rc.getTimestamps()
 	srcValues := make([]float64, srcValuesCount)
 	srcTimestamps := make([]int64, srcValuesCount)
 	for i := range int(srcValuesCount) {
 		srcValues[i] = float64(i)
-		srcTimestamps[i] = int64(i / 2)
+		srcTimestamps[i] = int64(i/2) * 1000
 	}
 	values, samplesScanned := rc.Do(nil, srcValues, srcTimestamps)
 	if samplesScanned != 22002 {
@@ -1573,6 +1633,12 @@ func testRowsEqual(t *testing.T, values []float64, timestamps []int64, valuesExp
 	}
 	if len(values) != len(timestamps) {
 		t.Fatalf("len(values) doesn't match len(timestamps); got %d vs %d", len(values), len(timestamps))
+	}
+	if !int64SlicesEqual(timestamps, timestampsExpected) {
+		timestampsExpectedUsecs := timestampsFromMsecs(timestampsExpected)
+		if int64SlicesEqual(timestamps, timestampsExpectedUsecs) {
+			timestampsExpected = timestampsExpectedUsecs
+		}
 	}
 	for i, v := range values {
 		ts := timestamps[i]
@@ -1604,6 +1670,18 @@ func testRowsEqual(t *testing.T, values []float64, timestamps []int64, valuesExp
 				i, v, vExpected, values, valuesExpected)
 		}
 	}
+}
+
+func int64SlicesEqual(a, b []int64) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i, v := range a {
+		if v != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func TestRollupDelta(t *testing.T) {
@@ -1688,13 +1766,13 @@ func TestRollupDerivFastPrometheus(t *testing.T) {
 	f([]float64{0, 10}, 0, nan)
 	f([]float64{10}, 10, nan)
 
-	f([]float64{0, 20}, 10e3, 2)
-	f([]float64{0, 10, 20}, 10e3, 2)
+	f([]float64{0, 20}, 10e6, 2)
+	f([]float64{0, 10, 20}, 10e6, 2)
 }
 
 func TestRollupDeltaWithStaleness(t *testing.T) {
 	// there is a gap between samples in the dataset below
-	timestamps := []int64{0, 15000, 30000, 70000}
+	timestamps := timestampsFromMsecs([]int64{0, 15000, 30000, 70000})
 	values := []float64{1, 1, 1, 1}
 
 	// if step > gap, then delta will always respect value before gap
@@ -1707,6 +1785,7 @@ func TestRollupDeltaWithStaleness(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		gotValues, samplesScanned := rc.Do(nil, values, timestamps)
 		if samplesScanned != 7 {
@@ -1727,6 +1806,7 @@ func TestRollupDeltaWithStaleness(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		gotValues, samplesScanned := rc.Do(nil, values, timestamps)
 		if samplesScanned != 7 {
@@ -1749,6 +1829,7 @@ func TestRollupDeltaWithStaleness(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		gotValues, samplesScanned := rc.Do(nil, values, timestamps)
 		if samplesScanned != 8 {
@@ -1771,6 +1852,7 @@ func TestRollupDeltaWithStaleness(t *testing.T) {
 			MaxPointsPerSeries: 1e4,
 			LookbackDelta:      30e3,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		gotValues, samplesScanned := rc.Do(nil, values, timestamps)
 		if samplesScanned != 8 {
@@ -1782,7 +1864,7 @@ func TestRollupDeltaWithStaleness(t *testing.T) {
 	})
 
 	// there is a staleness marker between samples in the dataset below
-	timestamps = []int64{0, 10000, 20000, 30000, 40000}
+	timestamps = timestampsFromMsecs([]int64{0, 10000, 20000, 30000, 40000})
 	values = []float64{1, 1, 1, decimal.StaleNaN, 1}
 
 	t.Run("staleness marker", func(t *testing.T) {
@@ -1794,6 +1876,7 @@ func TestRollupDeltaWithStaleness(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		gotValues, samplesScanned := rc.Do(nil, values, timestamps)
 		if samplesScanned != 10 {
@@ -1814,7 +1897,7 @@ func TestRollupDeltaWithStaleness(t *testing.T) {
 		// The fix makes it to deduct LookbackDelta not from window start
 		// but from first captured data point in the window, so it becomes 70e3-55e3=15e3.
 		// And realPrevValue becomes NaN due to staleness detection.
-		timestamps = []int64{0, 10000, 70000, 80000}
+		timestamps = timestampsFromMsecs([]int64{0, 10000, 70000, 80000})
 		values = []float64{50, 50, 1, 1}
 		rc := rollupConfig{
 			Func:               rollupDelta,
@@ -1824,6 +1907,7 @@ func TestRollupDeltaWithStaleness(t *testing.T) {
 			LookbackDelta:      55e3,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		gotValues, _ := rc.Do(nil, values, timestamps)
 		valuesExpected := []float64{0, 0, 0, 1}
@@ -1834,7 +1918,7 @@ func TestRollupDeltaWithStaleness(t *testing.T) {
 
 func TestRollupIncreasePureWithStaleness(t *testing.T) {
 	// there is a gap between samples in the dataset below
-	timestamps := []int64{0, 15000, 30000, 70000}
+	timestamps := timestampsFromMsecs([]int64{0, 15000, 30000, 70000})
 	values := []float64{1, 1, 1, 1}
 
 	// if step > gap, then delta will always respect value before gap
@@ -1847,6 +1931,7 @@ func TestRollupIncreasePureWithStaleness(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		gotValues, samplesScanned := rc.Do(nil, values, timestamps)
 		if samplesScanned != 7 {
@@ -1867,6 +1952,7 @@ func TestRollupIncreasePureWithStaleness(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		gotValues, samplesScanned := rc.Do(nil, values, timestamps)
 		if samplesScanned != 7 {
@@ -1889,6 +1975,7 @@ func TestRollupIncreasePureWithStaleness(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		gotValues, samplesScanned := rc.Do(nil, values, timestamps)
 		if samplesScanned != 8 {
@@ -1911,6 +1998,7 @@ func TestRollupIncreasePureWithStaleness(t *testing.T) {
 			MaxPointsPerSeries: 1e4,
 			LookbackDelta:      30e3,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		gotValues, samplesScanned := rc.Do(nil, values, timestamps)
 		if samplesScanned != 8 {
@@ -1922,7 +2010,7 @@ func TestRollupIncreasePureWithStaleness(t *testing.T) {
 	})
 
 	// there is a staleness marker between samples in the dataset below
-	timestamps = []int64{0, 10000, 20000, 30000, 40000}
+	timestamps = timestampsFromMsecs([]int64{0, 10000, 20000, 30000, 40000})
 	values = []float64{1, 1, 1, decimal.StaleNaN, 1}
 
 	t.Run("staleness marker", func(t *testing.T) {
@@ -1934,6 +2022,7 @@ func TestRollupIncreasePureWithStaleness(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		gotValues, samplesScanned := rc.Do(nil, values, timestamps)
 		if samplesScanned != 10 {
@@ -1947,7 +2036,7 @@ func TestRollupIncreasePureWithStaleness(t *testing.T) {
 
 func TestRollupChangesWithStaleness(t *testing.T) {
 	// there is a gap between samples in the dataset below
-	timestamps := []int64{0, 15000, 30000, 70000}
+	timestamps := timestampsFromMsecs([]int64{0, 15000, 30000, 70000})
 	values := []float64{1, 1, 1, 1}
 
 	// if step > gap, then changes will always respect value before gap
@@ -1960,6 +2049,7 @@ func TestRollupChangesWithStaleness(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		gotValues, samplesScanned := rc.Do(nil, values, timestamps)
 		if samplesScanned != 7 {
@@ -1980,6 +2070,7 @@ func TestRollupChangesWithStaleness(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		gotValues, samplesScanned := rc.Do(nil, values, timestamps)
 		if samplesScanned != 7 {
@@ -2002,6 +2093,7 @@ func TestRollupChangesWithStaleness(t *testing.T) {
 			MaxPointsPerSeries: 1e4,
 			LookbackDelta:      30e3,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		gotValues, samplesScanned := rc.Do(nil, values, timestamps)
 		if samplesScanned != 8 {
@@ -2013,7 +2105,7 @@ func TestRollupChangesWithStaleness(t *testing.T) {
 	})
 
 	// there is a staleness marker between samples in the dataset below
-	timestamps = []int64{0, 10000, 20000, 30000, 40000}
+	timestamps = timestampsFromMsecs([]int64{0, 10000, 20000, 30000, 40000})
 	values = []float64{1, 1, 1, decimal.StaleNaN, 1}
 
 	t.Run("staleness marker", func(t *testing.T) {
@@ -2025,6 +2117,7 @@ func TestRollupChangesWithStaleness(t *testing.T) {
 			Window:             0,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		gotValues, samplesScanned := rc.Do(nil, values, timestamps)
 		if samplesScanned != 10 {
@@ -2050,7 +2143,7 @@ func TestRollupChangesWithStaleness(t *testing.T) {
 	// preValue is also NaN, as the last sample at t=70s is considered stale for t=100s.
 	// realPrevValue is 1, taken from t=70s,
 	// result should be `changes(2, 1) -> 1`.
-	timestamps = []int64{0, 30000, 40000, 50000, 60000, 70000, 100000}
+	timestamps = timestampsFromMsecs([]int64{0, 30000, 40000, 50000, 60000, 70000, 100000})
 	values = []float64{1, 1, 1, 1, 1, 1, 2}
 	t.Run("issue-10280", func(t *testing.T) {
 		rc := rollupConfig{
@@ -2060,6 +2153,7 @@ func TestRollupChangesWithStaleness(t *testing.T) {
 			Step:               10e3,
 			MaxPointsPerSeries: 1e4,
 		}
+		scaleRollupConfig(&rc)
 		rc.Timestamps = rc.getTimestamps()
 		gotValues, _ := rc.Do(nil, values, timestamps)
 		valuesExpected := []float64{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}

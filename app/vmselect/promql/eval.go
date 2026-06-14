@@ -333,7 +333,7 @@ func evalExprInternal(qt *querytracer.Tracer, ec *EvalConfig, e metricsql.Expr) 
 		return rv, nil
 	}
 	if de, ok := e.(*metricsql.DurationExpr); ok {
-		d := de.Duration(ec.Step)
+		d := de.Duration(ec.Step / 1e3)
 		dSec := float64(d) / 1000
 		rv := evalNumber(ec, dSec)
 		return rv, nil
@@ -806,7 +806,7 @@ func evalRollupFunc(qt *querytracer.Tracer, ec *EvalConfig, funcName string, rf 
 			Err: fmt.Errorf("`@` modifier must return a non-NaN value"),
 		}
 	}
-	atTimestamp := int64(atValue * 1000)
+	atTimestamp := int64(atValue * 1e6)
 	ecNew := copyEvalConfig(ec)
 	ecNew.Start = atTimestamp
 	ecNew.End = atTimestamp
@@ -835,7 +835,7 @@ func evalRollupFuncWithoutAt(qt *querytracer.Tracer, ec *EvalConfig, funcName st
 	ecNew := ec
 	var offset int64
 	if re.Offset != nil {
-		offset = re.Offset.Duration(ec.Step)
+		offset = re.Offset.Duration(ec.Step/1e3) * 1e3
 		ecNew = copyEvalConfig(ecNew)
 		ecNew.Start -= offset
 		ecNew.End -= offset
@@ -911,17 +911,19 @@ func evalRollupFuncWithSubquery(qt *querytracer.Tracer, ec *EvalConfig, funcName
 	// TODO: determine whether to use rollupResultCacheV here.
 	qt = qt.NewChild("subquery")
 	defer qt.Done()
-	step, err := re.Step.NonNegativeDuration(ec.Step)
+	step, err := re.Step.NonNegativeDuration(ec.Step / 1e3)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse step in square brackets at %s: %w", expr.AppendString(nil), err)
 	}
+	step *= 1e3
 	if step == 0 {
 		step = ec.Step
 	}
-	window, err := re.Window.NonNegativeDuration(ec.Step)
+	window, err := re.Window.NonNegativeDuration(ec.Step / 1e3)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse lookbehind window in square brackets at %s: %w", expr.AppendString(nil), err)
 	}
+	window *= 1e3
 
 	ecSQ := copyEvalConfig(ec)
 	ecSQ.Start -= window + step + maxSilenceInterval()
@@ -1070,7 +1072,7 @@ func evalInstantRollup(qt *querytracer.Tracer, ec *EvalConfig, funcName string, 
 		return evalRollupFuncNoCache(qt, ecCopy, funcName, rf, expr, me, iafc, window, pointsPerSeries)
 	}
 	tooBigOffset := func(offset int64) bool {
-		maxOffset := min(window/2, 1800*1000)
+		maxOffset := min(window/2, 1800*1e6)
 		return offset >= maxOffset
 	}
 	deleteCachedSeries := func(qt *querytracer.Tracer) {
@@ -1084,7 +1086,7 @@ func evalInstantRollup(qt *querytracer.Tracer, ec *EvalConfig, funcName string, 
 		if len(tssCached) == 0 {
 			rollupResultCacheV.rollupResultCacheMisses.Inc()
 			// Cache miss. Re-populate the missing data.
-			start := int64(fasttime.UnixTimestamp()*1000) - cacheTimestampOffset.Milliseconds()
+			start := int64(fasttime.UnixTimestamp()*1e6) - cacheTimestampOffset.Microseconds()
 			offset = timestamp - start
 			if offset < 0 {
 				start = timestamp
@@ -1134,9 +1136,9 @@ func evalInstantRollup(qt *querytracer.Tracer, ec *EvalConfig, funcName string, 
 		qt.Printf("do not apply instant rollup optimization because of disabled cache")
 		return evalAt(qt, timestamp, window)
 	}
-	if window < minWindowForInstantRollupOptimization.Milliseconds() {
+	if window < minWindowForInstantRollupOptimization.Microseconds() {
 		qt.Printf("do not apply instant rollup optimization because of too small window=%d; must be equal or bigger than %d",
-			window, minWindowForInstantRollupOptimization.Milliseconds())
+			window, minWindowForInstantRollupOptimization.Microseconds())
 		return evalAt(qt, timestamp, window)
 	}
 	switch funcName {
@@ -1183,7 +1185,7 @@ func evalInstantRollup(qt *querytracer.Tracer, ec *EvalConfig, funcName string, 
 			newArg := copyRollupExpr(fe.Args[0].(*metricsql.RollupExpr))
 			newArg.Offset = nil
 			feIncrease.Args = []metricsql.Expr{newArg}
-			d := newArg.Window.Duration(ec.Step)
+			d := newArg.Window.Duration(ec.Step/1e3) * 1e3
 			if d == 0 {
 				d = ec.Step
 			}
@@ -1194,7 +1196,7 @@ func evalInstantRollup(qt *querytracer.Tracer, ec *EvalConfig, funcName string, 
 				KeepMetricNames: true,
 				Left:            &afeIncrease,
 				Right: &metricsql.NumberExpr{
-					N: float64(d) / 1000,
+					N: float64(d) / 1e6,
 				},
 			}
 			return evalExpr(qt, ec, be)
@@ -1208,7 +1210,7 @@ func evalInstantRollup(qt *querytracer.Tracer, ec *EvalConfig, funcName string, 
 		newArg := copyRollupExpr(fe.Args[0].(*metricsql.RollupExpr))
 		newArg.Offset = nil
 		feIncrease.Args = []metricsql.Expr{newArg}
-		d := newArg.Window.Duration(ec.Step)
+		d := newArg.Window.Duration(ec.Step/1e3) * 1e3
 		if d == 0 {
 			d = ec.Step
 		}
@@ -1217,7 +1219,7 @@ func evalInstantRollup(qt *querytracer.Tracer, ec *EvalConfig, funcName string, 
 			KeepMetricNames: fe.KeepMetricNames,
 			Left:            &feIncrease,
 			Right: &metricsql.NumberExpr{
-				N: float64(d) / 1000,
+				N: float64(d) / 1e6,
 			},
 		}
 		return evalExpr(qt, ec, be)
@@ -1594,10 +1596,11 @@ var memoryIntensiveQueries = metrics.NewCounter(`vm_memory_intensive_queries_tot
 func evalRollupFuncWithMetricExpr(qt *querytracer.Tracer, ec *EvalConfig, funcName string, rf rollupFunc,
 	expr metricsql.Expr, me *metricsql.MetricExpr, iafc *incrementalAggrFuncContext, windowExpr *metricsql.DurationExpr,
 ) ([]*timeseries, error) {
-	window, err := windowExpr.NonNegativeDuration(ec.Step)
+	window, err := windowExpr.NonNegativeDuration(ec.Step / 1e3)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse lookbehind window in square brackets at %s: %w", expr.AppendString(nil), err)
 	}
+	window *= 1e3
 	if me.IsEmpty() {
 		return evalNumber(ec, nan), nil
 	}
@@ -1755,7 +1758,7 @@ func evalRollupFuncNoCache(qt *querytracer.Tracer, ec *EvalConfig, funcName stri
 			"according to -search.maxMemoryPerQuery=%d; requested memory: %d bytes; "+
 			"possible solutions are: reducing the number of matching time series; increasing `step` query arg (step=%gs); "+
 			"increasing -search.maxMemoryPerQuery",
-			expr.AppendString(nil), rollupPoints, timeseriesLen*len(rcs), pointsPerSeries, maxMemory, rollupMemorySize, float64(ec.Step)/1e3)
+			expr.AppendString(nil), rollupPoints, timeseriesLen*len(rcs), pointsPerSeries, maxMemory, rollupMemorySize, float64(ec.Step)/1e6)
 		return nil, err
 	}
 	rml := getRollupMemoryLimiter()
@@ -1765,7 +1768,7 @@ func evalRollupFuncNoCache(qt *querytracer.Tracer, ec *EvalConfig, funcName stri
 			"total available memory for concurrent requests: %d bytes; requested memory: %d bytes; "+
 			"possible solutions are: reducing the number of matching time series; increasing `step` query arg (step=%gs); "+
 			"switching to node with more RAM; increasing -memory.allowedPercent",
-			expr.AppendString(nil), rollupPoints, timeseriesLen*len(rcs), pointsPerSeries, rml.MaxSize, uint64(rollupMemorySize), float64(ec.Step)/1e3)
+			expr.AppendString(nil), rollupPoints, timeseriesLen*len(rcs), pointsPerSeries, rml.MaxSize, uint64(rollupMemorySize), float64(ec.Step)/1e6)
 		return nil, err
 	}
 	defer rml.Put(uint64(rollupMemorySize))
@@ -1794,9 +1797,9 @@ func getRollupMemoryLimiter() *memoryLimiter {
 }
 
 func maxSilenceInterval() int64 {
-	d := minStalenessInterval.Milliseconds()
+	d := minStalenessInterval.Microseconds()
 	if d <= 0 {
-		d = 5 * 60 * 1000
+		d = 5 * 60 * 1e6
 	}
 	return d
 }
@@ -1961,7 +1964,7 @@ func evalTime(ec *EvalConfig) []*timeseries {
 	timestamps := rv[0].Timestamps
 	values := rv[0].Values
 	for i, ts := range timestamps {
-		values[i] = float64(ts) / 1e3
+		values[i] = float64(ts) / 1e6
 	}
 	return rv
 }

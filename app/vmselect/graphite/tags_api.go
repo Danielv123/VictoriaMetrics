@@ -36,7 +36,7 @@ func TagsDelSeriesHandler(startTime time.Time, w http.ResponseWriter, r *http.Re
 	totalDeleted := 0
 	var row graphiteparser.Row
 	var tagsPool []graphiteparser.Tag
-	ct := startTime.UnixNano() / 1e6
+	ct := startTime.UnixMicro()
 	etfs, err := searchutil.GetExtraTagFilters(r)
 	if err != nil {
 		return fmt.Errorf("cannot setup tag filters: %w", err)
@@ -99,7 +99,7 @@ func registerMetrics(startTime time.Time, w http.ResponseWriter, r *http.Request
 	var b []byte
 	var tagsPool []graphiteparser.Tag
 	mrs := make([]storage.MetricRow, len(paths))
-	ct := startTime.UnixNano() / 1e6
+	ct := startTime.UnixMicro()
 	canonicalPaths := make([]string, len(paths))
 	for i, path := range paths {
 		var err error
@@ -477,7 +477,7 @@ func getSearchQueryForExprs(startTime time.Time, etfs [][]storage.TagFilter, exp
 	if err != nil {
 		return nil, err
 	}
-	ct := startTime.UnixNano() / 1e6
+	ct := startTime.UnixMicro()
 	tfss := joinTagFilterss(tfs, etfs)
 	sq := storage.NewSearchQuery(0, ct, tfss, maxMetrics)
 	return sq, nil

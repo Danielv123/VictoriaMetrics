@@ -50,10 +50,10 @@ func TestEscapeDotsInRegexpLabelFilters(t *testing.T) {
 }
 
 func TestExecSuccess(t *testing.T) {
-	start := int64(1000e3)
-	end := int64(2000e3)
-	step := int64(200e3)
-	timestampsExpected := []int64{1000e3, 1200e3, 1400e3, 1600e3, 1800e3, 2000e3}
+	start := int64(1000e6)
+	end := int64(2000e6)
+	step := int64(200e6)
+	timestampsExpected := []int64{1000e6, 1200e6, 1400e6, 1600e6, 1800e6, 2000e6}
 	metricNameExpected := storage.MetricName{}
 
 	f := func(q string, resultExpected []netstorage.Result) {
@@ -363,7 +363,7 @@ func TestExecSuccess(t *testing.T) {
 		if err != nil {
 			t.Fatalf("cannot obtain timezone: %s", err)
 		}
-		at := time.Unix(timestampsExpected[0]/1000, 0)
+		at := time.Unix(timestampsExpected[0]/1e6, 0)
 		_, offset := at.In(loc).Zone()
 		off := float64(offset)
 		r := netstorage.Result{
@@ -381,7 +381,7 @@ func TestExecSuccess(t *testing.T) {
 		if err != nil {
 			t.Fatalf("cannot obtain timezone: %s", err)
 		}
-		at := time.Unix(timestampsExpected[0]/1000, 0)
+		at := time.Unix(timestampsExpected[0]/1e6, 0)
 		_, offset := at.In(loc).Zone()
 		off := float64(offset)
 		r := netstorage.Result{

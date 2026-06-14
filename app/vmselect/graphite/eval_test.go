@@ -13,9 +13,9 @@ import (
 
 func TestExecExprSuccess(t *testing.T) {
 	ec := &evalConfig{
-		startTime:   120e3,
-		endTime:     210e3,
-		storageStep: 30e3,
+		startTime:   120e6,
+		endTime:     210e6,
+		storageStep: 30e6,
 		currentTime: time.Unix(150e3, 0),
 	}
 	f := func(query string, expectedSeries []*series) {
@@ -76,7 +76,7 @@ func TestExecExprSuccess(t *testing.T) {
 		"sum"
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 165000},
+			Timestamps: []int64{120000000, 165000000},
 			Values:     []float64{3, 3},
 			Name:       "sumSeries(constantLine(1),constantLine(2))",
 			Tags:       map[string]string{"name": "sumSeries(constantLine(1),constantLine(2))", "aggregatedBy": "sum"},
@@ -91,7 +91,7 @@ func TestExecExprSuccess(t *testing.T) {
 		xFilesFactor = 1,
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 165000},
+			Timestamps: []int64{120000000, 165000000},
 			Values:     []float64{2, 2},
 			Name:       "countSeries(bar,constantLine(1))",
 			Tags:       map[string]string{"name": "countSeries(bar,constantLine(1))", "aggregatedBy": "count"},
@@ -105,7 +105,7 @@ func TestExecExprSuccess(t *testing.T) {
 		"avg_zero"
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 165000},
+			Timestamps: []int64{120000000, 165000000},
 			Values:     []float64{70.5, 93},
 			Name:       "avg_zeroSeries(bar,constantLine(1))",
 			Tags:       map[string]string{"name": "avg_zeroSeries(bar,constantLine(1))", "aggregatedBy": "avg_zero"},
@@ -119,7 +119,7 @@ func TestExecExprSuccess(t *testing.T) {
 		"min"
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 165000},
+			Timestamps: []int64{120000000, 165000000},
 			Values:     []float64{1, 1},
 			Name:       "minSeries(bar,constantLine(1))",
 			Tags:       map[string]string{"name": "minSeries(bar,constantLine(1))", "aggregatedBy": "min"},
@@ -133,7 +133,7 @@ func TestExecExprSuccess(t *testing.T) {
 		"diff",
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 165000},
+			Timestamps: []int64{120000000, 165000000},
 			Values:     []float64{-139, -184},
 			Name:       "diffSeries(constantLine(1),bar)",
 			Tags:       map[string]string{"name": "diffSeries(constantLine(1),bar)", "aggregatedBy": "diff"},
@@ -147,7 +147,7 @@ func TestExecExprSuccess(t *testing.T) {
 		"range",
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 165000},
+			Timestamps: []int64{120000000, 165000000},
 			Values:     []float64{139, 184},
 			Name:       "rangeSeries(bar,constantLine(1))",
 			Tags:       map[string]string{"name": "rangeSeries(bar,constantLine(1))", "aggregatedBy": "range"},
@@ -161,7 +161,7 @@ func TestExecExprSuccess(t *testing.T) {
 		"multiply",
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 165000},
+			Timestamps: []int64{120000000, 165000000},
 			Values:     []float64{280, 370},
 			Name:       "multiplySeries(bar,constantLine(2))",
 			Tags:       map[string]string{"name": "multiplySeries(bar,constantLine(2))", "aggregatedBy": "multiply"},
@@ -175,7 +175,7 @@ func TestExecExprSuccess(t *testing.T) {
 		"first",
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 165000},
+			Timestamps: []int64{120000000, 165000000},
 			Values:     []float64{2, 2},
 			Name:       "firstSeries(constantLine(2),bar)",
 			Tags:       map[string]string{"name": "firstSeries(constantLine(2),bar)", "aggregatedBy": "first"},
@@ -189,7 +189,7 @@ func TestExecExprSuccess(t *testing.T) {
 		"last",
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 165000},
+			Timestamps: []int64{120000000, 165000000},
 			Values:     []float64{140, 185},
 			Name:       "lastSeries(constantLine(2),bar)",
 			Tags:       map[string]string{"name": "lastSeries(constantLine(2),bar)", "aggregatedBy": "last"},
@@ -273,7 +273,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`aggregateLine(time("foo",20),func="min",keepStep=True)`, []*series{
 		{
-			Timestamps: []int64{120000, 140000, 160000, 180000, 200000},
+			Timestamps: []int64{120000000, 140000000, 160000000, 180000000, 200000000},
 			Values:     []float64{120, 120, 120, 120, 120},
 			Name:       "aggregateLine(foo,120)",
 			Tags:       map[string]string{"name": "foo"},
@@ -287,13 +287,13 @@ func TestExecExprSuccess(t *testing.T) {
 		func='max'
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{120, nan, 180},
 			Name:       "foo.baz",
 			Tags:       map[string]string{"name": "foo.baz", "aggregatedBy": "max"},
 		},
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{120, 150, 180},
 			Name:       "foo.bar",
 			Tags:       map[string]string{"name": "foo.bar", "aggregatedBy": "max"},
@@ -308,7 +308,7 @@ func TestExecExprSuccess(t *testing.T) {
 		1
 	)`, []*series{
 		{
-			Timestamps:     []int64{120000, 150000, 180000},
+			Timestamps:     []int64{120000000, 150000000, 180000000},
 			Values:         []float64{120, 150, 180},
 			Name:           "foo",
 			Tags:           map[string]string{"name": "medianSeries(foo.bar,foo.baz)", "aggregatedBy": "median"},
@@ -324,7 +324,7 @@ func TestExecExprSuccess(t *testing.T) {
 		1, 0, 2
 	)`, []*series{
 		{
-			Timestamps:     []int64{120000, 150000, 180000},
+			Timestamps:     []int64{120000000, 150000000, 180000000},
 			Values:         []float64{0, 0, 0},
 			Name:           "",
 			Tags:           map[string]string{"aggregatedBy": "stddev", "name": "stddevSeries(foo.bar,foo.baz)"},
@@ -349,28 +349,28 @@ func TestExecExprSuccess(t *testing.T) {
 		)
 	)`, []*series{
 		{
-			Timestamps:     []int64{ec.startTime, ec.startTime + 60*1000},
+			Timestamps:     []int64{ec.startTime, ec.startTime + 60*1000*1000},
 			Values:         []float64{120, 180},
 			Name:           "baz;x=y",
 			Tags:           map[string]string{"name": "foo.bar.baz", "x": "y"},
 			pathExpression: "foo.bar.baz;x=y",
 		},
 		{
-			Timestamps:     []int64{ec.startTime, ec.startTime + 30*1000, ec.startTime + 60*1000, ec.startTime + 90*1000},
+			Timestamps:     []int64{ec.startTime, ec.startTime + 30*1000*1000, ec.startTime + 60*1000*1000, ec.startTime + 90*1000*1000},
 			Values:         []float64{120, 150, 180, 210},
 			Name:           "bb",
 			Tags:           map[string]string{"name": "aaa.bb"},
 			pathExpression: "aaa.bb",
 		},
 		{
-			Timestamps:     []int64{120000, 150000, 180000, 210000},
+			Timestamps:     []int64{120000000, 150000000, 180000000, 210000000},
 			Values:         []float64{120, nan, 180, nan},
 			Name:           "a",
 			Tags:           map[string]string{"name": "a", "summarize": "30s", "summarizeFunction": "sum"},
 			pathExpression: "summarize(a,'30s','sum')",
 		},
 		{
-			Timestamps:     []int64{120000, 150000, 180000, 210000},
+			Timestamps:     []int64{120000000, 150000000, 180000000, 210000000},
 			Values:         []float64{120, nan, 180, nan},
 			Name:           "b",
 			Tags:           map[string]string{"name": "c.d.b", "summarize": "30s", "summarizeFunction": "sum"},
@@ -404,7 +404,7 @@ func TestExecExprSuccess(t *testing.T) {
 
 	f(`aliasByNode(time("foo.bar.baz"))`, []*series{
 		{
-			Timestamps:     []int64{ec.startTime, ec.startTime + 60*1000},
+			Timestamps:     []int64{ec.startTime, ec.startTime + 60*1000*1000},
 			Values:         []float64{120, 180},
 			Name:           "",
 			Tags:           map[string]string{"name": "foo.bar.baz"},
@@ -419,14 +419,14 @@ func TestExecExprSuccess(t *testing.T) {
 		1, "aa"
 	)`, []*series{
 		{
-			Timestamps:     []int64{120000, 140000, 160000, 180000, 200000},
+			Timestamps:     []int64{120000000, 140000000, 160000000, 180000000, 200000000},
 			Values:         []float64{120, 140, 160, 180, 200},
 			Name:           "bar.bb",
 			Tags:           map[string]string{"name": "foo.bar.baz", "aa": "bb"},
 			pathExpression: "foo.bar.baz;aa=bb",
 		},
 		{
-			Timestamps:     []int64{120000, 170000},
+			Timestamps:     []int64{120000000, 170000000},
 			Values:         []float64{120, 170},
 			Name:           "xx",
 			Tags:           map[string]string{"name": "foo.xx"},
@@ -443,14 +443,14 @@ func TestExecExprSuccess(t *testing.T) {
 		"foo %d bar %g"
 	)`, []*series{
 		{
-			Timestamps:     []int64{120000, 140000, 160000, 180000, 200000},
+			Timestamps:     []int64{120000000, 140000000, 160000000, 180000000, 200000000},
 			Values:         []float64{120, 140, 160, 180, 200},
 			Name:           "foo 1 bar 1.2",
 			Tags:           map[string]string{"name": "foo.1.2"},
 			pathExpression: "foo.1.2",
 		},
 		{
-			Timestamps:     []int64{120000, 170000},
+			Timestamps:     []int64{120000000, 170000000},
 			Values:         []float64{120, 170},
 			Name:           "foo 3 bar 3.4",
 			Tags:           map[string]string{"name": "foo.3.4"},
@@ -466,14 +466,14 @@ func TestExecExprSuccess(t *testing.T) {
 		"bar\2\1.x\2"
 	)`, []*series{
 		{
-			Timestamps:     []int64{120000, 140000, 160000, 180000, 200000},
+			Timestamps:     []int64{120000000, 140000000, 160000000, 180000000, 200000000},
 			Values:         []float64{120, 140, 160, 180, 200},
 			Name:           "bar21.x2",
 			Tags:           map[string]string{"name": "foo.1.2"},
 			pathExpression: "foo.1.2",
 		},
 		{
-			Timestamps:     []int64{120000, 170000},
+			Timestamps:     []int64{120000000, 170000000},
 			Values:         []float64{120, 170},
 			Name:           "bar43.x4",
 			Tags:           map[string]string{"name": "foo.3.4"},
@@ -482,7 +482,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`alpha(time("foo",50),0.5)`, []*series{
 		{
-			Timestamps: []int64{120000, 170000},
+			Timestamps: []int64{120000000, 170000000},
 			Values:     []float64{120, 170},
 			Name:       "foo",
 			Tags:       map[string]string{"name": "foo"},
@@ -494,7 +494,7 @@ func TestExecExprSuccess(t *testing.T) {
 		"time('%.abc;de=fg',50)"
 	)`, []*series{
 		{
-			Timestamps:     []int64{120000, 170000},
+			Timestamps:     []int64{120000000, 170000000},
 			Values:         []float64{120, 170},
 			Name:           "foo.bar.abc;de=fg",
 			Tags:           map[string]string{"name": "foo.bar.abc", "de": "fg"},
@@ -508,7 +508,7 @@ func TestExecExprSuccess(t *testing.T) {
 		"a.%.end"
 	)`, []*series{
 		{
-			Timestamps:     []int64{120000, 170000},
+			Timestamps:     []int64{120000000, 170000000},
 			Values:         []float64{120, 170},
 			Name:           "a.foo.bar.end",
 			Tags:           map[string]string{"name": "foo.bar.abc", "de": "fg"},
@@ -522,13 +522,13 @@ func TestExecExprSuccess(t *testing.T) {
 		)
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 180000},
+			Timestamps: []int64{120000000, 180000000},
 			Values:     []float64{120, 180},
 			Name:       "areaBetween(a)",
 			Tags:       map[string]string{"name": "a", "areaBetween": "1"},
 		},
 		{
-			Timestamps: []int64{120000, 180000},
+			Timestamps: []int64{120000000, 180000000},
 			Values:     []float64{120, 180},
 			Name:       "areaBetween(b)",
 			Tags:       map[string]string{"name": "b", "areaBetween": "1"},
@@ -541,13 +541,13 @@ func TestExecExprSuccess(t *testing.T) {
 		)
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{50, 50, 50},
 			Name:       "asPercent(foo,sumSeries(bar,foo))",
 			Tags:       map[string]string{"name": "asPercent(foo,sumSeries(bar,foo))"},
 		},
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{50, 50, 50},
 			Name:       "asPercent(bar,sumSeries(bar,foo))",
 			Tags:       map[string]string{"name": "asPercent(bar,sumSeries(bar,foo))"},
@@ -561,13 +561,13 @@ func TestExecExprSuccess(t *testing.T) {
 		150
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 137000, 154000, 171000, 188000, 205000},
+			Timestamps: []int64{120000000, 137000000, 154000000, 171000000, 188000000, 205000000},
 			Values:     []float64{80, 91.33333333333333, 102.66666666666666, 113.99999999999999, 125.33333333333334, 136.66666666666666},
 			Name:       "asPercent(foo,150)",
 			Tags:       map[string]string{"name": "foo"},
 		},
 		{
-			Timestamps: []int64{120000, 143000, 166000, 189000},
+			Timestamps: []int64{120000000, 143000000, 166000000, 189000000},
 			Values:     []float64{80, 95.33333333333334, 110.66666666666667, 126},
 			Name:       "asPercent(bar,150)",
 			Tags:       map[string]string{"name": "bar"},
@@ -591,19 +591,19 @@ func TestExecExprSuccess(t *testing.T) {
 		0
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{100, 100, 100},
 			Name:       "asPercent(foo.x,foo.x)",
 			Tags:       map[string]string{"name": "asPercent(foo.x,foo.x)"},
 		},
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{50, 50, 50},
 			Name:       "asPercent(bar.x,sumSeries(bar.x,bar.y))",
 			Tags:       map[string]string{"name": "asPercent(bar.x,sumSeries(bar.x,bar.y))"},
 		},
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{50, 50, 50},
 			Name:       "asPercent(bar.y,sumSeries(bar.x,bar.y))",
 			Tags:       map[string]string{"name": "asPercent(bar.y,sumSeries(bar.x,bar.y))"},
@@ -617,13 +617,13 @@ func TestExecExprSuccess(t *testing.T) {
 		constantLine(100)|alias("baz;x=y")
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 165000},
+			Timestamps: []int64{120000000, 165000000},
 			Values:     []float64{135, 180},
 			Name:       "asPercent(bar,baz;x=y)",
 			Tags:       map[string]string{"name": "asPercent(bar,baz;x=y)"},
 		},
 		{
-			Timestamps: []int64{120000, 165000},
+			Timestamps: []int64{120000000, 165000000},
 			Values:     []float64{135, 180},
 			Name:       "asPercent(foo;a=b,baz;x=y)",
 			Tags:       map[string]string{"name": "asPercent(foo;a=b,baz;x=y)", "a": "b"},
@@ -640,13 +640,13 @@ func TestExecExprSuccess(t *testing.T) {
 		)
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{100, 100, 100},
 			Name:       "asPercent(bar,y)",
 			Tags:       map[string]string{"name": "asPercent(bar,y)"},
 		},
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{100, 100, 100},
 			Name:       "asPercent(foo,x)",
 			Tags:       map[string]string{"name": "asPercent(foo,x)"},
@@ -665,25 +665,25 @@ func TestExecExprSuccess(t *testing.T) {
 		0
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{100, 100, 100},
 			Name:       "asPercent(bar.b;a=b,bar.sss)",
 			Tags:       map[string]string{"name": "asPercent(bar.b;a=b,bar.sss)", "a": "b"},
 		},
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{100, 100, 100},
 			Name:       "asPercent(bar.a,bar.sss)",
 			Tags:       map[string]string{"name": "asPercent(bar.a,bar.sss)"},
 		},
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{nan, nan, nan},
 			Name:       `asPercent(MISSING,abc;e=g)`,
 			Tags:       map[string]string{"name": `asPercent(MISSING,abc;e=g)`},
 		},
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{nan, nan, nan},
 			Name:       "asPercent(foo.x;c=d,MISSING)",
 			Tags:       map[string]string{"name": "asPercent(foo.x;c=d,MISSING)", "c": "d"},
@@ -698,7 +698,7 @@ func TestExecExprSuccess(t *testing.T) {
 		160
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 140000, 160000, 180000, 200000},
+			Timestamps: []int64{120000000, 140000000, 160000000, 180000000, 200000000},
 			Values:     []float64{220, 240, 260, 280, 300},
 			Name:       "add(baz,100)",
 			Tags:       map[string]string{"name": "baz", "add": "100"},
@@ -713,13 +713,13 @@ func TestExecExprSuccess(t *testing.T) {
 		160
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 180000},
+			Timestamps: []int64{120000000, 180000000},
 			Values:     []float64{120, 180},
 			Name:       "foo",
 			Tags:       map[string]string{"name": "foo"},
 		},
 		{
-			Timestamps:     []int64{120000, 165000, 210000},
+			Timestamps:     []int64{120000000, 165000000, 210000000},
 			Values:         []float64{10, 10, 10},
 			Name:           "bar",
 			Tags:           map[string]string{"name": "10"},
@@ -736,13 +736,13 @@ func TestExecExprSuccess(t *testing.T) {
 		75
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 180000},
+			Timestamps: []int64{120000000, 180000000},
 			Values:     []float64{110, 170},
 			Name:       "add(a,-10)",
 			Tags:       map[string]string{"name": "a", "add": "-10"},
 		},
 		{
-			Timestamps: []int64{120000, 180000},
+			Timestamps: []int64{120000000, 180000000},
 			Values:     []float64{140, 200},
 			Name:       "add(d,20)",
 			Tags:       map[string]string{"name": "d", "add": "20"},
@@ -753,7 +753,7 @@ func TestExecExprSuccess(t *testing.T) {
 		time('bar',30),
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{120, 150, 180},
 			Name:       "averageSeries(bar,foo)",
 			Tags:       map[string]string{"name": "averageSeries(bar,foo)", "aggregatedBy": "average"},
@@ -768,14 +768,14 @@ func TestExecExprSuccess(t *testing.T) {
 		1
 	)`, []*series{
 		{
-			Timestamps:     []int64{120000, 150000, 180000},
+			Timestamps:     []int64{120000000, 150000000, 180000000},
 			Values:         []float64{120, 150, 180},
 			Name:           "xxx",
 			Tags:           map[string]string{"aggregatedBy": "average", "name": "xxx.yy"},
 			pathExpression: "xxx.yy",
 		},
 		{
-			Timestamps:     []int64{120000, 150000, 180000},
+			Timestamps:     []int64{120000000, 150000000, 180000000},
 			Values:         []float64{120, 150, 180},
 			Name:           "foo",
 			Tags:           map[string]string{"aggregatedBy": "average", "name": "averageSeries(foo.bar,foo.baz)"},
@@ -790,19 +790,19 @@ func TestExecExprSuccess(t *testing.T) {
 		)
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{120, 150, 180},
 			Name:       "xxx.yy",
 			Tags:       map[string]string{"aggregatedBy": "average", "name": "xxx.yy"},
 		},
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{120, 150, 180},
 			Name:       "foo.bar",
 			Tags:       map[string]string{"aggregatedBy": "average", "name": "foo.bar"},
 		},
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{120, 150, 180},
 			Name:       "foo.baz",
 			Tags:       map[string]string{"aggregatedBy": "average", "name": "foo.baz"},
@@ -816,7 +816,7 @@ func TestExecExprSuccess(t *testing.T) {
 		time('bar',30),
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{120, 150, 180},
 			Name:       "averageSeries(bar,foo,xxx)",
 			Tags:       map[string]string{"name": "averageSeries(bar,foo,xxx)", "aggregatedBy": "average"},
@@ -829,14 +829,14 @@ func TestExecExprSuccess(t *testing.T) {
 		)
 	)`, []*series{
 		{
-			Timestamps:     []int64{120000, 165000, 210000},
+			Timestamps:     []int64{120000000, 165000000, 210000000},
 			Values:         []float64{0, 0, 0},
 			Name:           "changed(foo)",
 			Tags:           map[string]string{"name": "123"},
 			pathExpression: "changed(foo)",
 		},
 		{
-			Timestamps:     []int64{120000, 180000},
+			Timestamps:     []int64{120000000, 180000000},
 			Values:         []float64{0, 1},
 			Name:           "changed(bar)",
 			Tags:           map[string]string{"name": "bar"},
@@ -845,7 +845,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`color(time("foo",50),'green')`, []*series{
 		{
-			Timestamps: []int64{120000, 170000},
+			Timestamps: []int64{120000000, 170000000},
 			Values:     []float64{120, 170},
 			Name:       "foo",
 			Tags:       map[string]string{"name": "foo"},
@@ -861,7 +861,7 @@ func TestExecExprSuccess(t *testing.T) {
 		)
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{120, 150, 180},
 			Name:       `averageSeries(consolidateBy(bar,'first'),consolidateBy(foo,'first'))`,
 			Tags: map[string]string{
@@ -903,7 +903,7 @@ func TestExecExprSuccess(t *testing.T) {
 		time('bar',30),
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{2, 2, 2},
 			Name:       "countSeries(bar,foo)",
 			Tags:       map[string]string{"name": "countSeries(bar,foo)", "aggregatedBy": "count"},
@@ -915,7 +915,7 @@ func TestExecExprSuccess(t *testing.T) {
 		)
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{120, 150, 180},
 			Name:       `averageSeries(consolidateBy(foo,'sum'))`,
 			Tags:       map[string]string{"name": "foo", "aggregatedBy": "average", "consolidateBy": "sum"},
@@ -930,7 +930,7 @@ func TestExecExprSuccess(t *testing.T) {
 		200
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 140000, 160000, 180000, 200000},
+			Timestamps: []int64{120000000, 140000000, 160000000, 180000000, 200000000},
 			Values:     []float64{220, 240, 260, 280, 300},
 			Name:       "add(baz,100)",
 			Tags:       map[string]string{"name": "baz", "add": "100"},
@@ -945,13 +945,13 @@ func TestExecExprSuccess(t *testing.T) {
 		200
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 180000},
+			Timestamps: []int64{120000000, 180000000},
 			Values:     []float64{120, 180},
 			Name:       "foo",
 			Tags:       map[string]string{"name": "foo"},
 		},
 		{
-			Timestamps:     []int64{120000, 165000, 210000},
+			Timestamps:     []int64{120000000, 165000000, 210000000},
 			Values:         []float64{10, 10, 10},
 			Name:           "bar",
 			Tags:           map[string]string{"name": "10"},
@@ -960,7 +960,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`dashed(time('foo'))`, []*series{
 		{
-			Timestamps:     []int64{120000, 180000},
+			Timestamps:     []int64{120000000, 180000000},
 			Values:         []float64{120, 180},
 			Name:           "dashed(foo,5)",
 			Tags:           map[string]string{"name": "foo", "dashed": "5"},
@@ -969,7 +969,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`delay(time('foo',20),1)`, []*series{
 		{
-			Timestamps: []int64{120000, 140000, 160000, 180000, 200000},
+			Timestamps: []int64{120000000, 140000000, 160000000, 180000000, 200000000},
 			Values:     []float64{nan, 120, 140, 160, 180},
 			Name:       "delay(foo,1)",
 			Tags:       map[string]string{"name": "foo", "delay": "1"},
@@ -977,7 +977,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`delay(time('foo',20),-1)`, []*series{
 		{
-			Timestamps: []int64{120000, 140000, 160000, 180000, 200000},
+			Timestamps: []int64{120000000, 140000000, 160000000, 180000000, 200000000},
 			Values:     []float64{140, 160, 180, 200, nan},
 			Name:       "delay(foo,-1)",
 			Tags:       map[string]string{"name": "foo", "delay": "-1"},
@@ -985,7 +985,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`delay(time('foo',20),0)`, []*series{
 		{
-			Timestamps: []int64{120000, 140000, 160000, 180000, 200000},
+			Timestamps: []int64{120000000, 140000000, 160000000, 180000000, 200000000},
 			Values:     []float64{120, 140, 160, 180, 200},
 			Name:       "delay(foo,0)",
 			Tags:       map[string]string{"name": "foo", "delay": "0"},
@@ -993,7 +993,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`delay(time('foo',20),100)`, []*series{
 		{
-			Timestamps: []int64{120000, 140000, 160000, 180000, 200000},
+			Timestamps: []int64{120000000, 140000000, 160000000, 180000000, 200000000},
 			Values:     []float64{nan, nan, nan, nan, nan},
 			Name:       "delay(foo,100)",
 			Tags:       map[string]string{"name": "foo", "delay": "100"},
@@ -1001,7 +1001,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`delay(time('foo',20),-100)`, []*series{
 		{
-			Timestamps: []int64{120000, 140000, 160000, 180000, 200000},
+			Timestamps: []int64{120000000, 140000000, 160000000, 180000000, 200000000},
 			Values:     []float64{nan, nan, nan, nan, nan},
 			Name:       "delay(foo,-100)",
 			Tags:       map[string]string{"name": "foo", "delay": "-100"},
@@ -1009,7 +1009,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`derivative(time('foo',25))`, []*series{
 		{
-			Timestamps: []int64{120000, 145000, 170000, 195000},
+			Timestamps: []int64{120000000, 145000000, 170000000, 195000000},
 			Values:     []float64{nan, 25, 25, 25},
 			Name:       "derivative(foo)",
 			Tags:       map[string]string{"name": "foo", "derivative": "1"},
@@ -1020,7 +1020,7 @@ func TestExecExprSuccess(t *testing.T) {
 		time('bar',30),
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{0, 0, 0},
 			Name:       "diffSeries(foo,bar)",
 			Tags:       map[string]string{"name": "diffSeries(foo,bar)", "aggregatedBy": "diff"},
@@ -1034,13 +1034,13 @@ func TestExecExprSuccess(t *testing.T) {
 		add(time('xx',30),100)
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{0.5454545454545454, 0.6, 0.6428571428571429},
 			Name:       "divideSeries(foo,add(xx,100))",
 			Tags:       map[string]string{"name": "foo"},
 		},
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{0.5454545454545454, 0.6, 0.6428571428571429},
 			Name:       "divideSeries(bar,add(xx,100))",
 			Tags:       map[string]string{"name": "bar"},
@@ -1054,14 +1054,14 @@ func TestExecExprSuccess(t *testing.T) {
 		group()
 	)`, []*series{
 		{
-			Timestamps:     []int64{120000, 140000, 160000, 180000, 200000},
+			Timestamps:     []int64{120000000, 140000000, 160000000, 180000000, 200000000},
 			Values:         []float64{nan, nan, nan, nan, nan},
 			Name:           "divideSeries(foo,MISSING)",
 			Tags:           map[string]string{"name": "foo"},
 			pathExpression: "divideSeries(foo,MISSING)",
 		},
 		{
-			Timestamps:     []int64{120000, 150000, 180000, 210000},
+			Timestamps:     []int64{120000000, 150000000, 180000000, 210000000},
 			Values:         []float64{nan, nan, nan, nan},
 			Name:           "divideSeries(bar,MISSING)",
 			Tags:           map[string]string{"name": "bar"},
@@ -1079,13 +1079,13 @@ func TestExecExprSuccess(t *testing.T) {
 		)
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{1, 1, 1},
 			Name:       "divideSeries(foo,xx)",
 			Tags:       map[string]string{"name": "foo"},
 		},
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{1, 1, 1},
 			Name:       "divideSeries(bar,y)",
 			Tags:       map[string]string{"name": "bar"},
@@ -1093,7 +1093,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`drawAsInfinite(time('a'))`, []*series{
 		{
-			Timestamps:     []int64{120000, 180000},
+			Timestamps:     []int64{120000000, 180000000},
 			Values:         []float64{120, 180},
 			Name:           "drawAsInfinite(a)",
 			Tags:           map[string]string{"name": "a", "drawAsInfinite": "1"},
@@ -1102,7 +1102,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`events()`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{nan, nan, nan},
 			Name:       "events()",
 			Tags:       map[string]string{"name": "events()"},
@@ -1110,7 +1110,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`events("foo","bar")`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{nan, nan, nan},
 			Name:       "events('foo','bar')",
 			Tags:       map[string]string{"name": "events('foo','bar')"},
@@ -1124,7 +1124,7 @@ func TestExecExprSuccess(t *testing.T) {
 		"bar"
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 180000},
+			Timestamps: []int64{120000000, 180000000},
 			Values:     []float64{120, 180},
 			Name:       "x",
 			Tags:       map[string]string{"name": "x"},
@@ -1132,7 +1132,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`exp(scale(time('a',25),1e-2))`, []*series{
 		{
-			Timestamps:     []int64{120000, 145000, 170000, 195000},
+			Timestamps:     []int64{120000000, 145000000, 170000000, 195000000},
 			Values:         []float64{3.3201169227365472, 4.263114515168817, 5.4739473917272, 7.028687580589293},
 			Name:           "exp(scale(a,0.01))",
 			Tags:           map[string]string{"name": "a", "exp": "e"},
@@ -1141,7 +1141,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`exponentialMovingAverage(time('a',20),'1min')`, []*series{
 		{
-			Timestamps: []int64{120000, 140000, 160000, 180000, 200000},
+			Timestamps: []int64{120000000, 140000000, 160000000, 180000000, 200000000},
 			Values:     []float64{81.31147540983606, 83.23568933082504, 85.75255197571603, 88.8426322388073, 92.48713609983001},
 			Name:       "exponentialMovingAverage(a,'1min')",
 			Tags:       map[string]string{"name": "a", "exponentialMovingAverage": "'1min'"},
@@ -1149,7 +1149,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`exponentialMovingAverage(time('a',20),'10s')`, []*series{
 		{
-			Timestamps: []int64{130000, 150000, 170000, 190000, 210000},
+			Timestamps: []int64{130000000, 150000000, 170000000, 190000000, 210000000},
 			Values:     []float64{113.63636363636364, 120.24793388429751, 129.2937640871525, 140.33126152585203, 152.998304884788},
 			Name:       "exponentialMovingAverage(a,'10s')",
 			Tags:       map[string]string{"name": "a", "exponentialMovingAverage": "'10s'"},
@@ -1157,7 +1157,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`exponentialMovingAverage(time('a',20),5)`, []*series{
 		{
-			Timestamps: []int64{130000, 150000, 170000, 190000, 210000},
+			Timestamps: []int64{130000000, 150000000, 170000000, 190000000, 210000000},
 			Values:     []float64{70, 96.66666666666667, 121.11111111111111, 144.07407407407408, 166.0493827160494},
 			Name:       "exponentialMovingAverage(a,5)",
 			Tags:       map[string]string{"name": "a", "exponentialMovingAverage": "5"},
@@ -1165,7 +1165,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`fallbackSeries(time('a'),constantLine(10))`, []*series{
 		{
-			Timestamps: []int64{120000, 180000},
+			Timestamps: []int64{120000000, 180000000},
 			Values:     []float64{120, 180},
 			Name:       "a",
 			Tags:       map[string]string{"name": "a"},
@@ -1173,7 +1173,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`fallbackSeries(group(),constantLine(10))`, []*series{
 		{
-			Timestamps:     []int64{120000, 165000, 210000},
+			Timestamps:     []int64{120000000, 165000000, 210000000},
 			Values:         []float64{10, 10, 10},
 			Name:           "10",
 			Tags:           map[string]string{"name": "10"},
@@ -1188,7 +1188,7 @@ func TestExecExprSuccess(t *testing.T) {
 		'last','>=',300
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 140000, 160000, 180000, 200000},
+			Timestamps: []int64{120000000, 140000000, 160000000, 180000000, 200000000},
 			Values:     []float64{320, 340, 360, 380, 400},
 			Name:       "add(b,200)",
 			Tags:       map[string]string{"name": "b", "add": "200"},
@@ -1202,7 +1202,7 @@ func TestExecExprSuccess(t *testing.T) {
 		'first','<=',120
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 140000, 160000, 180000, 200000},
+			Timestamps: []int64{120000000, 140000000, 160000000, 180000000, 200000000},
 			Values:     []float64{120, 140, 160, 180, 200},
 			Name:       "a",
 			Tags:       map[string]string{"name": "a"},
@@ -1216,7 +1216,7 @@ func TestExecExprSuccess(t *testing.T) {
 		'first','=',120
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 140000, 160000, 180000, 200000},
+			Timestamps: []int64{120000000, 140000000, 160000000, 180000000, 200000000},
 			Values:     []float64{120, 140, 160, 180, 200},
 			Name:       "a",
 			Tags:       map[string]string{"name": "a"},
@@ -1230,7 +1230,7 @@ func TestExecExprSuccess(t *testing.T) {
 		'first','!=',120
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 140000, 160000, 180000, 200000},
+			Timestamps: []int64{120000000, 140000000, 160000000, 180000000, 200000000},
 			Values:     []float64{320, 340, 360, 380, 400},
 			Name:       "add(b,200)",
 			Tags:       map[string]string{"name": "b", "add": "200"},
@@ -1244,7 +1244,7 @@ func TestExecExprSuccess(t *testing.T) {
 		"bar"
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 180000},
+			Timestamps: []int64{120000000, 180000000},
 			Values:     []float64{120, 180},
 			Name:       "foo.bar.baz",
 			Tags:       map[string]string{"name": "foo.bar.baz"},
@@ -1275,7 +1275,7 @@ func TestExecExprSuccess(t *testing.T) {
 		0
 	)`, []*series{
 		{
-			Timestamps:     []int64{120000, 150000, 180000},
+			Timestamps:     []int64{120000000, 150000000, 180000000},
 			Values:         []float64{120, 150, 180},
 			Name:           "foo",
 			Tags:           map[string]string{"aggregatedBy": "average", "name": "averageSeries(foo.bar,foo.baz)"},
@@ -1291,7 +1291,7 @@ func TestExecExprSuccess(t *testing.T) {
 		'last'
 	)`, []*series{
 		{
-			Timestamps:     []int64{120000, 150000, 180000},
+			Timestamps:     []int64{120000000, 150000000, 180000000},
 			Values:         []float64{120, 150, 180},
 			Name:           "foo",
 			Tags:           map[string]string{"aggregatedBy": "last", "name": "lastSeries(foo.bar,foo.baz)"},
@@ -1306,7 +1306,7 @@ func TestExecExprSuccess(t *testing.T) {
 		callback='first',
 	)`, []*series{
 		{
-			Timestamps:     []int64{120000, 150000, 180000},
+			Timestamps:     []int64{120000000, 150000000, 180000000},
 			Values:         []float64{120, 150, 180},
 			Name:           "",
 			Tags:           map[string]string{"aggregatedBy": "first", "name": "firstSeries(foo.bar,foo.baz)"},
@@ -1322,7 +1322,7 @@ func TestExecExprSuccess(t *testing.T) {
 		0
 	)`, []*series{
 		{
-			Timestamps:     []int64{120000, 150000, 180000},
+			Timestamps:     []int64{120000000, 150000000, 180000000},
 			Values:         []float64{120, 150, 180},
 			Name:           "foo",
 			Tags:           map[string]string{"aggregatedBy": "median", "name": "medianSeries(foo.bar,foo.baz)"},
@@ -1338,7 +1338,7 @@ func TestExecExprSuccess(t *testing.T) {
 		'bar'
 	)`, []*series{
 		{
-			Timestamps:     []int64{120000, 150000, 180000},
+			Timestamps:     []int64{120000000, 150000000, 180000000},
 			Values:         []float64{120, 150, 180},
 			Name:           "median;bar=baz",
 			Tags:           map[string]string{"aggregatedBy": "median", "bar": "baz", "name": `medianSeries(foo;bar=baz,x;bar=baz;aa=bb)`},
@@ -1354,14 +1354,14 @@ func TestExecExprSuccess(t *testing.T) {
 		'bar', 'name'
 	)`, []*series{
 		{
-			Timestamps:     []int64{120000, 150000, 180000},
+			Timestamps:     []int64{120000000, 150000000, 180000000},
 			Values:         []float64{120, 150, 180},
 			Name:           "foo;bar=baz",
 			Tags:           map[string]string{"aggregatedBy": "median", "bar": "baz", "name": "foo"},
 			pathExpression: "foo",
 		},
 		{
-			Timestamps:     []int64{120000, 150000, 180000},
+			Timestamps:     []int64{120000000, 150000000, 180000000},
 			Values:         []float64{120, 150, 180},
 			Name:           "x;bar=baz",
 			Tags:           map[string]string{"aa": "bb", "aggregatedBy": "median", "bar": "baz", "name": "x"},
@@ -1376,7 +1376,7 @@ func TestExecExprSuccess(t *testing.T) {
 		)
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 147000, 174000, 201000},
+			Timestamps: []int64{120000000, 147000000, 174000000, 201000000},
 			Values:     []float64{120, 147, 174, 201},
 			Name:       "bar",
 			Tags:       map[string]string{"name": "bar"},
@@ -1392,19 +1392,19 @@ func TestExecExprSuccess(t *testing.T) {
 		'avg'
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 147000, 174000, 201000},
+			Timestamps: []int64{120000000, 147000000, 174000000, 201000000},
 			Values:     []float64{120, 147, 174, 201},
 			Name:       "bar",
 			Tags:       map[string]string{"name": "bar"},
 		},
 		{
-			Timestamps: []int64{120000, 145000, 170000, 195000},
+			Timestamps: []int64{120000000, 145000000, 170000000, 195000000},
 			Values:     []float64{120, 145, 170, 195},
 			Name:       "foo",
 			Tags:       map[string]string{"name": "foo"},
 		},
 		{
-			Timestamps: []int64{120000, 143000, 166000, 189000},
+			Timestamps: []int64{120000000, 143000000, 166000000, 189000000},
 			Values:     []float64{120, 143, 166, 189},
 			Name:       "baz",
 			Tags:       map[string]string{"name": "baz"},
@@ -1419,7 +1419,7 @@ func TestExecExprSuccess(t *testing.T) {
 		1
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 147000, 174000, 201000},
+			Timestamps: []int64{120000000, 147000000, 174000000, 201000000},
 			Values:     []float64{120, 147, 174, 201},
 			Name:       "bar",
 			Tags:       map[string]string{"name": "bar"},
@@ -1434,7 +1434,7 @@ func TestExecExprSuccess(t *testing.T) {
 		1
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 147000, 174000, 201000},
+			Timestamps: []int64{120000000, 147000000, 174000000, 201000000},
 			Values:     []float64{120, 147, 174, 201},
 			Name:       "bar",
 			Tags:       map[string]string{"name": "bar"},
@@ -1449,13 +1449,13 @@ func TestExecExprSuccess(t *testing.T) {
 		2
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 147000, 174000, 201000},
+			Timestamps: []int64{120000000, 147000000, 174000000, 201000000},
 			Values:     []float64{120, 147, 174, 201},
 			Name:       "bar",
 			Tags:       map[string]string{"name": "bar"},
 		},
 		{
-			Timestamps: []int64{120000, 145000, 170000, 195000},
+			Timestamps: []int64{120000000, 145000000, 170000000, 195000000},
 			Values:     []float64{120, 145, 170, 195},
 			Name:       "foo",
 			Tags:       map[string]string{"name": "foo"},
@@ -1463,7 +1463,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`hitcount(time('foo',20),'60s')`, []*series{
 		{
-			Timestamps: []int64{120000, 180000},
+			Timestamps: []int64{120000000, 180000000},
 			Values:     []float64{6000, 4000},
 			Name:       "hitcount(foo,'60s')",
 			Tags:       map[string]string{"name": "foo", "hitcount": "60s"},
@@ -1471,7 +1471,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`hitcount(time('foo',25),'60s')`, []*series{
 		{
-			Timestamps: []int64{120000, 180000},
+			Timestamps: []int64{120000000, 180000000},
 			Values:     []float64{7875, 5475},
 			Name:       "hitcount(foo,'60s')",
 			Tags:       map[string]string{"name": "foo", "hitcount": "60s"},
@@ -1479,7 +1479,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`hitcount(time('foo',25),'60s',true)`, []*series{
 		{
-			Timestamps: []int64{120000, 180000},
+			Timestamps: []int64{120000000, 180000000},
 			Values:     []float64{7875, 5475},
 			Name:       "hitcount(foo,'60s',true)",
 			Tags:       map[string]string{"name": "foo", "hitcount": "60s"},
@@ -1487,7 +1487,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`identity('foo')`, []*series{
 		{
-			Timestamps: []int64{120000, 180000},
+			Timestamps: []int64{120000000, 180000000},
 			Values:     []float64{120, 180},
 			Name:       "foo",
 			Tags:       map[string]string{"name": "foo"},
@@ -1500,13 +1500,13 @@ func TestExecExprSuccess(t *testing.T) {
 		)
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000, 210000},
+			Timestamps: []int64{120000000, 150000000, 180000000, 210000000},
 			Values:     []float64{120, 270, 450, 660},
 			Name:       "integral(foo)",
 			Tags:       map[string]string{"name": "foo", "integral": "1"},
 		},
 		{
-			Timestamps: []int64{120000, 145000, 170000, 195000},
+			Timestamps: []int64{120000000, 145000000, 170000000, 195000000},
 			Values:     []float64{120, 265, 435, 630},
 			Name:       "integral(bar)",
 			Tags:       map[string]string{"name": "bar", "integral": "1"},
@@ -1520,13 +1520,13 @@ func TestExecExprSuccess(t *testing.T) {
 		'60s'
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000, 210000},
+			Timestamps: []int64{120000000, 150000000, 180000000, 210000000},
 			Values:     []float64{120, 270, 180, 390},
 			Name:       "integralByInterval(foo,'60s')",
 			Tags:       map[string]string{"name": "foo", "integralByInterval": "1"},
 		},
 		{
-			Timestamps: []int64{120000, 145000, 170000, 195000},
+			Timestamps: []int64{120000000, 145000000, 170000000, 195000000},
 			Values:     []float64{120, 265, 435, 195},
 			Name:       "integralByInterval(bar,'60s')",
 			Tags:       map[string]string{"name": "bar", "integralByInterval": "1"},
@@ -1534,7 +1534,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`interpolate(time('a'))`, []*series{
 		{
-			Timestamps:     []int64{120000, 180000},
+			Timestamps:     []int64{120000000, 180000000},
 			Values:         []float64{120, 180},
 			Name:           "interpolate(a)",
 			Tags:           map[string]string{"name": "a"},
@@ -1543,7 +1543,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`invert(time('a'))`, []*series{
 		{
-			Timestamps:     []int64{120000, 180000},
+			Timestamps:     []int64{120000000, 180000000},
 			Values:         []float64{0.008333333333333333, 0.005555555555555556},
 			Name:           "invert(a)",
 			Tags:           map[string]string{"name": "a", "invert": "1"},
@@ -1552,7 +1552,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`keepLastValue(removeAboveValue(time('a'),150))`, []*series{
 		{
-			Timestamps:     []int64{120000, 180000},
+			Timestamps:     []int64{120000000, 180000000},
 			Values:         []float64{120, 120},
 			Name:           "keepLastValue(removeAboveValue(a,150))",
 			Tags:           map[string]string{"name": "a"},
@@ -1568,7 +1568,7 @@ func TestExecExprSuccess(t *testing.T) {
 		1
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 145000, 170000, 195000},
+			Timestamps: []int64{120000000, 145000000, 170000000, 195000000},
 			Values:     []float64{120, 145, 170, 195},
 			Name:       "foo",
 			Tags:       map[string]string{"name": "foo"},
@@ -1576,7 +1576,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`lineWidth(time('a'),2)`, []*series{
 		{
-			Timestamps: []int64{120000, 180000},
+			Timestamps: []int64{120000000, 180000000},
 			Values:     []float64{120, 180},
 			Name:       "a",
 			Tags:       map[string]string{"name": "a"},
@@ -1584,7 +1584,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`logarithm(time('a'))`, []*series{
 		{
-			Timestamps: []int64{120000, 180000},
+			Timestamps: []int64{120000000, 180000000},
 			Values:     []float64{2.0791812460476247, 2.255272505103306},
 			Name:       "log(a,10)",
 			Tags:       map[string]string{"name": "a", "log": "10"},
@@ -1592,7 +1592,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`logarithm(time('a'), 2)`, []*series{
 		{
-			Timestamps: []int64{120000, 180000},
+			Timestamps: []int64{120000000, 180000000},
 			Values:     []float64{6.906890595608519, 7.491853096329675},
 			Name:       "log(a,2)",
 			Tags:       map[string]string{"name": "a", "log": "2"},
@@ -1600,7 +1600,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`logarithm(time('a'),-2)`, []*series{
 		{
-			Timestamps: []int64{120000, 180000},
+			Timestamps: []int64{120000000, 180000000},
 			Values:     []float64{nan, nan},
 			Name:       "log(a,-2)",
 			Tags:       map[string]string{"name": "a", "log": "-2"},
@@ -1608,7 +1608,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`logit(invert(time('a')))`, []*series{
 		{
-			Timestamps:     []int64{120000, 180000},
+			Timestamps:     []int64{120000000, 180000000},
 			Values:         []float64{-4.77912349311153, -5.187385805840755},
 			Name:           "logit(invert(a))",
 			Tags:           map[string]string{"name": "a", "invert": "1", "logit": "logit"},
@@ -1617,7 +1617,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`logit(time('a'))`, []*series{
 		{
-			Timestamps:     []int64{120000, 180000},
+			Timestamps:     []int64{120000000, 180000000},
 			Values:         []float64{nan, nan},
 			Name:           "logit(a)",
 			Tags:           map[string]string{"name": "a", "logit": "logit"},
@@ -1632,7 +1632,7 @@ func TestExecExprSuccess(t *testing.T) {
 		)
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 143000, 166000, 189000},
+			Timestamps: []int64{120000000, 143000000, 166000000, 189000000},
 			Values:     []float64{120, 143, 166, 189},
 			Name:       "baz",
 			Tags:       map[string]string{"name": "baz"},
@@ -1648,13 +1648,13 @@ func TestExecExprSuccess(t *testing.T) {
 		'sum'
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 143000, 166000, 189000},
+			Timestamps: []int64{120000000, 143000000, 166000000, 189000000},
 			Values:     []float64{120, 143, 166, 189},
 			Name:       "baz",
 			Tags:       map[string]string{"name": "baz"},
 		},
 		{
-			Timestamps: []int64{120000, 145000, 170000, 195000},
+			Timestamps: []int64{120000000, 145000000, 170000000, 195000000},
 			Values:     []float64{120, 145, 170, 195},
 			Name:       "foo",
 			Tags:       map[string]string{"name": "foo"},
@@ -1669,7 +1669,7 @@ func TestExecExprSuccess(t *testing.T) {
 		1
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 143000, 166000, 189000},
+			Timestamps: []int64{120000000, 143000000, 166000000, 189000000},
 			Values:     []float64{120, 143, 166, 189},
 			Name:       "baz",
 			Tags:       map[string]string{"name": "baz"},
@@ -1684,7 +1684,7 @@ func TestExecExprSuccess(t *testing.T) {
 		1
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 143000, 166000, 189000},
+			Timestamps: []int64{120000000, 143000000, 166000000, 189000000},
 			Values:     []float64{120, 143, 166, 189},
 			Name:       "baz",
 			Tags:       map[string]string{"name": "baz"},
@@ -1695,7 +1695,7 @@ func TestExecExprSuccess(t *testing.T) {
 		time('bar',30),
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{120, 150, 180},
 			Name:       "maxSeries(bar,foo)",
 			Tags:       map[string]string{"name": "maxSeries(bar,foo)", "aggregatedBy": "max"},
@@ -1710,7 +1710,7 @@ func TestExecExprSuccess(t *testing.T) {
 		200
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 140000, 160000, 180000, 200000},
+			Timestamps: []int64{120000000, 140000000, 160000000, 180000000, 200000000},
 			Values:     []float64{220, 240, 260, 280, 300},
 			Name:       "add(baz,100)",
 			Tags:       map[string]string{"name": "baz", "add": "100"},
@@ -1725,13 +1725,13 @@ func TestExecExprSuccess(t *testing.T) {
 		200
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 180000},
+			Timestamps: []int64{120000000, 180000000},
 			Values:     []float64{120, 180},
 			Name:       "foo",
 			Tags:       map[string]string{"name": "foo"},
 		},
 		{
-			Timestamps:     []int64{120000, 165000, 210000},
+			Timestamps:     []int64{120000000, 165000000, 210000000},
 			Values:         []float64{10, 10, 10},
 			Name:           "bar",
 			Tags:           map[string]string{"name": "10"},
@@ -1740,7 +1740,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`minMax(time('foo',20))`, []*series{
 		{
-			Timestamps:     []int64{120000, 140000, 160000, 180000, 200000},
+			Timestamps:     []int64{120000000, 140000000, 160000000, 180000000, 200000000},
 			Values:         []float64{0, 0.25, 0.5, 0.75, 1},
 			Name:           "minMax(foo)",
 			Tags:           map[string]string{"name": "foo"},
@@ -1752,7 +1752,7 @@ func TestExecExprSuccess(t *testing.T) {
 		time('bar',30),
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{120, 150, 180},
 			Name:       "minSeries(bar,foo)",
 			Tags:       map[string]string{"name": "minSeries(bar,foo)", "aggregatedBy": "min"},
@@ -1767,7 +1767,7 @@ func TestExecExprSuccess(t *testing.T) {
 		200
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 140000, 160000, 180000, 200000},
+			Timestamps: []int64{120000000, 140000000, 160000000, 180000000, 200000000},
 			Values:     []float64{220, 240, 260, 280, 300},
 			Name:       "add(baz,100)",
 			Tags:       map[string]string{"name": "baz", "add": "100"},
@@ -1782,13 +1782,13 @@ func TestExecExprSuccess(t *testing.T) {
 		200
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 180000},
+			Timestamps: []int64{120000000, 180000000},
 			Values:     []float64{120, 180},
 			Name:       "foo",
 			Tags:       map[string]string{"name": "foo"},
 		},
 		{
-			Timestamps:     []int64{120000, 165000, 210000},
+			Timestamps:     []int64{120000000, 165000000, 210000000},
 			Values:         []float64{10, 10, 10},
 			Name:           "bar",
 			Tags:           map[string]string{"name": "10"},
@@ -1804,7 +1804,7 @@ func TestExecExprSuccess(t *testing.T) {
 		1
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000, 210000},
+			Timestamps: []int64{120000000, 150000000, 180000000, 210000000},
 			Values:     []float64{120, 150, 180, 210},
 			Name:       "baz",
 			Tags:       map[string]string{"name": "baz"},
@@ -1818,13 +1818,13 @@ func TestExecExprSuccess(t *testing.T) {
 		5
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000, 210000},
+			Timestamps: []int64{120000000, 150000000, 180000000, 210000000},
 			Values:     []float64{30, 60, 90, 120},
 			Name:       "movingAverage(foo,5)",
 			Tags:       map[string]string{"name": "foo", "movingAverage": "5"},
 		},
 		{
-			Timestamps: []int64{120000, 150000, 180000, 210000},
+			Timestamps: []int64{120000000, 150000000, 180000000, 210000000},
 			Values:     []float64{30, 60, 90, 120},
 			Name:       "movingAverage(bar,5)",
 			Tags:       map[string]string{"name": "bar", "movingAverage": "5"},
@@ -1840,13 +1840,13 @@ func TestExecExprSuccess(t *testing.T) {
 		2
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 180000},
+			Timestamps: []int64{120000000, 180000000},
 			Values:     []float64{330, 690},
 			Name:       "movingAverage(summarize(foo,'1m','sum'),2)",
 			Tags:       map[string]string{"name": "foo", "movingAverage": "2", "summarize": "1m", "summarizeFunction": "sum"},
 		},
 		{
-			Timestamps: []int64{120000, 180000},
+			Timestamps: []int64{120000000, 180000000},
 			Values:     []float64{150, 330},
 			Name:       "movingAverage(summarize(bar,'1m','sum'),2)",
 			Tags:       map[string]string{"name": "bar", "movingAverage": "2", "summarize": "1m", "summarizeFunction": "sum"},
@@ -1860,13 +1860,13 @@ func TestExecExprSuccess(t *testing.T) {
 		5
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000, 210000},
+			Timestamps: []int64{120000000, 150000000, 180000000, 210000000},
 			Values:     []float64{90, 120, 150, 180},
 			Name:       "movingMax(foo,5)",
 			Tags:       map[string]string{"name": "foo", "movingMax": "5"},
 		},
 		{
-			Timestamps: []int64{120000, 150000, 180000, 210000},
+			Timestamps: []int64{120000000, 150000000, 180000000, 210000000},
 			Values:     []float64{90, 120, 150, 180},
 			Name:       "movingMax(bar,5)",
 			Tags:       map[string]string{"name": "bar", "movingMax": "5"},
@@ -1880,13 +1880,13 @@ func TestExecExprSuccess(t *testing.T) {
 		5
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000, 210000},
+			Timestamps: []int64{120000000, 150000000, 180000000, 210000000},
 			Values:     []float64{30, 60, 90, 120},
 			Name:       "movingMedian(foo,5)",
 			Tags:       map[string]string{"name": "foo", "movingMedian": "5"},
 		},
 		{
-			Timestamps: []int64{120000, 150000, 180000, 210000},
+			Timestamps: []int64{120000000, 150000000, 180000000, 210000000},
 			Values:     []float64{30, 60, 90, 120},
 			Name:       "movingMedian(bar,5)",
 			Tags:       map[string]string{"name": "bar", "movingMedian": "5"},
@@ -1900,13 +1900,13 @@ func TestExecExprSuccess(t *testing.T) {
 		5
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000, 210000},
+			Timestamps: []int64{120000000, 150000000, 180000000, 210000000},
 			Values:     []float64{-30, 0, 30, 60},
 			Name:       "movingMin(foo,5)",
 			Tags:       map[string]string{"name": "foo", "movingMin": "5"},
 		},
 		{
-			Timestamps: []int64{120000, 150000, 180000, 210000},
+			Timestamps: []int64{120000000, 150000000, 180000000, 210000000},
 			Values:     []float64{-30, 0, 30, 60},
 			Name:       "movingMin(bar,5)",
 			Tags:       map[string]string{"name": "bar", "movingMin": "5"},
@@ -1920,13 +1920,13 @@ func TestExecExprSuccess(t *testing.T) {
 		5
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000, 210000},
+			Timestamps: []int64{120000000, 150000000, 180000000, 210000000},
 			Values:     []float64{150, 300, 450, 600},
 			Name:       "movingSum(foo,5)",
 			Tags:       map[string]string{"name": "foo", "movingSum": "5"},
 		},
 		{
-			Timestamps: []int64{120000, 150000, 180000, 210000},
+			Timestamps: []int64{120000000, 150000000, 180000000, 210000000},
 			Values:     []float64{150, 300, 450, 600},
 			Name:       "movingSum(bar,5)",
 			Tags:       map[string]string{"name": "bar", "movingSum": "5"},
@@ -1940,13 +1940,13 @@ func TestExecExprSuccess(t *testing.T) {
 		5
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000, 210000},
+			Timestamps: []int64{120000000, 150000000, 180000000, 210000000},
 			Values:     []float64{30, 60, 90, 120},
 			Name:       "movingAvg(foo,5)",
 			Tags:       map[string]string{"name": "foo", "movingAvg": "5"},
 		},
 		{
-			Timestamps: []int64{120000, 150000, 180000, 210000},
+			Timestamps: []int64{120000000, 150000000, 180000000, 210000000},
 			Values:     []float64{30, 60, 90, 120},
 			Name:       "movingAvg(bar,5)",
 			Tags:       map[string]string{"name": "bar", "movingAvg": "5"},
@@ -1961,13 +1961,13 @@ func TestExecExprSuccess(t *testing.T) {
 		'avg_zero'
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000, 210000},
+			Timestamps: []int64{120000000, 150000000, 180000000, 210000000},
 			Values:     []float64{90, 120, 150, 180},
 			Name:       `movingAvg_zero(foo,'30s')`,
 			Tags:       map[string]string{"name": "foo", "movingAvg_zero": "'30s'"},
 		},
 		{
-			Timestamps: []int64{120000, 150000, 180000, 210000},
+			Timestamps: []int64{120000000, 150000000, 180000000, 210000000},
 			Values:     []float64{90, 120, 150, 180},
 			Name:       `movingAvg_zero(bar,'30s')`,
 			Tags:       map[string]string{"name": "bar", "movingAvg_zero": "'30s'"},
@@ -1978,7 +1978,7 @@ func TestExecExprSuccess(t *testing.T) {
 		time('bar',30),
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{14400, 22500, 32400},
 			Name:       "multiplySeries(bar,foo)",
 			Tags:       map[string]string{"name": "multiplySeries(bar,foo)", "aggregatedBy": "multiply"},
@@ -1993,14 +1993,14 @@ func TestExecExprSuccess(t *testing.T) {
 		1
 	)`, []*series{
 		{
-			Timestamps:     []int64{120000, 150000, 180000},
+			Timestamps:     []int64{120000000, 150000000, 180000000},
 			Values:         []float64{120, 150, 180},
 			Name:           "xxx",
 			Tags:           map[string]string{"aggregatedBy": "multiply", "name": "xxx.yy"},
 			pathExpression: "xxx.yy",
 		},
 		{
-			Timestamps:     []int64{120000, 150000, 180000},
+			Timestamps:     []int64{120000000, 150000000, 180000000},
 			Values:         []float64{14400, 22500, 32400},
 			Name:           "foo",
 			Tags:           map[string]string{"aggregatedBy": "multiply", "name": "multiplySeries(foo.bar,foo.baz)"},
@@ -2015,13 +2015,13 @@ func TestExecExprSuccess(t *testing.T) {
 		30
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 140000, 160000, 180000, 200000},
+			Timestamps: []int64{120000000, 140000000, 160000000, 180000000, 200000000},
 			Values:     []float64{140, 140, 140, 140, 140},
 			Name:       "nPercentile(a,30)",
 			Tags:       map[string]string{"name": "a", "nPercentile": "30"},
 		},
 		{
-			Timestamps: []int64{120000, 137000, 154000, 171000, 188000, 205000},
+			Timestamps: []int64{120000000, 137000000, 154000000, 171000000, 188000000, 205000000},
 			Values:     []float64{154, 154, 154, 154, 154, 154},
 			Name:       "nPercentile(b,30)",
 			Tags:       map[string]string{"name": "b", "nPercentile": "30"},
@@ -2029,7 +2029,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`nonNegativeDerivative(time('foo.bar;baz=1',25))`, []*series{
 		{
-			Timestamps: []int64{120000, 145000, 170000, 195000},
+			Timestamps: []int64{120000000, 145000000, 170000000, 195000000},
 			Values:     []float64{nan, 25, 25, 25},
 			Name:       "nonNegativeDerivative(foo.bar;baz=1)",
 			Tags:       map[string]string{"name": "foo.bar", "baz": "1", "nonNegativeDerivative": "1"},
@@ -2037,7 +2037,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`offset(time('a'),10)`, []*series{
 		{
-			Timestamps:     []int64{120000, 180000},
+			Timestamps:     []int64{120000000, 180000000},
 			Values:         []float64{130, 190},
 			Name:           "offset(a,10)",
 			Tags:           map[string]string{"name": "a", "offset": "10"},
@@ -2046,7 +2046,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`offsetToZero(time('a',30))`, []*series{
 		{
-			Timestamps:     []int64{120000, 150000, 180000, 210000},
+			Timestamps:     []int64{120000000, 150000000, 180000000, 210000000},
 			Values:         []float64{0, 30, 60, 90},
 			Name:           "offsetToZero(a)",
 			Tags:           map[string]string{"name": "a", "offsetToZero": "120"},
@@ -2058,7 +2058,7 @@ func TestExecExprSuccess(t *testing.T) {
 		time('bar',30),
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{0, 0, 0},
 			Name:       "rangeOfSeries(bar,foo)",
 			Tags:       map[string]string{"name": "rangeOfSeries(bar,foo)", "aggregatedBy": "rangeOf"},
@@ -2066,7 +2066,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`pow(time('a'),0.5)`, []*series{
 		{
-			Timestamps:     []int64{120000, 180000},
+			Timestamps:     []int64{120000000, 180000000},
 			Values:         []float64{10.954451150103322, 13.416407864998739},
 			Name:           "pow(a,0.5)",
 			Tags:           map[string]string{"name": "a", "pow": "0.5"},
@@ -2078,7 +2078,7 @@ func TestExecExprSuccess(t *testing.T) {
 		time('b',30),
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{3.1750423737803376e+249, math.Inf(1), math.Inf(1)},
 			Name:       "powSeries(a,b)",
 			Tags:       map[string]string{"name": "powSeries(a,b)", "aggregatedBy": "pow"},
@@ -2086,7 +2086,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`removeAbovePercentile(time('a',35), 50)`, []*series{
 		{
-			Timestamps:     []int64{120000, 155000, 190000},
+			Timestamps:     []int64{120000000, 155000000, 190000000},
 			Values:         []float64{120, 155, nan},
 			Name:           "removeAbovePercentile(a,50)",
 			Tags:           map[string]string{"name": "a"},
@@ -2095,7 +2095,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`removeAboveValue(time('a'), 150)`, []*series{
 		{
-			Timestamps:     []int64{120000, 180000},
+			Timestamps:     []int64{120000000, 180000000},
 			Values:         []float64{120, nan},
 			Name:           "removeAboveValue(a,150)",
 			Tags:           map[string]string{"name": "a"},
@@ -2104,7 +2104,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`removeBelowPercentile(time('a'), 50)`, []*series{
 		{
-			Timestamps:     []int64{120000, 180000},
+			Timestamps:     []int64{120000000, 180000000},
 			Values:         []float64{nan, 180},
 			Name:           "removeBelowPercentile(a,50)",
 			Tags:           map[string]string{"name": "a"},
@@ -2113,7 +2113,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`removeBelowValue(time('a'), 150)`, []*series{
 		{
-			Timestamps:     []int64{120000, 180000},
+			Timestamps:     []int64{120000000, 180000000},
 			Values:         []float64{nan, 180},
 			Name:           "removeBelowValue(a,150)",
 			Tags:           map[string]string{"name": "a"},
@@ -2130,7 +2130,7 @@ func TestExecExprSuccess(t *testing.T) {
 	)`, []*series{})
 	f(`removeEmptySeries(time('a'))`, []*series{
 		{
-			Timestamps: []int64{120000, 180000},
+			Timestamps: []int64{120000000, 180000000},
 			Values:     []float64{120, 180},
 			Name:       "a",
 			Tags:       map[string]string{"name": "a"},
@@ -2141,7 +2141,7 @@ func TestExecExprSuccess(t *testing.T) {
 	// considered non-empty
 	f(`removeEmptySeries(removeBelowValue(time('a'),150),0)`, []*series{
 		{
-			Timestamps: []int64{120000, 180000},
+			Timestamps: []int64{120000000, 180000000},
 			Values:     []float64{nan, 180},
 			Name:       "removeBelowValue(a,150)",
 			Tags:       map[string]string{"name": "a"},
@@ -2149,7 +2149,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`removeEmptySeries(removeBelowValue(time('a'),150),-1)`, []*series{
 		{
-			Timestamps: []int64{120000, 180000},
+			Timestamps: []int64{120000000, 180000000},
 			Values:     []float64{nan, 180},
 			Name:       "removeBelowValue(a,150)",
 			Tags:       map[string]string{"name": "a"},
@@ -2158,7 +2158,7 @@ func TestExecExprSuccess(t *testing.T) {
 
 	f(`round(time('a',17),-1)`, []*series{
 		{
-			Timestamps:     []int64{120000, 137000, 154000, 171000, 188000, 205000},
+			Timestamps:     []int64{120000000, 137000000, 154000000, 171000000, 188000000, 205000000},
 			Values:         []float64{120, 140, 150, 170, 190, 210},
 			Name:           "round(a,-1)",
 			Tags:           map[string]string{"name": "a"},
@@ -2167,7 +2167,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`round(time('a',17))`, []*series{
 		{
-			Timestamps:     []int64{120000, 137000, 154000, 171000, 188000, 205000},
+			Timestamps:     []int64{120000000, 137000000, 154000000, 171000000, 188000000, 205000000},
 			Values:         []float64{120, 137, 154, 171, 188, 205},
 			Name:           "round(a)",
 			Tags:           map[string]string{"name": "a"},
@@ -2176,7 +2176,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`scale(time('a'),0.5)`, []*series{
 		{
-			Timestamps:     []int64{120000, 180000},
+			Timestamps:     []int64{120000000, 180000000},
 			Values:         []float64{60, 90},
 			Name:           "scale(a,0.5)",
 			Tags:           map[string]string{"name": "a"},
@@ -2188,7 +2188,7 @@ func TestExecExprSuccess(t *testing.T) {
 		0.5
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 140000, 160000, 180000, 200000},
+			Timestamps: []int64{120000000, 140000000, 160000000, 180000000, 200000000},
 			Values:     []float64{120, 140, 160, 180, 200},
 			Name:       "foo",
 			Tags:       map[string]string{"name": "foo", "xFilesFactor": "0.5"},
@@ -2203,14 +2203,14 @@ func TestExecExprSuccess(t *testing.T) {
 		1
 	)`, []*series{
 		{
-			Timestamps:     []int64{120000, 150000, 180000},
+			Timestamps:     []int64{120000000, 150000000, 180000000},
 			Values:         []float64{120, 150, 180},
 			Name:           "xxx",
 			Tags:           map[string]string{"aggregatedBy": "sum", "name": "xxx.yy"},
 			pathExpression: "xxx.yy",
 		},
 		{
-			Timestamps:     []int64{120000, 150000, 180000},
+			Timestamps:     []int64{120000000, 150000000, 180000000},
 			Values:         []float64{240, 300, 360},
 			Name:           "foo",
 			Tags:           map[string]string{"aggregatedBy": "sum", "name": "sumSeries(foo.bar,foo.baz)"},
@@ -2225,13 +2225,13 @@ func TestExecExprSuccess(t *testing.T) {
 		'45s'
 	)`, []*series{
 		{
-			Timestamps: []int64{90000, 135000, 180000},
+			Timestamps: []int64{90000000, 135000000, 180000000},
 			Values:     []float64{333, 327, 411},
 			Name:       `summarize(bar,'45s','sum')`,
 			Tags:       map[string]string{"name": "bar", "summarize": "45s", "summarizeFunction": "sum"},
 		},
 		{
-			Timestamps: []int64{90000, 135000, 180000},
+			Timestamps: []int64{90000000, 135000000, 180000000},
 			Values:     []float64{438, 465, 802},
 			Name:       `summarize(foo,'45s','sum')`,
 			Tags:       map[string]string{"name": "foo", "summarize": "45s", "summarizeFunction": "sum"},
@@ -2247,13 +2247,13 @@ func TestExecExprSuccess(t *testing.T) {
 		True
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 165000},
+			Timestamps: []int64{120000000, 165000000},
 			Values:     []float64{558, 555},
 			Name:       `summarize(foo,'45s','sum',true)`,
 			Tags:       map[string]string{"name": "foo", "summarize": "45s", "summarizeFunction": "sum"},
 		},
 		{
-			Timestamps: []int64{120000, 165000},
+			Timestamps: []int64{120000000, 165000000},
 			Values:     []float64{423, 387},
 			Name:       `summarize(bar,'45s','sum',true)`,
 			Tags:       map[string]string{"name": "bar", "summarize": "45s", "summarizeFunction": "sum"},
@@ -2269,13 +2269,13 @@ func TestExecExprSuccess(t *testing.T) {
 		True
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 165000},
+			Timestamps: []int64{120000000, 165000000},
 			Values:     []float64{558, 555},
 			Name:       `summarize(foo,'45s','sumSeries',true)`,
 			Tags:       map[string]string{"name": "foo", "summarize": "45s", "summarizeFunction": "sumSeries"},
 		},
 		{
-			Timestamps: []int64{120000, 165000},
+			Timestamps: []int64{120000000, 165000000},
 			Values:     []float64{423, 387},
 			Name:       `summarize(bar,'45s','sumSeries',true)`,
 			Tags:       map[string]string{"name": "bar", "summarize": "45s", "summarizeFunction": "sumSeries"},
@@ -2291,13 +2291,13 @@ func TestExecExprSuccess(t *testing.T) {
 		True
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 165000},
+			Timestamps: []int64{120000000, 165000000},
 			Values:     []float64{159, 198},
 			Name:       `summarize(foo,'45s','last',true)`,
 			Tags:       map[string]string{"name": "foo", "summarize": "45s", "summarizeFunction": "last"},
 		},
 		{
-			Timestamps: []int64{120000, 165000},
+			Timestamps: []int64{120000000, 165000000},
 			Values:     []float64{162, 204},
 			Name:       `summarize(bar,'45s','last',true)`,
 			Tags:       map[string]string{"name": "bar", "summarize": "45s", "summarizeFunction": "last"},
@@ -2305,8 +2305,8 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`time('foo.bar;baz=aa', 40)`, []*series{
 		{
-			Timestamps:     []int64{ec.startTime, ec.startTime + 40e3, ec.startTime + 80e3},
-			Values:         []float64{float64(ec.startTime) / 1e3, float64(ec.startTime)/1e3 + 40, float64(ec.startTime)/1e3 + 80},
+			Timestamps:     []int64{ec.startTime, ec.startTime + 40000e3, ec.startTime + 80000e3},
+			Values:         []float64{float64(ec.startTime) / 1e6, float64(ec.startTime)/1e6 + 40, float64(ec.startTime)/1e6 + 80},
 			Name:           "foo.bar;baz=aa",
 			Tags:           map[string]string{"name": "foo.bar", "baz": "aa"},
 			pathExpression: "foo.bar;baz=aa",
@@ -2314,8 +2314,8 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`timeFunction("foo.bar.baz")`, []*series{
 		{
-			Timestamps:     []int64{ec.startTime, ec.startTime + 60e3},
-			Values:         []float64{float64(ec.startTime) / 1e3, float64(ec.startTime)/1e3 + 60},
+			Timestamps:     []int64{ec.startTime, ec.startTime + 60000e3},
+			Values:         []float64{float64(ec.startTime) / 1e6, float64(ec.startTime)/1e6 + 60},
 			Name:           "foo.bar.baz",
 			Tags:           map[string]string{"name": "foo.bar.baz"},
 			pathExpression: "foo.bar.baz",
@@ -2323,15 +2323,15 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`timeFunction('foo.bar;baz=aa', step=30)`, []*series{
 		{
-			Timestamps: []int64{ec.startTime, ec.startTime + 30e3, ec.startTime + 60e3, ec.startTime + 90e3},
-			Values:     []float64{float64(ec.startTime) / 1e3, float64(ec.startTime)/1e3 + 30, float64(ec.startTime)/1e3 + 60, float64(ec.startTime)/1e3 + 90},
+			Timestamps: []int64{ec.startTime, ec.startTime + 30000e3, ec.startTime + 60000e3, ec.startTime + 90000e3},
+			Values:     []float64{float64(ec.startTime) / 1e6, float64(ec.startTime)/1e6 + 30, float64(ec.startTime)/1e6 + 60, float64(ec.startTime)/1e6 + 90},
 			Name:       "foo.bar;baz=aa",
 			Tags:       map[string]string{"name": "foo.bar", "baz": "aa"},
 		},
 	})
 	f(`weightedAverage(time('foo',30),time('bar',30))`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{120, 150, 180},
 			Name:       "weightedAverage(foo,bar,)",
 			Tags:       map[string]string{"name": "weightedAverage(foo,bar,)"},
@@ -2349,7 +2349,7 @@ func TestExecExprSuccess(t *testing.T) {
 		0
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{120, 150, 180},
 			Name:       "weightedAverage(bar.y,foo.x,bar.x,foo.y,0)",
 			Tags:       map[string]string{"name": "weightedAverage(bar.y,foo.x,bar.x,foo.y,0)"},
@@ -2378,7 +2378,7 @@ func TestExecExprSuccess(t *testing.T) {
         1
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{120, 150, 180},
 			Name:       "weightedAverage(foo0.bar1,foo0.bar2,foo1.bar1,foo1.bar2,1)",
 			Tags:       map[string]string{"name": "weightedAverage(foo0.bar1,foo0.bar2,foo1.bar1,foo1.bar2,1)"},
@@ -2389,7 +2389,7 @@ func TestExecExprSuccess(t *testing.T) {
 		0.5
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 140000, 160000, 180000, 200000},
+			Timestamps: []int64{120000000, 140000000, 160000000, 180000000, 200000000},
 			Values:     []float64{120, 140, 160, 180, 200},
 			Name:       "foo",
 			Tags:       map[string]string{"name": "foo", "xFilesFactor": "0.5"},
@@ -2397,7 +2397,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`verticalLine("00:03_19700101","event","blue")`, []*series{
 		{
-			Timestamps: []int64{180000, 180000},
+			Timestamps: []int64{180000000, 180000000},
 			Values:     []float64{1.0, 1.0},
 			Name:       "event",
 			Tags:       map[string]string{"name": "event"},
@@ -2405,7 +2405,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`verticalLine("00:0319700101","event","blue")`, []*series{
 		{
-			Timestamps: []int64{180000, 180000},
+			Timestamps: []int64{180000000, 180000000},
 			Values:     []float64{1.0, 1.0},
 			Name:       "event",
 			Tags:       map[string]string{"name": "event"},
@@ -2414,7 +2414,7 @@ func TestExecExprSuccess(t *testing.T) {
 	f(`useSeriesAbove(time('foo.baz',10),10000,"reqs","time")`, []*series{})
 	f(`unique(time('foo',30),time('foo',30))`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000, 210000},
+			Timestamps: []int64{120000000, 150000000, 180000000, 210000000},
 			Values:     []float64{120.0, 150.0, 180.0, 210.0},
 			Name:       "foo",
 			Tags:       map[string]string{"name": "foo"},
@@ -2422,13 +2422,13 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`unique(time('foo',30),time('foo',40),time('foo.bar',40))`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000, 210000},
+			Timestamps: []int64{120000000, 150000000, 180000000, 210000000},
 			Values:     []float64{120.0, 150.0, 180.0, 210.0},
 			Name:       "foo",
 			Tags:       map[string]string{"name": "foo"},
 		},
 		{
-			Timestamps: []int64{120000, 160000, 200000},
+			Timestamps: []int64{120000000, 160000000, 200000000},
 			Values:     []float64{120.0, 160.0, 200.0},
 			Name:       "foo.bar",
 			Tags:       map[string]string{"name": "foo.bar"},
@@ -2436,7 +2436,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`perSecond(time('foo.bar;baz=1',25))`, []*series{
 		{
-			Timestamps: []int64{120000, 145000, 170000, 195000},
+			Timestamps: []int64{120000000, 145000000, 170000000, 195000000},
 			Values:     []float64{nan, 1, 1, 1},
 			Name:       "perSecond(foo.bar;baz=1)",
 			Tags:       map[string]string{"name": "foo.bar", "baz": "1", "perSecond": "1"},
@@ -2444,7 +2444,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`perSecond(time('foo.bar;baz=1',25),150)`, []*series{
 		{
-			Timestamps: []int64{120000, 145000, 170000, 195000},
+			Timestamps: []int64{120000000, 145000000, 170000000, 195000000},
 			Values:     []float64{nan, 1, nan, nan},
 			Name:       "perSecond(foo.bar;baz=1)",
 			Tags:       map[string]string{"name": "foo.bar", "baz": "1", "perSecond": "1"},
@@ -2452,7 +2452,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`perSecond(time('foo.bar;baz=1',25),None,140)`, []*series{
 		{
-			Timestamps: []int64{120000, 145000, 170000, 195000},
+			Timestamps: []int64{120000000, 145000000, 170000000, 195000000},
 			Values:     []float64{nan, nan, 1, 1},
 			Name:       "perSecond(foo.bar;baz=1)",
 			Tags:       map[string]string{"name": "foo.bar", "baz": "1", "perSecond": "1"},
@@ -2467,7 +2467,7 @@ func TestExecExprSuccess(t *testing.T) {
 		40
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{120, 150, 180},
 			Name:       "percentileOfSeries(a,40)",
 			Tags:       map[string]string{"name": "percentileOfSeries(a,40)"},
@@ -2482,7 +2482,7 @@ func TestExecExprSuccess(t *testing.T) {
 		90
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{120, 150, 180},
 			Name:       "percentileOfSeries(a,90)",
 			Tags:       map[string]string{"name": "percentileOfSeries(a,90)"},
@@ -2490,7 +2490,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`transformNull(time('foo.bar',35),-1,time('foo.bar',30))`, []*series{
 		{
-			Timestamps:     []int64{120000, 150000, 180000},
+			Timestamps:     []int64{120000000, 150000000, 180000000},
 			Values:         []float64{120, 155, 190},
 			Name:           "transformNull(foo.bar,-1,referenceSeries)",
 			Tags:           map[string]string{"name": "foo.bar", "referenceSeries": "1", "transformNull": "-1"},
@@ -2499,7 +2499,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`transformNull(time('foo.bar',35),-1)`, []*series{
 		{
-			Timestamps:     []int64{120000, 155000, 190000},
+			Timestamps:     []int64{120000000, 155000000, 190000000},
 			Values:         []float64{120, 155, 190},
 			Name:           "transformNull(foo.bar,-1)",
 			Tags:           map[string]string{"name": "foo.bar", "transformNull": "-1"},
@@ -2508,7 +2508,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`timeShift(time('foo.bar;baz=1',25),"+1min")`, []*series{
 		{
-			Timestamps:     []int64{120000, 145000},
+			Timestamps:     []int64{120000000, 145000000},
 			Values:         []float64{180, 205},
 			Name:           `timeShift(foo.bar;baz=1,'+1min')`,
 			Tags:           map[string]string{"name": "foo.bar", "baz": "1", "timeShift": "+1min"},
@@ -2517,7 +2517,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`timeShift(time('foo.bar;baz=1',25),"+1min",false)`, []*series{
 		{
-			Timestamps:     []int64{120000, 145000, 170000, 195000},
+			Timestamps:     []int64{120000000, 145000000, 170000000, 195000000},
 			Values:         []float64{180, 205, 230, 255},
 			Name:           `timeShift(foo.bar;baz=1,'+1min')`,
 			Tags:           map[string]string{"name": "foo.bar", "baz": "1", "timeShift": "+1min"},
@@ -2526,7 +2526,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`timeShift(time('foo.bar;baz=1',25),"-1min",true)`, []*series{
 		{
-			Timestamps:     []int64{120000, 145000, 170000, 195000},
+			Timestamps:     []int64{120000000, 145000000, 170000000, 195000000},
 			Values:         []float64{60, 85, 110, 135},
 			Name:           "timeShift(foo.bar;baz=1,'-1min')",
 			Tags:           map[string]string{"name": "foo.bar", "baz": "1", "timeShift": "-1min"},
@@ -2535,7 +2535,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`timeShift(time('foo.bar;baz=1',25),"1min",false,true)`, []*series{
 		{
-			Timestamps:     []int64{120000, 145000, 170000, 195000},
+			Timestamps:     []int64{120000000, 145000000, 170000000, 195000000},
 			Values:         []float64{60, 85, 110, 135},
 			Name:           `timeShift(foo.bar;baz=1,'1min')`,
 			Tags:           map[string]string{"name": "foo.bar", "baz": "1", "timeShift": "1min"},
@@ -2544,7 +2544,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`timeSlice(time('foo.bar;bar=1',20),"00:00 19700101","00:03 19700101")`, []*series{
 		{
-			Timestamps:     []int64{120000, 140000, 160000, 180000, 200000},
+			Timestamps:     []int64{120000000, 140000000, 160000000, 180000000, 200000000},
 			Values:         []float64{120, 140, 160, 180, nan},
 			Name:           "timeSlice(foo.bar;bar=1,0,180)",
 			Tags:           map[string]string{"name": "foo.bar", "bar": "1", "timeSliceEnd": "180", "timeSliceStart": "0"},
@@ -2553,21 +2553,21 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`timeStack(time('foo.bar',35),"+1min",1,3)`, []*series{
 		{
-			Timestamps:     []int64{120000, 155000, 190000},
+			Timestamps:     []int64{120000000, 155000000, 190000000},
 			Values:         []float64{180, 215, 250},
 			Name:           "timeShift(foo.bar,+1min,1)",
 			Tags:           map[string]string{"name": "foo.bar", "timeShift": "1", "timeShiftUnit": "+1min"},
 			pathExpression: `timeShift(foo.bar,+1min,1)`,
 		},
 		{
-			Timestamps:     []int64{120000, 155000, 190000},
+			Timestamps:     []int64{120000000, 155000000, 190000000},
 			Values:         []float64{240, 275, 310},
 			Name:           "timeShift(foo.bar,+1min,2)",
 			Tags:           map[string]string{"name": "foo.bar", "timeShift": "2", "timeShiftUnit": "+1min"},
 			pathExpression: `timeShift(foo.bar,+1min,2)`,
 		},
 		{
-			Timestamps:     []int64{120000, 155000, 190000},
+			Timestamps:     []int64{120000000, 155000000, 190000000},
 			Values:         []float64{300, 335, 370},
 			Name:           "timeShift(foo.bar,+1min,3)",
 			Tags:           map[string]string{"name": "foo.bar", "timeShift": "3", "timeShiftUnit": "+1min"},
@@ -2576,21 +2576,21 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`timeStack(time('foo.bar',35),"1min",1,3)`, []*series{
 		{
-			Timestamps:     []int64{120000, 155000, 190000},
+			Timestamps:     []int64{120000000, 155000000, 190000000},
 			Values:         []float64{60, 95, 130},
 			Name:           "timeShift(foo.bar,1min,1)",
 			Tags:           map[string]string{"name": "foo.bar", "timeShift": "1", "timeShiftUnit": "1min"},
 			pathExpression: `timeShift(foo.bar,1min,1)`,
 		},
 		{
-			Timestamps:     []int64{120000, 155000, 190000},
+			Timestamps:     []int64{120000000, 155000000, 190000000},
 			Values:         []float64{0, 35, 70},
 			Name:           "timeShift(foo.bar,1min,2)",
 			Tags:           map[string]string{"name": "foo.bar", "timeShift": "2", "timeShiftUnit": "1min"},
 			pathExpression: `timeShift(foo.bar,1min,2)`,
 		},
 		{
-			Timestamps:     []int64{120000, 155000, 190000},
+			Timestamps:     []int64{120000000, 155000000, 190000000},
 			Values:         []float64{-60, -25, 10},
 			Name:           "timeShift(foo.bar,1min,3)",
 			Tags:           map[string]string{"name": "foo.bar", "timeShift": "3", "timeShiftUnit": "1min"},
@@ -2599,7 +2599,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`threshold(1.5)`, []*series{
 		{
-			Timestamps:     []int64{120000, 165000, 210000},
+			Timestamps:     []int64{120000000, 165000000, 210000000},
 			Values:         []float64{1.5, 1.5, 1.5},
 			Name:           "1.5",
 			Tags:           map[string]string{"name": "1.5"},
@@ -2608,7 +2608,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`threshold(1.5,"max","black")`, []*series{
 		{
-			Timestamps:     []int64{120000, 165000, 210000},
+			Timestamps:     []int64{120000000, 165000000, 210000000},
 			Values:         []float64{1.5, 1.5, 1.5},
 			Name:           "max",
 			Tags:           map[string]string{"name": "1.5"},
@@ -2620,7 +2620,7 @@ func TestExecExprSuccess(t *testing.T) {
 		time('bar',30),
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{240, 300, 360},
 			Name:       "sumSeries(bar,foo)",
 			Tags:       map[string]string{"name": "sumSeries(bar,foo)", "aggregatedBy": "sum"},
@@ -2631,7 +2631,7 @@ func TestExecExprSuccess(t *testing.T) {
 		time('bar',30),
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{240, 300, 360},
 			Name:       "sumSeries(bar,foo)",
 			Tags:       map[string]string{"name": "sumSeries(bar,foo)", "aggregatedBy": "sum"},
@@ -2639,7 +2639,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`substr(time('collectd.test-db1.load.value;tag1=value1;tag2=value2'),1,3)`, []*series{
 		{
-			Timestamps:     []int64{120000, 180000},
+			Timestamps:     []int64{120000000, 180000000},
 			Values:         []float64{120, 180},
 			Name:           "test-db1.load",
 			Tags:           map[string]string{"name": "collectd.test-db1.load.value", "tag1": "value1", "tag2": "value2"},
@@ -2649,7 +2649,7 @@ func TestExecExprSuccess(t *testing.T) {
 
 	f(`substr(time('foo.baz.host;tag1=value1;tag2=value2'),1)`, []*series{
 		{
-			Timestamps:     []int64{120000, 180000},
+			Timestamps:     []int64{120000000, 180000000},
 			Values:         []float64{120, 180},
 			Name:           "baz.host;tag1=value1;tag2=value2",
 			Tags:           map[string]string{"name": "foo.baz.host", "tag1": "value1", "tag2": "value2"},
@@ -2659,7 +2659,7 @@ func TestExecExprSuccess(t *testing.T) {
 
 	f(`substr(time('foo.baz.host;tag1=value1;tag2=value2'),5)`, []*series{
 		{
-			Timestamps:     []int64{120000, 180000},
+			Timestamps:     []int64{120000000, 180000000},
 			Values:         []float64{120, 180},
 			Name:           "",
 			Tags:           map[string]string{"name": "foo.baz.host", "tag1": "value1", "tag2": "value2"},
@@ -2668,7 +2668,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`substr(time('foo.baz.host;tag1=value1;tag2=value2'),1,10)`, []*series{
 		{
-			Timestamps:     []int64{120000, 180000},
+			Timestamps:     []int64{120000000, 180000000},
 			Values:         []float64{120, 180},
 			Name:           "baz.host;tag1=value1;tag2=value2",
 			Tags:           map[string]string{"name": "foo.baz.host", "tag1": "value1", "tag2": "value2"},
@@ -2677,7 +2677,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`substr(time('foo.baz.host;tag1=value1;tag2=value2'),-1)`, []*series{
 		{
-			Timestamps:     []int64{120000, 180000},
+			Timestamps:     []int64{120000000, 180000000},
 			Values:         []float64{120, 180},
 			Name:           "host;tag1=value1;tag2=value2",
 			Tags:           map[string]string{"name": "foo.baz.host", "tag1": "value1", "tag2": "value2"},
@@ -2686,7 +2686,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`substr(time('foo.baz.host;tag1=value1;tag2=value2'),1,-1)`, []*series{
 		{
-			Timestamps:     []int64{120000, 180000},
+			Timestamps:     []int64{120000000, 180000000},
 			Values:         []float64{120, 180},
 			Name:           "baz",
 			Tags:           map[string]string{"name": "foo.baz.host", "tag1": "value1", "tag2": "value2"},
@@ -2695,7 +2695,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`stdev(time('foo.baz',20),3,0.1)`, []*series{
 		{
-			Timestamps:     []int64{120000, 140000, 160000, 180000, 200000},
+			Timestamps:     []int64{120000000, 140000000, 160000000, 180000000, 200000000},
 			Values:         []float64{0, 10, 16.32993161855452, 16.32993161855452, 16.32993161855452},
 			Name:           "stdev(foo.baz,3)",
 			Tags:           map[string]string{"name": "foo.baz", "stdev": "3"},
@@ -2704,7 +2704,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`stdev(time('foo.baz',20),3,0.5)`, []*series{
 		{
-			Timestamps:     []int64{120000, 140000, 160000, 180000, 200000},
+			Timestamps:     []int64{120000000, 140000000, 160000000, 180000000, 200000000},
 			Values:         []float64{nan, 10, 16.32993161855452, 16.32993161855452, 16.32993161855452},
 			Name:           "stdev(foo.baz,3)",
 			Tags:           map[string]string{"name": "foo.baz", "stdev": "3"},
@@ -2714,7 +2714,7 @@ func TestExecExprSuccess(t *testing.T) {
 
 	f(`stddevSeries(time('foo.baz',30))`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{0, 0, 0},
 			Name:       "stddevSeries(foo.baz)",
 			Tags:       map[string]string{"name": "foo.baz", "aggregatedBy": "stddev"},
@@ -2727,13 +2727,13 @@ func TestExecExprSuccess(t *testing.T) {
 			time("bar", 30) | alias("foo1.bar3")
 		))`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{120, 150, 180},
 			Name:       "stacked(foo1.bar2)",
 			Tags:       map[string]string{"name": "foo", "stacked": "__DEFAULT__"},
 		},
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{240, 300, 360},
 			Name:       "stacked(foo1.bar3)",
 			Tags:       map[string]string{"name": "bar", "stacked": "__DEFAULT__"},
@@ -2748,19 +2748,19 @@ func TestExecExprSuccess(t *testing.T) {
 		''
      )`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{120, 150, 180},
 			Name:       "foo1.bar1",
 			Tags:       map[string]string{"name": "bar"},
 		},
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{240, 300, 360},
 			Name:       "foo1.bar2",
 			Tags:       map[string]string{"name": "foo"},
 		},
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{360, 450, 540},
 			Name:       "foo1.bar3",
 			Tags:       map[string]string{"name": "foo"},
@@ -2769,7 +2769,7 @@ func TestExecExprSuccess(t *testing.T) {
 
 	f(`squareRoot(time('foo.baz',10))`, []*series{
 		{
-			Timestamps:     []int64{120000, 130000, 140000, 150000, 160000, 170000, 180000, 190000, 200000, 210000},
+			Timestamps:     []int64{120000000, 130000000, 140000000, 150000000, 160000000, 170000000, 180000000, 190000000, 200000000, 210000000},
 			Values:         []float64{10.954451150103322, 11.40175425099138, 11.832159566199232, 12.24744871391589, 12.649110640673518, 13.038404810405298, 13.416407864998739, 13.784048752090222, 14.142135623730951, 14.491376746189438},
 			Name:           "squareRoot(foo.baz)",
 			Tags:           map[string]string{"name": "foo.baz", "squareRoot": "1"},
@@ -2784,21 +2784,21 @@ func TestExecExprSuccess(t *testing.T) {
 			time("foo", 30) | alias("foo1.bar3")
      ))`, []*series{
 		{
-			Timestamps:     []int64{120000, 130000, 140000, 150000, 160000, 170000, 180000, 190000, 200000, 210000},
+			Timestamps:     []int64{120000000, 130000000, 140000000, 150000000, 160000000, 170000000, 180000000, 190000000, 200000000, 210000000},
 			Values:         []float64{120, 130, 140, 150, 160, 170, 180, 190, 200, 210},
 			Name:           "foo1.bar1",
 			Tags:           map[string]string{"name": "bar"},
 			pathExpression: "bar",
 		},
 		{
-			Timestamps:     []int64{120000, 135000, 150000, 165000, 180000, 195000, 210000},
+			Timestamps:     []int64{120000000, 135000000, 150000000, 165000000, 180000000, 195000000, 210000000},
 			Values:         []float64{120, 135, 150, 165, 180, 195, 210},
 			Name:           "foo1.bar2",
 			Tags:           map[string]string{"name": "foo"},
 			pathExpression: "foo",
 		},
 		{
-			Timestamps:     []int64{120000, 150000, 180000, 210000},
+			Timestamps:     []int64{120000000, 150000000, 180000000, 210000000},
 			Values:         []float64{120, 150, 180, 210},
 			Name:           "foo1.bar3",
 			Tags:           map[string]string{"name": "foo"},
@@ -2813,14 +2813,14 @@ func TestExecExprSuccess(t *testing.T) {
              )
     )`, []*series{
 		{
-			Timestamps:     []int64{120000, 130000, 140000, 150000, 160000, 170000, 180000, 190000, 200000, 210000},
+			Timestamps:     []int64{120000000, 130000000, 140000000, 150000000, 160000000, 170000000, 180000000, 190000000, 200000000, 210000000},
 			Values:         []float64{120, 130, 140, 150, 160, 170, 180, 190, 200, 210},
 			Name:           "foo1.bar1",
 			Tags:           map[string]string{"name": "bar"},
 			pathExpression: "bar",
 		},
 		{
-			Timestamps:     []int64{120000, 135000, 150000, 165000, 180000, 195000, 210000},
+			Timestamps:     []int64{120000000, 135000000, 150000000, 165000000, 180000000, 195000000, 210000000},
 			Values:         []float64{120, 135, 150, 165, 180, 195, 210},
 			Name:           "foo1.bar2",
 			Tags:           map[string]string{"name": "foo"},
@@ -2833,14 +2833,14 @@ func TestExecExprSuccess(t *testing.T) {
 			time("foo", 15) | alias("foo1.bar2"),
         ),'average',true)`, []*series{
 		{
-			Timestamps:     []int64{120000, 135000, 150000, 165000, 180000, 195000, 210000},
+			Timestamps:     []int64{120000000, 135000000, 150000000, 165000000, 180000000, 195000000, 210000000},
 			Values:         []float64{120, 135, 150, 165, 180, 195, 210},
 			Name:           "foo1.bar2",
 			Tags:           map[string]string{"name": "foo"},
 			pathExpression: "foo",
 		},
 		{
-			Timestamps:     []int64{120000, 130000, 140000, 150000, 160000, 170000, 180000, 190000, 200000, 210000},
+			Timestamps:     []int64{120000000, 130000000, 140000000, 150000000, 160000000, 170000000, 180000000, 190000000, 200000000, 210000000},
 			Values:         []float64{120, 130, 140, 150, 160, 170, 180, 190, 200, 210},
 			Name:           "foo1.bar1",
 			Tags:           map[string]string{"name": "bar"},
@@ -2853,14 +2853,14 @@ func TestExecExprSuccess(t *testing.T) {
 			time("foo", 15) | alias("foo1.bar2"),
         ),'multiply',true)`, []*series{
 		{
-			Timestamps:     []int64{120000, 135000, 150000, 165000, 180000, 195000, 210000},
+			Timestamps:     []int64{120000000, 135000000, 150000000, 165000000, 180000000, 195000000, 210000000},
 			Values:         []float64{120, 135, 150, 165, 180, 195, 210},
 			Name:           "foo1.bar2",
 			Tags:           map[string]string{"name": "foo"},
 			pathExpression: "foo",
 		},
 		{
-			Timestamps:     []int64{120000, 130000, 140000, 150000, 160000, 170000, 180000, 190000, 200000, 210000},
+			Timestamps:     []int64{120000000, 130000000, 140000000, 150000000, 160000000, 170000000, 180000000, 190000000, 200000000, 210000000},
 			Values:         []float64{120, 130, 140, 150, 160, 170, 180, 190, 200, 210},
 			Name:           "foo1.bar1",
 			Tags:           map[string]string{"name": "bar"},
@@ -2873,14 +2873,14 @@ func TestExecExprSuccess(t *testing.T) {
 			time("foo", 15) | alias("foo1.bar2"),
         ),'diff')`, []*series{
 		{
-			Timestamps:     []int64{120000, 135000, 150000, 165000, 180000, 195000, 210000},
+			Timestamps:     []int64{120000000, 135000000, 150000000, 165000000, 180000000, 195000000, 210000000},
 			Values:         []float64{120, 135, 150, 165, 180, 195, 210},
 			Name:           "foo1.bar2",
 			Tags:           map[string]string{"name": "foo"},
 			pathExpression: "foo",
 		},
 		{
-			Timestamps:     []int64{120000, 130000, 140000, 150000, 160000, 170000, 180000, 190000, 200000, 210000},
+			Timestamps:     []int64{120000000, 130000000, 140000000, 150000000, 160000000, 170000000, 180000000, 190000000, 200000000, 210000000},
 			Values:         []float64{120, 130, 140, 150, 160, 170, 180, 190, 200, 210},
 			Name:           "foo1.bar1",
 			Tags:           map[string]string{"name": "bar"},
@@ -2893,14 +2893,14 @@ func TestExecExprSuccess(t *testing.T) {
 			time("foo", 15) | alias("foo1.bar2")
         ))`, []*series{
 		{
-			Timestamps:     []int64{120000, 135000, 150000, 165000, 180000, 195000, 210000},
+			Timestamps:     []int64{120000000, 135000000, 150000000, 165000000, 180000000, 195000000, 210000000},
 			Values:         []float64{120, 135, 150, 165, 180, 195, 210},
 			Name:           "foo1.bar2",
 			Tags:           map[string]string{"name": "foo"},
 			pathExpression: "foo",
 		},
 		{
-			Timestamps:     []int64{120000, 130000, 140000, 150000, 160000, 170000, 180000, 190000, 200000, 210000},
+			Timestamps:     []int64{120000000, 130000000, 140000000, 150000000, 160000000, 170000000, 180000000, 190000000, 200000000, 210000000},
 			Values:         []float64{120, 130, 140, 150, 160, 170, 180, 190, 200, 210},
 			Name:           "foo1.bar1",
 			Tags:           map[string]string{"name": "bar"},
@@ -2913,14 +2913,14 @@ func TestExecExprSuccess(t *testing.T) {
 			constantLine( 15) | alias("foo1.bar2")
         ))`, []*series{
 		{
-			Timestamps:     []int64{120000, 165000, 210000},
+			Timestamps:     []int64{120000000, 165000000, 210000000},
 			Values:         []float64{15, 15, 15},
 			Name:           "foo1.bar2",
 			Tags:           map[string]string{"name": "15"},
 			pathExpression: "constantLine(15)",
 		},
 		{
-			Timestamps:     []int64{120000, 130000, 140000, 150000, 160000, 170000, 180000, 190000, 200000, 210000},
+			Timestamps:     []int64{120000000, 130000000, 140000000, 150000000, 160000000, 170000000, 180000000, 190000000, 200000000, 210000000},
 			Values:         []float64{120, 130, 140, 150, 160, 170, 180, 190, 200, 210},
 			Name:           "foo1.bar1",
 			Tags:           map[string]string{"name": "bar"},
@@ -2933,14 +2933,14 @@ func TestExecExprSuccess(t *testing.T) {
 			constantLine( 15) | alias("foo1.bar2")
         ))`, []*series{
 		{
-			Timestamps:     []int64{120000, 130000, 140000, 150000, 160000, 170000, 180000, 190000, 200000, 210000},
+			Timestamps:     []int64{120000000, 130000000, 140000000, 150000000, 160000000, 170000000, 180000000, 190000000, 200000000, 210000000},
 			Values:         []float64{120, 130, 140, 150, 160, 170, 180, 190, 200, 210},
 			Name:           "foo1.bar1",
 			Tags:           map[string]string{"name": "bar"},
 			pathExpression: "bar",
 		},
 		{
-			Timestamps:     []int64{120000, 165000, 210000},
+			Timestamps:     []int64{120000000, 165000000, 210000000},
 			Values:         []float64{15, 15, 15},
 			Name:           "foo1.bar2",
 			Tags:           map[string]string{"name": "15"},
@@ -2953,7 +2953,7 @@ func TestExecExprSuccess(t *testing.T) {
 			constantLine( 0) | alias("foo1.bar2")
         ))`, []*series{
 		{
-			Timestamps:     []int64{120000, 130000, 140000, 150000, 160000, 170000, 180000, 190000, 200000, 210000},
+			Timestamps:     []int64{120000000, 130000000, 140000000, 150000000, 160000000, 170000000, 180000000, 190000000, 200000000, 210000000},
 			Values:         []float64{120, 130, 140, 150, 160, 170, 180, 190, 200, 210},
 			Name:           "foo1.bar1",
 			Tags:           map[string]string{"name": "bar"},
@@ -2968,13 +2968,13 @@ func TestExecExprSuccess(t *testing.T) {
 		'45s'
 	)`, []*series{
 		{
-			Timestamps: []int64{120000, 165000},
+			Timestamps: []int64{120000000, 165000000},
 			Values:     []float64{423, 387},
 			Name:       `smartSummarize(bar,'45s','sum')`,
 			Tags:       map[string]string{"name": "bar", "smartSummarize": "45s", "smartSummarizeFunction": "sum"},
 		},
 		{
-			Timestamps: []int64{120000, 165000},
+			Timestamps: []int64{120000000, 165000000},
 			Values:     []float64{558, 555},
 			Name:       `smartSummarize(foo,'45s','sum')`,
 			Tags:       map[string]string{"name": "foo", "smartSummarize": "45s", "smartSummarizeFunction": "sum"},
@@ -2988,13 +2988,13 @@ func TestExecExprSuccess(t *testing.T) {
 		'1min','sum','hour'
 	)`, []*series{
 		{
-			Timestamps: []int64{0, 60000, 120000},
+			Timestamps: []int64{0, 60000000, 120000000},
 			Values:     []float64{130, 455, 598},
 			Name:       `smartSummarize(foo,'1min','sum')`,
 			Tags:       map[string]string{"name": "foo", "smartSummarize": "1min", "smartSummarizeFunction": "sum"},
 		},
 		{
-			Timestamps: []int64{0, 60000, 120000},
+			Timestamps: []int64{0, 60000000, 120000000},
 			Values:     []float64{63, 252, 441},
 			Name:       `smartSummarize(bar,'1min','sum')`,
 			Tags:       map[string]string{"name": "bar", "smartSummarize": "1min", "smartSummarizeFunction": "sum"},
@@ -3003,7 +3003,7 @@ func TestExecExprSuccess(t *testing.T) {
 
 	f(`sinFunction("base",1,30)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{0.5806111842123143, -0.7148764296291645, -0.8011526357338306},
 			Name:       "base",
 			Tags:       map[string]string{"name": "base"},
@@ -3011,7 +3011,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`sinFunction("base",2,30)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{1.1612223684246286, -1.429752859258329, -1.602305271467661},
 			Name:       "base",
 			Tags:       map[string]string{"name": "base"},
@@ -3019,7 +3019,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`sinFunction("base",step=20)`, []*series{
 		{
-			Timestamps: []int64{120000, 140000, 160000, 180000, 200000},
+			Timestamps: []int64{120000000, 140000000, 160000000, 180000000, 200000000},
 			Values:     []float64{0.5806111842123143, 0.9802396594403116, 0.21942525837900473, -0.8011526357338306, -0.8732972972139945},
 			Name:       "base",
 			Tags:       map[string]string{"name": "base"},
@@ -3028,7 +3028,7 @@ func TestExecExprSuccess(t *testing.T) {
 
 	f(`sigmoid(time('foo.baz'))`, []*series{
 		{
-			Timestamps:     []int64{120000, 180000},
+			Timestamps:     []int64{120000000, 180000000},
 			Values:         []float64{1, 1},
 			Name:           "sigmoid(foo.baz)",
 			Tags:           map[string]string{"name": "foo.baz", "sigmoid": "sigmoid"},
@@ -3038,7 +3038,7 @@ func TestExecExprSuccess(t *testing.T) {
 
 	f(`scaleToSeconds(time('foo.bas',20),5)`, []*series{
 		{
-			Timestamps:     []int64{120000, 140000, 160000, 180000, 200000},
+			Timestamps:     []int64{120000000, 140000000, 160000000, 180000000, 200000000},
 			Values:         []float64{30, 35, 40, 45, 50},
 			Name:           "scaleToSeconds(foo.bas,5)",
 			Tags:           map[string]string{"name": "foo.bas", "scaleToSeconds": "5"},
@@ -3048,7 +3048,7 @@ func TestExecExprSuccess(t *testing.T) {
 
 	f(`secondYAxis(time('foo.bas',30))`, []*series{
 		{
-			Timestamps:     []int64{120000, 150000, 180000, 210000},
+			Timestamps:     []int64{120000000, 150000000, 180000000, 210000000},
 			Values:         []float64{120, 150, 180, 210},
 			Name:           "secondYAxis(foo.bas)",
 			Tags:           map[string]string{"name": "foo.bas", "secondYAxis": "1"},
@@ -3058,7 +3058,7 @@ func TestExecExprSuccess(t *testing.T) {
 
 	f(`isNonNull(timeSlice(time('foo.bar',20),"00:00 19700101","00:03 19700101"))`, []*series{
 		{
-			Timestamps: []int64{120000, 140000, 160000, 180000, 200000},
+			Timestamps: []int64{120000000, 140000000, 160000000, 180000000, 200000000},
 			Values:     []float64{1, 1, 1, 1, 0},
 			Name:       "isNonNull(timeSlice(foo.bar,0,180))",
 			Tags:       map[string]string{"name": "foo.bar", "isNonNull": "1", "timeSliceEnd": "180", "timeSliceStart": "0"},
@@ -3071,14 +3071,14 @@ func TestExecExprSuccess(t *testing.T) {
       )
      )`, []*series{
 		{
-			Timestamps:     []int64{120000, 150000, 180000},
+			Timestamps:     []int64{120000000, 150000000, 180000000},
 			Values:         []float64{120, 150, 180},
 			Name:           "linearRegression(foo.baz, 120, 210)",
 			Tags:           map[string]string{"name": "foo.baz", "linearRegressions": "120, 210"},
 			pathExpression: "linearRegression(foo.baz, 120, 210)",
 		},
 		{
-			Timestamps:     []int64{120000, 150000, 180000},
+			Timestamps:     []int64{120000000, 150000000, 180000000},
 			Values:         []float64{120, 150, 180},
 			Name:           "linearRegression(baz.bar, 120, 210)",
 			Tags:           map[string]string{"name": "baz.bar", "linearRegressions": "120, 210"},
@@ -3094,14 +3094,14 @@ func TestExecExprSuccess(t *testing.T) {
       EndSourceAt=None,
      )`, []*series{
 		{
-			Timestamps:     []int64{120000, 150000, 180000},
+			Timestamps:     []int64{120000000, 150000000, 180000000},
 			Values:         []float64{120, 150, 180},
 			Name:           "linearRegression(foo.baz, 100, 210)",
 			Tags:           map[string]string{"name": "foo.baz", "linearRegressions": "100, 210"},
 			pathExpression: "linearRegression(foo.baz, 100, 210)",
 		},
 		{
-			Timestamps:     []int64{120000, 150000, 180000},
+			Timestamps:     []int64{120000000, 150000000, 180000000},
 			Values:         []float64{120, 150, 180},
 			Name:           "linearRegression(baz.bar, 100, 210)",
 			Tags:           map[string]string{"name": "baz.bar", "linearRegressions": "100, 210"},
@@ -3117,14 +3117,14 @@ func TestExecExprSuccess(t *testing.T) {
       endSourceAt="00:08 19700101"
      )`, []*series{
 		{
-			Timestamps:     []int64{120000, 150000, 180000},
+			Timestamps:     []int64{120000000, 150000000, 180000000},
 			Values:         []float64{120, 150, 180},
 			Name:           "linearRegression(foo.baz, 120, 480)",
 			Tags:           map[string]string{"name": "foo.baz", "linearRegressions": "120, 480"},
 			pathExpression: "linearRegression(foo.baz, 120, 480)",
 		},
 		{
-			Timestamps:     []int64{120000, 150000, 180000},
+			Timestamps:     []int64{120000000, 150000000, 180000000},
 			Values:         []float64{120, 150, 180},
 			Name:           "linearRegression(baz.bar, 120, 480)",
 			Tags:           map[string]string{"name": "baz.bar", "linearRegressions": "120, 480"},
@@ -3133,7 +3133,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`holtWintersForecast(time("foo.baz",30))`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{120.00026583823248, 151.53351196300892, 182.8503377518708},
 			Name:       "holtWintersForecast(foo.baz)",
 			Tags:       map[string]string{"name": "holtWintersForecast(foo.baz)", "holtWintersForecast": "1"},
@@ -3141,7 +3141,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`holtWintersForecast(time("foo.baz",30),"4d")`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{120.00027210295323, 152.034912932407, 183.72178095512407},
 			Name:       "holtWintersForecast(foo.baz)",
 			Tags:       map[string]string{"name": "holtWintersForecast(foo.baz)", "holtWintersForecast": "1"},
@@ -3149,7 +3149,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`holtWintersForecast(time("foo.baz",30),"8d","2d")`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{120.00000001724152, 152.03464171718454, 183.72151060765324},
 			Name:       "holtWintersForecast(foo.baz)",
 			Tags:       map[string]string{"name": "holtWintersForecast(foo.baz)", "holtWintersForecast": "1"},
@@ -3157,13 +3157,13 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`holtWintersConfidenceBands(time("foo.bar",30))`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{120.00214864234894, 158.95265929117159, 196.72661235783855},
 			Name:       "holtWintersConfidenceUpper(foo.bar)",
 			Tags:       map[string]string{"name": "foo.bar", "holtWintersConfidenceUpper": "1"},
 		},
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{119.99838303411602, 144.11436463484625, 168.97406314590305},
 			Name:       "holtWintersConfidenceLower(foo.bar)",
 			Tags:       map[string]string{"name": "foo.bar", "holtWintersConfidenceLower": "1"},
@@ -3171,13 +3171,13 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`holtWintersConfidenceBands(time("foo.bar",30),5,"4d")`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{120.00407891280487, 165.87605713703562, 209.67633502193422},
 			Name:       "holtWintersConfidenceUpper(foo.bar)",
 			Tags:       map[string]string{"name": "foo.bar", "holtWintersConfidenceUpper": "1"},
 		},
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{119.9964652931016, 138.19376872777838, 157.76722688831393},
 			Name:       "holtWintersConfidenceLower(foo.bar)",
 			Tags:       map[string]string{"name": "foo.bar", "holtWintersConfidenceLower": "1"},
@@ -3185,13 +3185,13 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`holtWintersConfidenceBands(time("foo.bar",30),5,"8d","2d")`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{120.00000014163967, 165.87883899077733, 209.679106539474},
 			Name:       "holtWintersConfidenceUpper(foo.bar)",
 			Tags:       map[string]string{"name": "foo.bar", "holtWintersConfidenceUpper": "1"},
 		},
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{119.99999989284336, 138.19044444359176, 157.7639146758325},
 			Name:       "holtWintersConfidenceLower(foo.bar)",
 			Tags:       map[string]string{"name": "foo.bar", "holtWintersConfidenceLower": "1"},
@@ -3200,7 +3200,7 @@ func TestExecExprSuccess(t *testing.T) {
 
 	f(`holtWintersAberration(time("baz.baf",30))`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{0, 0, 0},
 			Name:       "holtWintersAberration(baz.baf)",
 			Tags:       map[string]string{"name": "baz.baf", "holtWintersAberration": "1"},
@@ -3208,7 +3208,7 @@ func TestExecExprSuccess(t *testing.T) {
 	})
 	f(`holtWintersAberration(time("baz.baf",30),2)`, []*series{
 		{
-			Timestamps: []int64{120000, 150000, 180000},
+			Timestamps: []int64{120000000, 150000000, 180000000},
 			Values:     []float64{0, 0, 0},
 			Name:       "holtWintersAberration(baz.baf)",
 			Tags:       map[string]string{"name": "baz.baf", "holtWintersAberration": "1"},
@@ -3217,14 +3217,14 @@ func TestExecExprSuccess(t *testing.T) {
 
 	f(`holtWintersConfidenceArea(time("foo.baz",30))`, []*series{
 		{
-			Timestamps:     []int64{120000, 150000, 180000},
+			Timestamps:     []int64{120000000, 150000000, 180000000},
 			Values:         []float64{120.00214864234894, 158.95265929117159, 196.72661235783855},
 			Name:           "areaBetween(holtWintersConfidenceUpper(foo.baz))",
 			Tags:           map[string]string{"holtWintersConfidenceUpper": "1", "areaBetween": "1", "name": "foo.baz"},
 			pathExpression: "holtWintersConfidenceUpper(foo.baz)",
 		},
 		{
-			Timestamps:     []int64{120000, 150000, 180000},
+			Timestamps:     []int64{120000000, 150000000, 180000000},
 			Values:         []float64{119.99838303411602, 144.11436463484625, 168.97406314590305},
 			Name:           "areaBetween(holtWintersConfidenceLower(foo.baz))",
 			Tags:           map[string]string{"holtWintersConfidenceLower": "1", "areaBetween": "1", "name": "foo.baz"},
@@ -3241,14 +3241,14 @@ func TestExecExprSuccess(t *testing.T) {
                '45s'
        ),1)`, []*series{
 		{
-			Timestamps:     []int64{120000, 165000},
+			Timestamps:     []int64{120000000, 165000000},
 			Values:         []float64{325, 400},
 			Name:           `foo`,
 			Tags:           map[string]string{"aggregatedBy": "average", "name": "bar.foo.bad", "summarize": "45s", "summarizeFunction": "sum"},
 			pathExpression: "bar.foo.bad",
 		},
 		{
-			Timestamps:     []int64{120000, 165000},
+			Timestamps:     []int64{120000000, 165000000},
 			Values:         []float64{325, 400},
 			Name:           `bar`,
 			Tags:           map[string]string{"aggregatedBy": "average", "name": "foo.bar.baz", "summarize": "45s", "summarizeFunction": "sum"},
@@ -3270,13 +3270,13 @@ func TestExecExprSuccess(t *testing.T) {
                '45s'
        ))`, []*series{
 		{
-			Timestamps: []int64{120000, 165000},
+			Timestamps: []int64{120000000, 165000000},
 			Values:     []float64{1, 1},
 			Name:       `divideSeries(summarize(foo.bar.baz,'45s','sum'),summarize(foo.bar.baz,'45s','sum'))`,
 			Tags:       map[string]string{"name": "foo.bar.baz", "summarize": "45s", "summarizeFunction": "sum"},
 		},
 		{
-			Timestamps: []int64{120000, 165000},
+			Timestamps: []int64{120000000, 165000000},
 			Values:     []float64{1, 1},
 			Name:       `divideSeries(summarize(bar.foo.bad,'45s','sum'),summarize(foo.bar.baz,'45s','sum'))`,
 			Tags:       map[string]string{"name": "bar.foo.bad", "summarize": "45s", "summarizeFunction": "sum"},
@@ -3292,7 +3292,7 @@ func TestExecExprSuccess(t *testing.T) {
                '45s'
        ))`, []*series{
 		{
-			Timestamps: []int64{120000, 165000},
+			Timestamps: []int64{120000000, 165000000},
 			Values:     []float64{1, 1},
 			Name:       `divideSeries(summarize(foo.bar.baz,'45s','sum'),summarize(bar.foo.bad,'45s','sum'))`,
 			Tags:       map[string]string{"name": "foo.bar.baz", "summarize": "45s", "summarizeFunction": "sum"},
@@ -3308,7 +3308,7 @@ func TestExecExprSuccess(t *testing.T) {
                '45s'
        ), 'sum')`, []*series{
 		{
-			Timestamps: []int64{120000, 165000},
+			Timestamps: []int64{120000000, 165000000},
 			Values:     []float64{1170, 2000},
 			Name:       `sumSeries(summarize(foo.bar.baz,'45s','sum'),summarize(bar.foo.bad,'45s','sum'))`,
 			Tags:       map[string]string{"name": "foo.bar.baz", "summarize": "45s", "summarizeFunction": "sum"},
@@ -3324,7 +3324,7 @@ func TestExecExprSuccess(t *testing.T) {
                '45s'
        ))`, []*series{
 		{
-			Timestamps: []int64{120000, 165000},
+			Timestamps: []int64{120000000, 165000000},
 			Values:     []float64{1170, 2000},
 			Name:       `sumSeries(summarize(foo.bar.baz,'45s','sum'),summarize(bar.foo.bad,'45s','sum'))`,
 			Tags:       map[string]string{"name": "foo.bar.baz", "summarize": "45s", "summarizeFunction": "sum"},
@@ -3340,7 +3340,7 @@ func TestExecExprSuccess(t *testing.T) {
                '45s'
        ), 'diff')`, []*series{
 		{
-			Timestamps: []int64{120000, 165000},
+			Timestamps: []int64{120000000, 165000000},
 			Values:     []float64{0, 0},
 			Name:       `diffSeries(summarize(foo.bar.baz,'45s','sum'),summarize(bar.foo.bad,'45s','sum'))`,
 			Tags:       map[string]string{"name": "foo.bar.baz", "summarize": "45s", "summarizeFunction": "sum"},
@@ -3356,7 +3356,7 @@ func TestExecExprSuccess(t *testing.T) {
                '45s'
        ))`, []*series{
 		{
-			Timestamps: []int64{120000, 165000},
+			Timestamps: []int64{120000000, 165000000},
 			Values:     []float64{0, 0},
 			Name:       `diffSeries(summarize(foo.bar.baz,'45s','sum'),summarize(bar.foo.bad,'45s','sum'))`,
 			Tags:       map[string]string{"name": "foo.bar.baz", "summarize": "45s", "summarizeFunction": "sum"},
@@ -3372,7 +3372,7 @@ func TestExecExprSuccess(t *testing.T) {
                '45s'
        ), 'multiply')`, []*series{
 		{
-			Timestamps: []int64{120000, 165000},
+			Timestamps: []int64{120000000, 165000000},
 			Values:     []float64{342225, 1e+06},
 			Name:       `multiplySeries(summarize(foo.bar.baz,'45s','sum'),summarize(bar.foo.bad,'45s','sum'))`,
 			Tags:       map[string]string{"name": "foo.bar.baz", "summarize": "45s", "summarizeFunction": "sum"},
@@ -3388,7 +3388,7 @@ func TestExecExprSuccess(t *testing.T) {
                '45s'
        ))`, []*series{
 		{
-			Timestamps: []int64{120000, 165000},
+			Timestamps: []int64{120000000, 165000000},
 			Values:     []float64{342225, 1e+06},
 			Name:       `multiplySeries(summarize(foo.bar.baz,'45s','sum'),summarize(bar.foo.bad,'45s','sum'))`,
 			Tags:       map[string]string{"name": "foo.bar.baz", "summarize": "45s", "summarizeFunction": "sum"},
@@ -3410,7 +3410,7 @@ func TestExecExprSuccess(t *testing.T) {
                '45s'
        ))`, []*series{
 		{
-			Timestamps: []int64{120000, 165000},
+			Timestamps: []int64{120000000, 165000000},
 			Values:     []float64{292.5, 500},
 			Name:       `weightedAverage(summarize(bar.foo.bad,'45s','sum'),summarize(foo.bar.baz,'45s','sum'),summarize(bar.foo.bad,'45s','sum'),summarize(foo.bar.baz,'45s','sum'),)`,
 			Tags:       map[string]string{"name": "weightedAverage(summarize(bar.foo.bad,'45s','sum'),summarize(foo.bar.baz,'45s','sum'),summarize(bar.foo.bad,'45s','sum'),summarize(foo.bar.baz,'45s','sum'),)"},
@@ -3426,7 +3426,7 @@ func TestExecExprSuccess(t *testing.T) {
                '30s'
        ))`, []*series{
 		{
-			Timestamps:     []int64{120000, 150000, 180000},
+			Timestamps:     []int64{120000000, 150000000, 180000000},
 			Values:         []float64{120, 150, 180},
 			Name:           `transformNull(foo.bar.baz,-1,referenceSeries)`,
 			Tags:           map[string]string{"name": "foo.bar.baz", "referenceSeries": "1", "transformNull": "-1"},

@@ -137,7 +137,7 @@ func ExportCSVLine(xb *exportBlock, fieldNames []string) string {
 }
 
 //line app/vmselect/prometheus/export.qtpl:37
-const rfc3339Milli = "2006-01-02T15:04:05.999Z07:00"
+const rfc3339Micro = "2006-01-02T15:04:05.999999Z07:00"
 
 //line app/vmselect/prometheus/export.qtpl:38
 func streamexportCSVField(qw422016 *qt422016.Writer, mn *storage.MetricName, fieldName string, timestamp int64, value float64) {
@@ -167,20 +167,20 @@ func streamexportCSVField(qw422016 *qt422016.Writer, mn *storage.MetricName, fie
 //line app/vmselect/prometheus/export.qtpl:50
 		case "unix_s":
 //line app/vmselect/prometheus/export.qtpl:51
-			qw422016.N().DL(timestamp / 1000)
+			qw422016.N().DL(timestamp / 1e6)
 //line app/vmselect/prometheus/export.qtpl:52
 		case "unix_ms":
 //line app/vmselect/prometheus/export.qtpl:53
-			qw422016.N().DL(timestamp)
+			qw422016.N().DL(timestamp / 1e3)
 //line app/vmselect/prometheus/export.qtpl:54
 		case "unix_ns":
 //line app/vmselect/prometheus/export.qtpl:55
-			qw422016.N().DL(timestamp * 1e6)
+			qw422016.N().DL(timestamp * 1e3)
 //line app/vmselect/prometheus/export.qtpl:56
 		case "rfc3339":
 //line app/vmselect/prometheus/export.qtpl:58
 			bb := quicktemplate.AcquireByteBuffer()
-			bb.B = time.Unix(timestamp/1000, (timestamp%1000)*1e6).AppendFormat(bb.B[:0], rfc3339Milli)
+			bb.B = time.Unix(timestamp/1e6, (timestamp%1e6)*1e3).AppendFormat(bb.B[:0], rfc3339Micro)
 
 //line app/vmselect/prometheus/export.qtpl:61
 			qw422016.N().Z(bb.B)
@@ -194,7 +194,7 @@ func streamexportCSVField(qw422016 *qt422016.Writer, mn *storage.MetricName, fie
 //line app/vmselect/prometheus/export.qtpl:68
 				layout := timeFormat[len("custom:"):]
 				bb := quicktemplate.AcquireByteBuffer()
-				bb.B = time.Unix(timestamp/1000, (timestamp%1000)*1e6).AppendFormat(bb.B[:0], layout)
+				bb.B = time.Unix(timestamp/1e6, (timestamp%1e6)*1e3).AppendFormat(bb.B[:0], layout)
 
 //line app/vmselect/prometheus/export.qtpl:72
 				if bytes.ContainsAny(bb.B, `"`+",\n") {

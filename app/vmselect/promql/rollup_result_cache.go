@@ -51,7 +51,7 @@ func ResetRollupResultCacheIfNeeded(mrs []storage.MetricRow) {
 		return
 	}
 
-	minTimestamp := int64(fasttime.UnixTimestamp()*1000) - cacheTimestampOffset.Milliseconds() + checkRollupResultCacheResetInterval.Milliseconds()
+	minTimestamp := int64(fasttime.UnixTimestamp()*1e6) - cacheTimestampOffset.Microseconds() + checkRollupResultCacheResetInterval.Microseconds()
 	needCacheReset := false
 	for i := range mrs {
 		if mrs[i].Timestamp < minTimestamp {
@@ -73,9 +73,9 @@ func checkRollupResultCacheReset() {
 		time.Sleep(checkRollupResultCacheResetInterval)
 		if needRollupResultCacheReset.Swap(false) {
 			mr := rollupResultResetMetricRowSample.Load()
-			d := int64(fasttime.UnixTimestamp()*1000) - mr.Timestamp - cacheTimestampOffset.Milliseconds()
+			d := int64(fasttime.UnixTimestamp()*1e6) - mr.Timestamp - cacheTimestampOffset.Microseconds()
 			logger.Warnf("resetting rollup result cache because the metric %s has a timestamp older than -search.cacheTimestampOffset=%s by %.3fs",
-				mr.String(), cacheTimestampOffset, float64(d)/1e3)
+				mr.String(), cacheTimestampOffset, float64(d)/1e6)
 			ResetRollupResultCache()
 		}
 	}
@@ -392,7 +392,7 @@ func (rrc *rollupResultCache) PutSeries(qt *querytracer.Tracer, ec *EvalConfig, 
 	// Remove values up to currentTime - step - cacheTimestampOffset,
 	// since these values may be added later.
 	timestamps := tss[0].Timestamps
-	deadline := (time.Now().UnixNano() / 1e6) - ec.Step - cacheTimestampOffset.Milliseconds()
+	deadline := (time.Now().UnixMicro()) - ec.Step - cacheTimestampOffset.Microseconds()
 	i := len(timestamps) - 1
 	for i >= 0 && timestamps[i] > deadline {
 		i--

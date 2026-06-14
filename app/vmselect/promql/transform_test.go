@@ -73,6 +73,7 @@ func TestVmrangeBucketsToLE(t *testing.T) {
 		tss := promMetricsToTimeseries(buckets)
 		result := vmrangeBucketsToLE(tss)
 		resultBuckets := timeseriesToPromMetrics(result)
+		bucketsExpected = timeseriesToPromMetrics(promMetricsToTimeseries(bucketsExpected))
 		if !reflect.DeepEqual(resultBuckets, bucketsExpected) {
 			t.Fatalf("unexpected vmrangeBucketsToLE(); got\n%v\nwant\n%v", resultBuckets, bucketsExpected)
 		}

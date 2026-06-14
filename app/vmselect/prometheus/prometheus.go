@@ -68,7 +68,7 @@ var (
 )
 
 // Default step used if not set.
-const defaultStep = 5 * 60 * 1000
+const defaultStep = 5 * 60 * 1000 * 1000
 
 // ExpandWithExprs handles the request to /expand-with-exprs
 func ExpandWithExprs(w http.ResponseWriter, r *http.Request) {
@@ -615,8 +615,8 @@ func TSDBStatusHandler(qt *querytracer.Tracer, startTime time.Time, w http.Respo
 		}
 		topN = n
 	}
-	start := int64(date*secsPerDay) * 1000
-	end := int64((date+1)*secsPerDay)*1000 - 1
+	start := int64(date*secsPerDay) * 1e6
+	end := int64((date+1)*secsPerDay)*1e6 - 1
 	sq := storage.NewSearchQuery(start, end, cp.filterss, *maxTSDBStatusSeries)
 	status, err := netstorage.TSDBStatus(qt, sq, focusLabel, topN, cp.deadline)
 	if err != nil {
@@ -765,7 +765,7 @@ var seriesDuration = metrics.NewSummary(`vm_request_duration_seconds{path="/api/
 func QueryHandler(qt *querytracer.Tracer, startTime time.Time, w http.ResponseWriter, r *http.Request) error {
 	defer queryDuration.UpdateDuration(startTime)
 
-	ct := startTime.UnixNano() / 1e6
+	ct := startTime.UnixMicro()
 	deadline := searchutil.GetDeadlineForQuery(r, startTime)
 	mayCache := !httputil.GetBool(r, "nocache")
 	query := r.FormValue("query")
@@ -797,11 +797,12 @@ func QueryHandler(qt *querytracer.Tracer, startTime time.Time, w http.ResponseWr
 		return err
 	}
 	if childQuery, windowExpr, offsetExpr := promql.IsMetricSelectorWithRollup(query); childQuery != "" {
-		window, err := windowExpr.NonNegativeDuration(step)
+		window, err := windowExpr.NonNegativeDuration(step / 1e3)
 		if err != nil {
 			return fmt.Errorf("cannot parse lookbehind window in square brackets at %s: %w", query, err)
 		}
-		offset := offsetExpr.Duration(step)
+		window *= 1e3
+		offset := offsetExpr.Duration(step/1e3) * 1e3
 		start -= offset
 		end := start
 		start = end - window
@@ -829,18 +830,20 @@ func QueryHandler(qt *querytracer.Tracer, startTime time.Time, w http.ResponseWr
 		return nil
 	}
 	if childQuery, windowExpr, stepExpr, offsetExpr := promql.IsRollup(query); childQuery != "" {
-		newStep, err := stepExpr.NonNegativeDuration(step)
+		newStep, err := stepExpr.NonNegativeDuration(step / 1e3)
 		if err != nil {
 			return fmt.Errorf("cannot parse step in square brackets at %s: %w", query, err)
 		}
+		newStep *= 1e3
 		if newStep > 0 {
 			step = newStep
 		}
-		window, err := windowExpr.NonNegativeDuration(step)
+		window, err := windowExpr.NonNegativeDuration(step / 1e3)
 		if err != nil {
 			return fmt.Errorf("cannot parse lookbehind window in square brackets at %s: %w", query, err)
 		}
-		offset := offsetExpr.Duration(step)
+		window *= 1e3
+		offset := offsetExpr.Duration(step/1e3) * 1e3
 		start -= offset
 		end := start
 		start = end - window
@@ -923,7 +926,7 @@ var queryDuration = metrics.NewSummary(`vm_request_duration_seconds{path="/api/v
 func QueryRangeHandler(qt *querytracer.Tracer, startTime time.Time, w http.ResponseWriter, r *http.Request) error {
 	defer queryRangeDuration.UpdateDuration(startTime)
 
-	ct := startTime.UnixNano() / 1e6
+	ct := startTime.UnixMicro()
 	query := r.FormValue("query")
 	if len(query) == 0 {
 		return fmt.Errorf("missing `query` arg")
@@ -998,7 +1001,7 @@ func queryRangeHandler(qt *querytracer.Tracer, startTime time.Time, w http.Respo
 	if err != nil {
 		return err
 	}
-	if step < maxStepForPointsAdjustment.Milliseconds() {
+	if step < maxStepForPointsAdjustment.Microseconds() {
 		queryOffset, err := getLatencyOffsetMilliseconds(r)
 		if err != nil {
 			return err
@@ -1095,9 +1098,9 @@ func adjustLastPoints(tss []netstorage.Result, start, end int64) []netstorage.Re
 }
 
 func getMaxLookback(r *http.Request) (int64, error) {
-	d := maxLookback.Milliseconds()
+	d := maxLookback.Microseconds()
 	if d == 0 {
-		d = maxStalenessInterval.Milliseconds()
+		d = maxStalenessInterval.Microseconds()
 	}
 	maxLookback, err := httputil.GetDuration(r, "max_lookback", d)
 	if err != nil {
@@ -1141,7 +1144,7 @@ func getRoundDigits(r *http.Request) int {
 func getLatencyOffsetMilliseconds(r *http.Request) (int64, error) {
 	// Zero latency offset may be useful for some use cases.
 	// See https://github.com/VictoriaMetrics/VictoriaMetrics/issues/2061#issuecomment-1299109836
-	d := max(latencyOffset.Milliseconds(), 0)
+	d := max(latencyOffset.Microseconds(), 0)
 	return httputil.GetDuration(r, "latency_offset", d)
 }
 
@@ -1156,11 +1159,11 @@ func QueryStatsHandler(w http.ResponseWriter, r *http.Request) error {
 		}
 		topN = n
 	}
-	maxLifetimeMsecs, err := httputil.GetDuration(r, "maxLifetime", 10*60*1000)
+	maxLifetimeUsecs, err := httputil.GetDuration(r, "maxLifetime", 10*60*1e6)
 	if err != nil {
 		return fmt.Errorf("cannot parse `maxLifetime` arg: %w", err)
 	}
-	maxLifetime := time.Duration(maxLifetimeMsecs) * time.Millisecond
+	maxLifetime := time.Duration(maxLifetimeUsecs) * time.Microsecond
 	w.Header().Set("Content-Type", "application/json")
 	bw := bufferedwriter.Get(w)
 	defer bufferedwriter.Put(bw)
@@ -1233,7 +1236,7 @@ func getCommonParamsInternal(r *http.Request, startTime time.Time, requireNonEmp
 	if err != nil {
 		return nil, err
 	}
-	ct := startTime.UnixNano() / 1e6
+	ct := startTime.UnixMicro()
 	end, err := httputil.GetTime(r, "end", ct)
 	if err != nil {
 		return nil, err
