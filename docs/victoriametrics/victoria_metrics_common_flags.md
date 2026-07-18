@@ -13,6 +13,8 @@ victoria-metrics is a time series database and monitoring solution.
 
 See the docs at https://docs.victoriametrics.com/victoriametrics/
 
+  -accountID uint
+     The accountID of the stored data
   -bigMergeConcurrency int
      Deprecated: this flag does nothing
   -blockcache.missesBeforeCaching int
@@ -95,6 +97,8 @@ See the docs at https://docs.victoriametrics.com/victoriametrics/
      Disable compression of HTTP responses to save CPU resources. By default, compression is enabled to save network bandwidth
   -http.header.csp string
      Value for 'Content-Security-Policy' header, recommended: "default-src 'self'"
+  -http.header.disableServerHostname
+     Whether to disable 'X-Server-Hostname' header in HTTP responses
   -http.header.frameOptions string
      Value for 'X-Frame-Options' header
   -http.header.hsts string
@@ -102,7 +106,7 @@ See the docs at https://docs.victoriametrics.com/victoriametrics/
   -http.idleConnTimeout duration
      Timeout for incoming idle http connections (default 1m0s)
   -http.maxGracefulShutdownDuration duration
-     The maximum duration for a graceful shutdown of the HTTP server. A highly loaded server may require increased value for a graceful shutdown (default 7s)
+     The maximum duration for a graceful shutdown of the HTTP server. During this period the server stops accepting new connections, but it will continue serving existing connections. The remaining in-flight requests are canceled before the deadline, so the shutdown can finish within this duration. A highly loaded server may require increased value for a graceful shutdown (default 7s)
   -http.pathPrefix string
      An optional prefix to add to all the paths handled by http server. For example, if '-http.pathPrefix=/foo/bar' is set, then all the http requests will be handled on '/foo/bar/*' paths. This may be useful for proxied requests. See https://www.robustperception.io/using-external-urls-and-proxies-with-prometheus
   -http.shutdownDelay duration
@@ -192,11 +196,11 @@ See the docs at https://docs.victoriametrics.com/victoriametrics/
      The maximum size in bytes of a single Prometheus remote_write API request
      Supports the following optional suffixes for size values: KB, MB, GB, TB, KiB, MiB, GiB, TiB (default 33554432)
   -maxLabelNameLen int
-     The maximum length of label name in the accepted time series. Series with longer label name are ignored. In this case the vm_rows_ignored_total{reason="too_long_label_name"} metric at /metrics page is incremented (default 256)
+     The maximum length of label name in the accepted time series. Series with longer label name are ignored. In this case the vm_rows_ignored_total{reason="too_long_label_name"} metric at /metrics page is incremented. Value must be in range 1..65535. (default 256)
   -maxLabelValueLen int
-     The maximum length of label values in the accepted time series. Series with longer label value are ignored. In this case the vm_rows_ignored_total{reason="too_long_label_value"} metric at /metrics page is incremented (default 4096)
+     The maximum length of label values in the accepted time series. Series with longer label value are ignored. In this case the vm_rows_ignored_total{reason="too_long_label_value"} metric at /metrics page is incremented. Value must be in range 1..65535. (default 4096)
   -maxLabelsPerTimeseries int
-     The maximum number of labels per time series to be accepted. Series with superfluous labels are ignored. In this case the vm_rows_ignored_total{reason="too_many_labels"} metric at /metrics page is incremented (default 40)
+     The maximum number of labels per time series to be accepted. Series with superfluous labels are ignored. In this case the vm_rows_ignored_total{reason="too_many_labels"} metric at /metrics page is incremented. (default 40)
   -memory.allowedBytes size
      Allowed size of system memory VictoriaMetrics caches may occupy. This option overrides -memory.allowedPercent if set to a non-zero value. Too low a value may increase the cache miss rate usually resulting in higher CPU and disk IO usage. Too high a value may evict too much data from the OS page cache resulting in higher disk IO usage. The process may behave unexpectedly if this flag is set too small (e.g., 1 byte).
      Supports the following optional suffixes for size values: KB, MB, GB, TB, KiB, MiB, GiB, TiB (default 0)
@@ -259,6 +263,8 @@ See the docs at https://docs.victoriametrics.com/victoriametrics/
      The number of precision bits to store per each value. Lower precision bits improves data compression at the cost of precision loss (default 64)
   -prevCacheRemovalPercent float
      Items in the previous caches are removed when the percent of requests it serves becomes lower than this value. Higher values reduce memory usage at the cost of higher CPU usage. See also -cacheExpireDuration (default 0.1)
+  -projectID uint
+     The projectID of the stored data
   -promscrape.azureSDCheckInterval duration
      Interval for checking for changes in Azure. This works only if azure_sd_configs is configured in '-promscrape.config' file. See https://docs.victoriametrics.com/victoriametrics/sd_configs/#azure_sd_configs for details (default 1m0s)
   -promscrape.cluster.memberLabel string
@@ -273,6 +279,10 @@ See the docs at https://docs.victoriametrics.com/victoriametrics/
      Optional name of the cluster. If multiple vmagent clusters scrape the same targets, then each cluster must have unique name in order to properly de-duplicate samples received from these clusters. See https://docs.victoriametrics.com/victoriametrics/vmagent/#scraping-big-number-of-targets for more info
   -promscrape.cluster.replicationFactor int
      The number of members in the cluster, which scrape the same targets. If the replication factor is greater than 1, then the deduplication must be enabled at remote storage side. See https://docs.victoriametrics.com/victoriametrics/vmagent/#scraping-big-number-of-targets for more info (default 1)
+  -promscrape.cluster.shardByLabels array
+     Optional list of target labels, which will be used for sharding targets among cluster members if -promscrape.cluster.membersCount is greater than 1. If none of the specified labels are found in a target, then all the target labels will be used for sharding. See https://docs.victoriametrics.com/victoriametrics/vmagent/#scraping-big-number-of-targets for more info
+     Supports an array of values separated by comma or specified via multiple flags.
+     Each array item can contain comma inside single-quoted or double-quoted string, {}, [] and () braces.
   -promscrape.config string
      Optional path to Prometheus config file with 'scrape_configs' section containing targets to scrape. The path can point to local file and to http url. See https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/#how-to-scrape-prometheus-exporters-such-as-node-exporter for details
   -promscrape.config.dryRun
@@ -395,6 +405,10 @@ See the docs at https://docs.victoriametrics.com/victoriametrics/
      The following optional suffixes are supported: s (second), h (hour), d (day), w (week), M (month), y (year). If suffix isn't set, then the duration is counted in months (default 1M)
   -retentionTimezoneOffset duration
      The offset for performing indexdb rotation. If set to 0, then the indexdb rotation is performed at 4am UTC time per each -retentionPeriod. If set to 2h, then the indexdb rotation is performed at 4am EET time (the timezone with +2h offset)
+  -rpc.disableCompression
+     Whether to disable compression of the data sent from vmstorage to vmselect. This reduces CPU usage at the cost of higher network bandwidth usage
+  -rpc.handshakeTimeout duration
+     Timeout for RPC handshake between vminsert/vmselect and vmstorage. Increase this value if transient handshake failures occur. See https://docs.victoriametrics.com/victoriametrics/troubleshooting/#cluster-instability section for more details. (default 5s)
   -search.cacheTimestampOffset duration
      The maximum duration since the current time for response data, which is always queried from the original raw data, without using the response cache. Increase this value if you see gaps in responses due to time synchronization issues between VictoriaMetrics and data sources. See also -search.disableAutoCacheReset (default 5m0s)
   -search.disableAutoCacheReset
@@ -484,13 +498,13 @@ See the docs at https://docs.victoriametrics.com/victoriametrics/
   -search.maxTSDBStatusTopNSeries int
      The maximum value of 'topN' argument that can be passed to /api/v1/status/tsdb API. This option allows limiting memory usage. See https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/#tsdb-stats (default 1000)
   -search.maxTagKeys int
-     The maximum number of tag keys returned from /api/v1/labels . See also -search.maxLabelsAPISeries and -search.maxLabelsAPIDuration (default 100000)
+     The maximum number of tag keys returned per search. See also -search.maxLabelsAPISeries and -search.maxLabelsAPIDuration (default 100000)
   -search.maxTagValueSuffixesPerSearch int
      The maximum number of tag value suffixes returned from /metrics/find (default 100000)
   -search.maxTagValues int
-     The maximum number of tag values returned from /api/v1/label/<label_name>/values . See also -search.maxLabelsAPISeries and -search.maxLabelsAPIDuration (default 100000)
+     The maximum number of tag values returned per search. See also -search.maxLabelsAPISeries and -search.maxLabelsAPIDuration (default 100000)
   -search.maxUniqueTimeseries int
-     The maximum number of unique time series, which can be selected during /api/v1/query and /api/v1/query_range queries. This option allows limiting memory usage. When set to zero, the limit is automatically calculated based on -search.maxConcurrentRequests (inversely proportional) and memory available to the process (proportional).
+     The maximum number of unique time series, which can be scanned during every query. This allows protecting against heavy queries, which select unexpectedly high number of series. When set to zero, the limit is automatically calculated based on -search.maxConcurrentRequests (inversely proportional) and memory available to the process (proportional). See also -search.max* command-line flags at vmselect
   -search.maxWorkersPerQuery int
      The maximum number of CPU cores a single query can use. The default value should work good for most cases. The flag can be set to lower values for improving performance of big number of concurrently executed queries. The flag can be set to bigger values for improving performance of heavy queries, which scan big number of time series (>10K) and/or big number of samples (>100M). There is no sense in setting this flag to values bigger than the number of CPU cores available on the system (default netstorage.defaultMaxWorkersPerQuery())
   -search.minStalenessInterval duration
@@ -621,7 +635,9 @@ See the docs at https://docs.victoriametrics.com/victoriametrics/
   -version
      Show VictoriaMetrics version
   -vmalert.proxyURL string
-     Optional URL for proxying requests to vmalert. For example, if -vmalert.proxyURL=http://vmalert:8880 , then alerting API requests such as /api/v1/rules from Grafana will be proxied to http://vmalert:8880/api/v1/rules
+     Optional URL for proxying requests to vmalert. For example, if -vmalert.proxyURL=http://vmalert:8880 , then alerting API requests such as /api/v1/rules from Grafana will be proxied to http://vmalert:8880/api/v1/rules . See https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/#vmalert
+  -vmselectAddr string
+     TCP address to accept connections from vmselect services
   -vmui.customDashboardsPath string
      Optional path to vmui dashboards. See https://github.com/VictoriaMetrics/VictoriaMetrics/tree/master/app/vmui/packages/vmui/public/dashboards
   -vmui.defaultTimezone string

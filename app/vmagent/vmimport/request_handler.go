@@ -65,7 +65,7 @@ func insertRows(at *auth.Token, rows []vmimport.Row, extraLabels []prompb.Label)
 		for j, value := range values {
 			samples = append(samples, prompb.Sample{
 				Value:     value,
-				Timestamp: timestamps[j],
+				Timestamp: timestamps[j] * 1e3,
 			})
 		}
 		tssDst = append(tssDst, prompb.TimeSeries{

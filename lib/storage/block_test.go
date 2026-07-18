@@ -24,6 +24,24 @@ func TestBlockMarshalUnmarshalPortable(t *testing.T) {
 	}
 }
 
+func TestBlockMustConvertTimestampsToMilliseconds(t *testing.T) {
+	timestamps := []int64{1_234_567, 1_234_999, 1_235_001}
+	values := []int64{1, 2, 3}
+
+	var b Block
+	b.Init(&TSID{}, timestamps, values, 0, 64)
+	b.MarshalData(0, 0)
+	b.MustConvertTimestampsToMilliseconds()
+	if err := b.UnmarshalData(); err != nil {
+		t.Fatalf("cannot unmarshal converted block: %s", err)
+	}
+
+	want := []int64{1_234, 1_234, 1_235}
+	if !reflect.DeepEqual(b.timestamps, want) {
+		t.Fatalf("unexpected timestamps after converting to milliseconds; got %v; want %v", b.timestamps, want)
+	}
+}
+
 func testBlockMarshalUnmarshalPortable(t *testing.T, b *Block) {
 	var b1, b2 Block
 	rowsCount := len(b.values)

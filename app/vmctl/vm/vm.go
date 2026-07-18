@@ -8,10 +8,12 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/VictoriaMetrics/VictoriaMetrics/app/vmctl/auth"
 	"github.com/VictoriaMetrics/metrics"
 
 	"github.com/VictoriaMetrics/VictoriaMetrics/app/vmctl/backoff"
@@ -27,6 +29,8 @@ type Config struct {
 	//   --httpListenAddr value for single node version
 	//   --httpListenAddr value of vmselect  component for cluster version
 	Addr string
+
+	AuthCfg *auth.Config
 	// Transport allows specifying custom http.Transport
 	Transport *http.Transport
 	// Concurrency defines number of worker
@@ -40,10 +44,6 @@ type Config struct {
 	// BatchSize defines how many samples
 	// importer collects before sending the import request
 	BatchSize int
-	// User name for basic auth
-	User string
-	// Password for basic auth
-	Password string
 	// SignificantFigures defines the number of significant figures to leave
 	// in metric values before importing.
 	// Zero value saves all the significant decimal places
@@ -65,11 +65,10 @@ type Config struct {
 // see https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/#how-to-import-time-series-data
 type Importer struct {
 	addr       string
+	authCfg    *auth.Config
 	client     *http.Client
 	importPath string
 	compress   bool
-	user       string
-	password   string
 
 	close  chan struct{}
 	input  chan *TimeSeries
@@ -113,7 +112,7 @@ func AddExtraLabelsToImportPath(path string, extraLabels []string) (string, erro
 		if strings.Contains(dst, "?") {
 			separator = "&"
 		}
-		dst += fmt.Sprintf("%sextra_label=%s", separator, extraLabel)
+		dst += fmt.Sprintf("%sextra_label=%s", separator, url.QueryEscape(extraLabel))
 	}
 	return dst, nil
 }
@@ -148,8 +147,7 @@ func NewImporter(ctx context.Context, cfg Config) (*Importer, error) {
 		client:     client,
 		importPath: importPath,
 		compress:   cfg.Compress,
-		user:       cfg.User,
-		password:   cfg.Password,
+		authCfg:    cfg.AuthCfg,
 		rl:         limiter.NewLimiter(cfg.RateLimit),
 		close:      make(chan struct{}),
 		input:      make(chan *TimeSeries, cfg.Concurrency*4),
@@ -304,8 +302,8 @@ func (im *Importer) Ping() error {
 	if err != nil {
 		return fmt.Errorf("cannot create request to %q: %w", im.addr, err)
 	}
-	if im.user != "" {
-		req.SetBasicAuth(im.user, im.password)
+	if im.authCfg != nil {
+		im.authCfg.SetHeaders(req, true)
 	}
 	resp, err := im.client.Do(req)
 	if err != nil {
@@ -334,8 +332,8 @@ func (im *Importer) Import(tsBatch []*TimeSeries) error {
 		im.importRequestsErrorsTotal.Inc()
 		return fmt.Errorf("cannot create request to %q: %w", im.addr, err)
 	}
-	if im.user != "" {
-		req.SetBasicAuth(im.user, im.password)
+	if im.authCfg != nil {
+		im.authCfg.SetHeaders(req, true)
 	}
 	if im.compress {
 		req.Header.Set("Content-Encoding", "gzip")

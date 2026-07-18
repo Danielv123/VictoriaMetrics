@@ -264,9 +264,9 @@ func (c Client) GetData(series Meta, rt RetentionMeta, start int64, end int64, m
 	*/
 	for ts, val := range output[0].Dps {
 		if !mSecs {
-			data.Timestamps = append(data.Timestamps, ts*1e6)
+			data.Timestamps = append(data.Timestamps, ts*1000)
 		} else {
-			data.Timestamps = append(data.Timestamps, ts*1e3)
+			data.Timestamps = append(data.Timestamps, ts)
 		}
 		data.Values = append(data.Values, val)
 	}

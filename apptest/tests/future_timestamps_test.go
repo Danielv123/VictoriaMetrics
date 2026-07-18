@@ -91,6 +91,7 @@ func testFutureTimestamps(tc *apptest.TestCase, opts testFutureTimestampsOpts) {
 				Status: "success",
 				Data:   want,
 			},
+			Retries: 100,
 			FailNow: true,
 		})
 	}
@@ -119,6 +120,7 @@ func testFutureTimestamps(tc *apptest.TestCase, opts testFutureTimestampsOpts) {
 					Result:     want,
 				},
 			},
+			Retries: 100,
 			FailNow: true,
 		})
 	}

@@ -279,7 +279,7 @@ func (tp *thanosProcessor) do(bi thanos.BlockInfo, aggrType thanos.AggrType) (ui
 				continue
 			}
 			t, v := it.At()
-			timestamps = append(timestamps, t*1e3)
+			timestamps = append(timestamps, t)
 			values = append(values, v)
 		}
 		if err := it.Err(); err != nil {

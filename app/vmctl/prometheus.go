@@ -109,7 +109,7 @@ func (pp *prometheusProcessor) do(ctx context.Context, b tsdb.BlockReader) error
 				continue
 			}
 			t, v := it.At()
-			timestamps = append(timestamps, t*1e3)
+			timestamps = append(timestamps, t)
 			values = append(values, v)
 		}
 		if err := it.Err(); err != nil {

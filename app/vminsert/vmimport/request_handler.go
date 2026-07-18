@@ -68,7 +68,7 @@ func insertRows(rows []vmimport.Row, extraLabels []prompb.Label) error {
 			logger.Panicf("BUG: len(timestamps)=%d must match len(values)=%d", len(timestamps), len(values))
 		}
 		for j, value := range values {
-			timestamp := timestamps[j]
+			timestamp := timestamps[j] * 1e3
 			if err := ic.WriteDataPoint(ctx.metricNameBuf, nil, timestamp, value); err != nil {
 				return err
 			}

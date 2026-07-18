@@ -60,3 +60,24 @@ func TestGetMaxMetrics(t *testing.T) {
 	f(2e6, 0, 2e6)
 	f(2e6, 1e6, 1e6)
 }
+
+func TestTimestampMillisecondsToMicroseconds(t *testing.T) {
+	testCases := []struct {
+		name string
+		in   int64
+		want int64
+	}{
+		{name: "positive", in: 1_234, want: 1_234_000},
+		{name: "negative", in: -1_234, want: -1_234_000},
+		{name: "max", in: math.MaxInt64, want: math.MaxInt64},
+		{name: "min", in: math.MinInt64, want: math.MinInt64},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := timestampMillisecondsToMicroseconds(tc.in)
+			if got != tc.want {
+				t.Fatalf("unexpected timestamp; got %d; want %d", got, tc.want)
+			}
+		})
+	}
+}

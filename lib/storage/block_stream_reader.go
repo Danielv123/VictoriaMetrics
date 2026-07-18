@@ -294,6 +294,15 @@ func (bsr *blockStreamReader) readBlock() error {
 	bsr.valuesBlockOffset += uint64(bsr.Block.bh.ValuesBlockSize)
 	bsr.indexBlockHeadersCount++
 
+	if bsr.ph.timestampsMultiplier != 1 {
+		bsr.Block.bh.MinTimestamp *= bsr.ph.timestampsMultiplier
+		bsr.Block.bh.MaxTimestamp *= bsr.ph.timestampsMultiplier
+		bsr.Block.timestampsMultiplier = bsr.ph.timestampsMultiplier
+		if err := bsr.Block.UnmarshalData(); err != nil {
+			return fmt.Errorf("cannot convert legacy millisecond timestamps to microseconds: %w", err)
+		}
+	}
+
 	return nil
 }
 

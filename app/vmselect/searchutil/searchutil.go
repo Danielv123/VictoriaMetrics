@@ -27,11 +27,11 @@ var (
 
 // GetMaxQueryDuration returns the maximum duration for query from r.
 func GetMaxQueryDuration(r *http.Request) time.Duration {
-	dms, err := httputil.GetDuration(r, "timeout", 0)
+	dusecs, err := httputil.GetDuration(r, "timeout", 0)
 	if err != nil {
-		dms = 0
+		dusecs = 0
 	}
-	d := time.Duration(dms) * time.Millisecond
+	d := time.Duration(dusecs) * time.Microsecond
 	if d <= 0 || d > *maxQueryDuration {
 		d = *maxQueryDuration
 	}
@@ -40,31 +40,31 @@ func GetMaxQueryDuration(r *http.Request) time.Duration {
 
 // GetDeadlineForQuery returns deadline for the given query r.
 func GetDeadlineForQuery(r *http.Request, startTime time.Time) Deadline {
-	dMax := maxQueryDuration.Milliseconds()
+	dMax := maxQueryDuration.Microseconds()
 	return getDeadlineWithMaxDuration(r, startTime, dMax, "-search.maxQueryDuration")
 }
 
 // GetDeadlineForStatusRequest returns deadline for the given request to /api/v1/status/*.
 func GetDeadlineForStatusRequest(r *http.Request, startTime time.Time) Deadline {
-	dMax := maxStatusRequestDuration.Milliseconds()
+	dMax := maxStatusRequestDuration.Microseconds()
 	return getDeadlineWithMaxDuration(r, startTime, dMax, "-search.maxStatusRequestDuration")
 }
 
 // GetDeadlineForExport returns deadline for the given request to /api/v1/export.
 func GetDeadlineForExport(r *http.Request, startTime time.Time) Deadline {
-	dMax := maxExportDuration.Milliseconds()
+	dMax := maxExportDuration.Microseconds()
 	return getDeadlineWithMaxDuration(r, startTime, dMax, "-search.maxExportDuration")
 }
 
 // GetDeadlineForLabelsAPI returns deadline for the given request to /api/v1/labels, /api/v1/label/.../values or /api/v1/series
 func GetDeadlineForLabelsAPI(r *http.Request, startTime time.Time) Deadline {
-	dMax := maxLabelsAPIDuration.Milliseconds()
+	dMax := maxLabelsAPIDuration.Microseconds()
 	return getDeadlineWithMaxDuration(r, startTime, dMax, "-search.maxLabelsAPIDuration")
 }
 
 // GetDeadlineForDelete returns deadline for the given request to /api/v1/admin/tsdb/delete_series.
 func GetDeadlineForDelete(r *http.Request, startTime time.Time) Deadline {
-	dMax := maxDeleteDuration.Milliseconds()
+	dMax := maxDeleteDuration.Microseconds()
 	return getDeadlineWithMaxDuration(r, startTime, dMax, "-search.maxDeleteDuration")
 }
 
@@ -76,7 +76,7 @@ func getDeadlineWithMaxDuration(r *http.Request, startTime time.Time, dMax int64
 	if d <= 0 || d > dMax {
 		d = dMax
 	}
-	timeout := time.Duration(d) * time.Millisecond
+	timeout := time.Duration(d) * time.Microsecond
 	return NewDeadline(startTime, timeout, flagHint)
 }
 

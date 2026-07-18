@@ -1,9 +1,23 @@
 package graphite
 
 import (
+	"strings"
 	"testing"
 	"time"
 )
+
+func TestRenderSeriesJSONConvertsMicrosecondsToSeconds(t *testing.T) {
+	s := &series{
+		Name:       "foo",
+		Timestamps: []int64{1234567890123456},
+		Values:     []float64{1.5},
+	}
+
+	response := renderSeriesJSON(s)
+	if !strings.Contains(response, `"datapoints":[[1.5,1234567890]]`) {
+		t.Fatalf("unexpected Graphite render response: %s", response)
+	}
+}
 
 func TestParseIntervalSuccess(t *testing.T) {
 	f := func(s string, intervalExpected int64) {

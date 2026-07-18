@@ -74,6 +74,8 @@ See the docs at https://docs.victoriametrics.com/victoriametrics/vmagent/ .
      Disable compression of HTTP responses to save CPU resources. By default, compression is enabled to save network bandwidth
   -http.header.csp string
      Value for 'Content-Security-Policy' header, recommended: "default-src 'self'"
+  -http.header.disableServerHostname
+     Whether to disable 'X-Server-Hostname' header in HTTP responses
   -http.header.frameOptions string
      Value for 'X-Frame-Options' header
   -http.header.hsts string
@@ -81,7 +83,7 @@ See the docs at https://docs.victoriametrics.com/victoriametrics/vmagent/ .
   -http.idleConnTimeout duration
      Timeout for incoming idle http connections (default 1m0s)
   -http.maxGracefulShutdownDuration duration
-     The maximum duration for a graceful shutdown of the HTTP server. A highly loaded server may require increased value for a graceful shutdown (default 7s)
+     The maximum duration for a graceful shutdown of the HTTP server. During this period the server stops accepting new connections, but it will continue serving existing connections. The remaining in-flight requests are canceled before the deadline, so the shutdown can finish within this duration. A highly loaded server may require increased value for a graceful shutdown (default 7s)
   -http.pathPrefix string
      An optional prefix to add to all the paths handled by http server. For example, if '-http.pathPrefix=/foo/bar' is set, then all the http requests will be handled on '/foo/bar/*' paths. This may be useful for proxied requests. See https://www.robustperception.io/using-external-urls-and-proxies-with-prometheus
   -http.shutdownDelay duration
@@ -168,6 +170,8 @@ See the docs at https://docs.victoriametrics.com/victoriametrics/vmagent/ .
      The maximum length of label values in the accepted time series. Series with longer label value are ignored. In this case the vm_rows_ignored_total{reason="too_long_label_value"} metric at /metrics page is incremented
   -maxLabelsPerTimeseries int
      The maximum number of labels per time series to be accepted. Series with superfluous labels are ignored. In this case the vm_rows_ignored_total{reason="too_many_labels"} metric at /metrics page is incremented
+  -mdx.label -remoteWrite.url
+     Optional label value in the form 'name=value' used to identify VictoriaMetrics metrics for MDX. Metrics containing the specified label are forwarded to -remoteWrite.url endpoints configured with `-remoteWrite.mdx.enable=true`.
   -memory.allowedBytes size
      Allowed size of system memory VictoriaMetrics caches may occupy. This option overrides -memory.allowedPercent if set to a non-zero value. Too low a value may increase the cache miss rate usually resulting in higher CPU and disk IO usage. Too high a value may evict too much data from the OS page cache resulting in higher disk IO usage. The process may behave unexpectedly if this flag is set too small (e.g., 1 byte).
      Supports the following optional suffixes for size values: KB, MB, GB, TB, KiB, MiB, GiB, TiB (default 0)
@@ -238,6 +242,10 @@ See the docs at https://docs.victoriametrics.com/victoriametrics/vmagent/ .
      Optional name of the cluster. If multiple vmagent clusters scrape the same targets, then each cluster must have unique name in order to properly de-duplicate samples received from these clusters. See https://docs.victoriametrics.com/victoriametrics/vmagent/#scraping-big-number-of-targets for more info
   -promscrape.cluster.replicationFactor int
      The number of members in the cluster, which scrape the same targets. If the replication factor is greater than 1, then the deduplication must be enabled at remote storage side. See https://docs.victoriametrics.com/victoriametrics/vmagent/#scraping-big-number-of-targets for more info (default 1)
+  -promscrape.cluster.shardByLabels array
+     Optional list of target labels, which will be used for sharding targets among cluster members if -promscrape.cluster.membersCount is greater than 1. If none of the specified labels are found in a target, then all the target labels will be used for sharding. See https://docs.victoriametrics.com/victoriametrics/vmagent/#scraping-big-number-of-targets for more info
+     Supports an array of values separated by comma or specified via multiple flags.
+     Each array item can contain comma inside single-quoted or double-quoted string, {}, [] and () braces.
   -promscrape.config string
      Optional path to Prometheus config file with 'scrape_configs' section containing targets to scrape. The path can point to local file and to http url. See https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/#how-to-scrape-prometheus-exporters-such-as-node-exporter for details
   -promscrape.config.dryRun
@@ -433,6 +441,10 @@ See the docs at https://docs.victoriametrics.com/victoriametrics/vmagent/ .
      Optional HTTP headers to send with each request to the corresponding -remoteWrite.url. For example, -remoteWrite.headers='My-Auth:foobar' would send 'My-Auth: foobar' HTTP header with every request to the corresponding -remoteWrite.url. Multiple headers must be delimited by '^^': -remoteWrite.headers='header1:value1^^header2:value2'
      Supports an array of values separated by comma or specified via multiple flags.
      Each array item can contain comma inside single-quoted or double-quoted string, {}, [] and () braces.
+  -remoteWrite.inmemoryQueues array
+     The number of additional workers per each -remoteWrite.url, which send only recently ingested data from the in-memory queue, while the file-based queue at -remoteWrite.tmpDataPath is drained by workers configured via -remoteWrite.queues. This reduces delivery lag for fresh samples when the file-based queue contains a backlog accumulated during remote storage outages. (default 0)
+     Supports array of values separated by comma or specified via multiple flags.
+     Empty values are set to default value.
   -remoteWrite.keepDanglingQueues
      Keep persistent queues contents at -remoteWrite.tmpDataPath in case there are no matching -remoteWrite.url. Useful when -remoteWrite.url is changed temporarily and persistent queue files will be needed later on.
   -remoteWrite.label array
@@ -455,6 +467,10 @@ See the docs at https://docs.victoriametrics.com/victoriametrics/vmagent/ .
      The maximum number of metadata to send in each block to remote storage. Higher number may improve performance at the cost of the increased memory usage. See also -remoteWrite.maxBlockSize (default 5000)
   -remoteWrite.maxRowsPerBlock int
      The maximum number of samples to send in each block to remote storage. Higher number may improve performance at the cost of the increased memory usage. See also -remoteWrite.maxBlockSize (default 10000)
+  -remoteWrite.mdx.enable array
+     Whether to only retain metrics from VictoriaMetrics services before sending them to the corresponding -remoteWrite.url. Please see https://docs.victoriametrics.com/victoriametrics/vmagent/#monitoring-data-exchange
+     Supports array of values separated by comma or specified via multiple flags.
+     Empty values are set to false.
   -remoteWrite.oauth2.clientID array
      Optional OAuth2 clientID to use for the corresponding -remoteWrite.url
      Supports an array of values separated by comma or specified via multiple flags.

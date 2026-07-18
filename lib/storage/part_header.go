@@ -31,7 +31,20 @@ type partHeader struct {
 
 	// MinDedupInterval is minimal dedup interval in microseconds across all the blocks in the part.
 	MinDedupInterval int64
+
+	// TimestampsPrecision identifies the timestamp precision used by the part files.
+	// It is empty for parts created before this field was introduced.
+	TimestampsPrecision string `json:",omitempty"`
+
+	// timestampsMultiplier converts timestamps stored in the part to microseconds.
+	// It isn't persisted in metadata.
+	timestampsMultiplier int64
 }
+
+const (
+	timestampsPrecisionMilliseconds = "milliseconds"
+	timestampsPrecisionMicroseconds = "microseconds"
+)
 
 // String returns string representation of ph.
 func (ph *partHeader) String() string {
@@ -45,6 +58,39 @@ func (ph *partHeader) Reset() {
 	ph.MinTimestamp = (1 << 63) - 1
 	ph.MaxTimestamp = -1 << 63
 	ph.MinDedupInterval = 0
+	ph.TimestampsPrecision = ""
+	ph.timestampsMultiplier = 1
+}
+
+func (ph *partHeader) initTimestampsMultiplier() {
+	switch ph.TimestampsPrecision {
+	case timestampsPrecisionMilliseconds:
+		ph.timestampsMultiplier = 1000
+	case timestampsPrecisionMicroseconds:
+		ph.timestampsMultiplier = 1
+	case "":
+		// Parts created by released VictoriaMetrics versions contain millisecond
+		// timestamps. Microsecond parts created by early versions of this branch
+		// don't have TimestampsPrecision, but can be identified by their range.
+		if ph.MaxTimestamp <= maxUnixMilli {
+			ph.timestampsMultiplier = 1000
+			ph.TimestampsPrecision = timestampsPrecisionMilliseconds
+		} else {
+			ph.timestampsMultiplier = 1
+			ph.TimestampsPrecision = timestampsPrecisionMicroseconds
+		}
+	default:
+		logger.Panicf("FATAL: unsupported timestamps precision %q", ph.TimestampsPrecision)
+	}
+}
+
+func (ph *partHeader) timestampsToMicroseconds() {
+	if ph.timestampsMultiplier == 1 {
+		return
+	}
+	ph.MinTimestamp *= ph.timestampsMultiplier
+	ph.MaxTimestamp *= ph.timestampsMultiplier
+	ph.MinDedupInterval *= ph.timestampsMultiplier
 }
 
 func (ph *partHeader) readMinDedupInterval(partPath string) error {
@@ -62,7 +108,11 @@ func (ph *partHeader) readMinDedupInterval(partPath string) error {
 	if err != nil {
 		return fmt.Errorf("cannot parse minimum dedup interval %q at %q: %w", data, filePath, err)
 	}
-	ph.MinDedupInterval = dedupInterval.Microseconds()
+	if ph.timestampsMultiplier == 1000 {
+		ph.MinDedupInterval = dedupInterval.Milliseconds()
+	} else {
+		ph.MinDedupInterval = dedupInterval.Microseconds()
+	}
 	return nil
 }
 
@@ -124,6 +174,16 @@ func (ph *partHeader) ParseFromPath(path string) error {
 		return fmt.Errorf("blocksCount cannot be bigger than rowsCount; got blocksCount=%d, rowsCount=%d", ph.BlocksCount, ph.RowsCount)
 	}
 
+	fractionalDigits := len(a[3]) - strings.LastIndexByte(a[3], '.') - 1
+	if fractionalDigits <= 3 {
+		ph.MinTimestamp /= 1000
+		ph.MaxTimestamp /= 1000
+		ph.TimestampsPrecision = timestampsPrecisionMilliseconds
+	} else {
+		ph.TimestampsPrecision = timestampsPrecisionMicroseconds
+	}
+	ph.initTimestampsMultiplier()
+
 	if err := ph.readMinDedupInterval(path); err != nil {
 		return fmt.Errorf("cannot read min dedup interval: %w", err)
 	}
@@ -149,6 +209,7 @@ func (ph *partHeader) MustReadMetadata(partPath string) {
 		if err := json.Unmarshal(metadata, ph); err != nil {
 			logger.Panicf("FATAL: cannot parse %q: %s", metadataPath, err)
 		}
+		ph.initTimestampsMultiplier()
 	}
 
 	// Perform various checks
@@ -167,7 +228,10 @@ func (ph *partHeader) MustReadMetadata(partPath string) {
 }
 
 func (ph *partHeader) MustWriteMetadata(partPath string) {
-	metadata, err := json.Marshal(ph)
+	phCopy := *ph
+	phCopy.TimestampsPrecision = timestampsPrecisionMicroseconds
+	phCopy.timestampsMultiplier = 1
+	metadata, err := json.Marshal(&phCopy)
 	if err != nil {
 		logger.Panicf("BUG: cannot marshal partHeader metadata: %s", err)
 	}

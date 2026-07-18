@@ -26,7 +26,12 @@ type Block struct {
 	nextIdx int
 
 	timestamps []int64
-	values     []int64
+
+	// timestampsMultiplier converts timestampsData to microseconds when reading
+	// parts created with the legacy millisecond storage format.
+	timestampsMultiplier int64
+
+	values []int64
 
 	// Marshaled representation of block header.
 	headerData []byte
@@ -43,6 +48,7 @@ func (b *Block) Reset() {
 	b.bh = blockHeader{}
 	b.nextIdx = 0
 	b.timestamps = b.timestamps[:0]
+	b.timestampsMultiplier = 1
 	b.values = b.values[:0]
 
 	b.headerData = b.headerData[:0]
@@ -55,6 +61,7 @@ func (b *Block) CopyFrom(src *Block) {
 	b.bh = src.bh
 	b.nextIdx = 0
 	b.timestamps = append(b.timestamps[:0], src.timestamps[src.nextIdx:]...)
+	b.timestampsMultiplier = src.timestampsMultiplier
 	b.values = append(b.values[:0], src.values[src.nextIdx:]...)
 
 	b.headerData = append(b.headerData[:0], src.headerData...)
@@ -267,17 +274,28 @@ func (b *Block) UnmarshalData() error {
 
 	var err error
 
-	b.timestamps, err = encoding.UnmarshalTimestamps(b.timestamps[:0], b.timestampsData, b.bh.TimestampsMarshalType, b.bh.MinTimestamp, int(b.bh.RowsCount))
+	timestampsMultiplier := b.timestampsMultiplier
+	if timestampsMultiplier == 0 {
+		timestampsMultiplier = 1
+	}
+	minTimestamp := b.bh.MinTimestamp / timestampsMultiplier
+	maxTimestamp := b.bh.MaxTimestamp / timestampsMultiplier
+	b.timestamps, err = encoding.UnmarshalTimestamps(b.timestamps[:0], b.timestampsData, b.bh.TimestampsMarshalType, minTimestamp, int(b.bh.RowsCount))
 	if err != nil {
 		return err
 	}
 	if b.bh.PrecisionBits < 64 {
 		// Recover timestamps order after lossy compression.
-		encoding.EnsureNonDecreasingSequence(b.timestamps, b.bh.MinTimestamp, b.bh.MaxTimestamp)
+		encoding.EnsureNonDecreasingSequence(b.timestamps, minTimestamp, maxTimestamp)
 	} else if b.bh.TimestampsMarshalType.NeedsValidation() {
 		// Ensure timestamps are in the range [MinTimestamp ... MaxTimestamps] and are ordered.
-		if err := checkTimestampsBounds(b.timestamps, b.bh.MinTimestamp, b.bh.MaxTimestamp); err != nil {
+		if err := checkTimestampsBounds(b.timestamps, minTimestamp, maxTimestamp); err != nil {
 			return err
+		}
+	}
+	if timestampsMultiplier != 1 {
+		for i := range b.timestamps {
+			b.timestamps[i] *= timestampsMultiplier
 		}
 	}
 	b.timestampsData = b.timestampsData[:0]
@@ -295,6 +313,22 @@ func (b *Block) UnmarshalData() error {
 	b.nextIdx = 0
 
 	return nil
+}
+
+// MustConvertTimestampsToMilliseconds converts the timestamps in b from
+// microseconds to milliseconds and marshals the converted block data.
+//
+// This is used at protocol boundaries which must remain compatible with
+// VictoriaMetrics versions that use millisecond timestamps on the wire.
+func (b *Block) MustConvertTimestampsToMilliseconds() {
+	if err := b.UnmarshalData(); err != nil {
+		logger.Panicf("FATAL: cannot unmarshal block for converting timestamps to milliseconds: %s", err)
+	}
+	for i := range b.timestamps {
+		b.timestamps[i] /= 1000
+	}
+	b.timestampsMultiplier = 1
+	b.MarshalData(0, 0)
 }
 
 func checkTimestampsBounds(timestamps []int64, minTimestamp, maxTimestamp int64) error {

@@ -160,7 +160,7 @@ func streamrenderSeriesJSON(qw422016 *qt422016.Writer, s *series) {
 //line app/vmselect/graphite/render_response.qtpl:50
 		qw422016.N().S(`,`)
 //line app/vmselect/graphite/render_response.qtpl:51
-		qw422016.N().DL(timestamps[i] / 1e3)
+		qw422016.N().DL(timestamps[i] / 1e6)
 //line app/vmselect/graphite/render_response.qtpl:51
 		qw422016.N().S(`]`)
 //line app/vmselect/graphite/render_response.qtpl:53

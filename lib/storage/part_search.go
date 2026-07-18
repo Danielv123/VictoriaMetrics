@@ -248,6 +248,12 @@ func (ps *partSearch) readIndexBlock(mr *metaindexRow) (*indexBlock, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot unmarshal index block: %w", err)
 	}
+	if ps.p.ph.timestampsMultiplier != 1 {
+		for i := range ib.bhs {
+			ib.bhs[i].MinTimestamp *= ps.p.ph.timestampsMultiplier
+			ib.bhs[i].MaxTimestamp *= ps.p.ph.timestampsMultiplier
+		}
+	}
 	return ib, nil
 }
 

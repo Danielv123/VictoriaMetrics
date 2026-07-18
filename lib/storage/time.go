@@ -121,6 +121,10 @@ const (
 	usecPerDay  = 24 * 3600 * 1000 * 1000
 	usecPerHour = 3600 * 1000 * 1000
 
+	// maxUnixMilli is the maximum timestamp supported by the millisecond
+	// storage format used by released VictoriaMetrics versions.
+	maxUnixMilli = 9222422399999
+
 	// maxUnixMicro is the max microsecond that is allowed to be used as the
 	// sample timestamp.
 	//

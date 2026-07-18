@@ -28,6 +28,7 @@ import (
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/fasttime"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/httpserver"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/httputil"
+	"github.com/VictoriaMetrics/VictoriaMetrics/lib/logger"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/netutil"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/querytracer"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/storage"
@@ -525,6 +526,7 @@ func DeleteHandler(startTime time.Time, r *http.Request) error {
 	if deletedCount > 0 {
 		promql.ResetRollupResultCache()
 	}
+	logger.Infof("/api/v1/admin/tsdb/delete_series has been called for %q. Deleted %d series.", sq.FiltersString(), deletedCount)
 	return nil
 }
 
@@ -725,7 +727,7 @@ var seriesCountDuration = metrics.NewSummary(`vm_request_duration_seconds{path="
 func SeriesHandler(qt *querytracer.Tracer, startTime time.Time, w http.ResponseWriter, r *http.Request) error {
 	defer seriesDuration.UpdateDuration(startTime)
 
-	// Do not set start to httputil.minTimeMsecs by default as Prometheus does,
+	// Do not set start to httputil.minTimeUsecs by default as Prometheus does,
 	// since this leads to fetching and scanning all the data from the storage,
 	// which can take a lot of time for big storages.
 	// It is better setting start as end-defaultStep by default.
@@ -957,6 +959,7 @@ func queryRangeHandler(qt *querytracer.Tracer, startTime time.Time, w http.Respo
 	start, end, step int64, r *http.Request, ct int64, etfs [][]storage.TagFilter) error {
 	deadline := searchutil.GetDeadlineForQuery(r, startTime)
 	mayCache := !httputil.GetBool(r, "nocache")
+	optimizeRepeatedBinaryOpSubexprs := httputil.GetBool(r, "optimize_repeated_binary_op_subexprs")
 	lookbackDelta, err := getMaxLookback(r)
 	if err != nil {
 		return err
@@ -978,18 +981,19 @@ func queryRangeHandler(qt *querytracer.Tracer, startTime time.Time, w http.Respo
 	}
 
 	ec := &promql.EvalConfig{
-		Start:               start,
-		End:                 end,
-		Step:                step,
-		MaxPointsPerSeries:  *maxPointsPerTimeseries,
-		MaxSeries:           0, // let vmstorage use maxUniqueTimeseries by default
-		QuotedRemoteAddr:    httpserver.GetQuotedRemoteAddr(r),
-		Deadline:            deadline,
-		MayCache:            mayCache,
-		LookbackDelta:       lookbackDelta,
-		RoundDigits:         getRoundDigits(r),
-		EnforcedTagFilterss: etfs,
-		CacheTagFilters:     etfs,
+		Start:                            start,
+		End:                              end,
+		Step:                             step,
+		MaxPointsPerSeries:               *maxPointsPerTimeseries,
+		MaxSeries:                        0, // let vmstorage use maxUniqueTimeseries by default
+		QuotedRemoteAddr:                 httpserver.GetQuotedRemoteAddr(r),
+		Deadline:                         deadline,
+		MayCache:                         mayCache,
+		OptimizeRepeatedBinaryOpSubexprs: optimizeRepeatedBinaryOpSubexprs,
+		LookbackDelta:                    lookbackDelta,
+		RoundDigits:                      getRoundDigits(r),
+		EnforcedTagFilterss:              etfs,
+		CacheTagFilters:                  etfs,
 		GetRequestURI: func() string {
 			return httpserver.GetRequestURI(r)
 		},
@@ -1186,7 +1190,7 @@ type commonParams struct {
 }
 
 func (cp *commonParams) IsDefaultTimeRange() bool {
-	return cp.start == 0 && cp.currentTimestamp-cp.end < 1000
+	return cp.start == 0 && cp.currentTimestamp-cp.end < 1e6
 }
 
 // getExportParams obtains common params from r, which are used in /api/v1/export* handlers
@@ -1241,7 +1245,7 @@ func getCommonParamsInternal(r *http.Request, startTime time.Time, requireNonEmp
 	if err != nil {
 		return nil, err
 	}
-	maxTS := int64(math.MaxInt64 / 1_000_000)
+	maxTS := int64(math.MaxInt64 / 1_000)
 	if end > maxTS {
 		end = maxTS
 	}
