@@ -26,6 +26,8 @@ See also [LTS releases](https://docs.victoriametrics.com/victoriametrics/lts-rel
 
 ## tip
 
+* FEATURE: [vmsingle](https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/): support vmsingle-only global downsampling with a single non-filtered `-downsampling.period=offset:interval` rule, microsecond duration resolution, and merge-time physical materialization. The interval must divide 24 hours exactly. Cluster and Enterprise downsampling behavior remains separate.
+
 ## [v1.148.0](https://github.com/VictoriaMetrics/VictoriaMetrics/releases/tag/v1.148.0)
 
 Release candidate

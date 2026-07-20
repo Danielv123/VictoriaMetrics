@@ -1323,8 +1323,9 @@ Please note, [labels](https://docs.victoriametrics.com/victoriametrics/keyconcep
 in order to be deduplicated. For example, this is why [HA pair of vmagents](https://docs.victoriametrics.com/victoriametrics/vmagent/#high-availability)
 needs to be identically configured.
 
-The `-dedup.minScrapeInterval=D` is equivalent to `-downsampling.period=0s:D` in [downsampling](#downsampling).
-It is also safe to use deduplication and downsampling simultaneously.
+For Enterprise filtered and multi-level [downsampling](#downsampling), `-dedup.minScrapeInterval=D` is equivalent to
+`-downsampling.period=0s:D`. The vmsingle-only global downsampling mode can also be used with deduplication, but its interval
+must be strictly greater than and divisible by the non-zero `-dedup.minScrapeInterval`.
 
 The recommended value for `-dedup.minScrapeInterval` must equal to `scrape_interval` config from Prometheus configs.
 It is recommended to have a single `scrape_interval` across all the scrape targets.
@@ -1630,71 +1631,121 @@ See how to request a [free trial license](https://victoriametrics.com/products/e
 
 ## Downsampling
 
-[VictoriaMetrics Enterprise](https://docs.victoriametrics.com/victoriametrics/enterprise/) supports multi-level downsampling via `-downsampling.period=offset:interval` command-line flag.
-This command-line flag instructs leaving the last sample per each `interval` for [time series](https://docs.victoriametrics.com/victoriametrics/keyconcepts/#time-series)
-[samples](https://docs.victoriametrics.com/victoriametrics/keyconcepts/#raw-samples) older than the `offset`. The `offset` must be a multiple of `interval`. For example, `-downsampling.period=30d:5m` instructs leaving the last sample
-per each 5-minute interval for samples older than 30 days, while the rest of samples are dropped.
+Single-node VictoriaMetrics (`vmsingle`) supports global downsampling via a single
+`-downsampling.period=offset:interval` command-line flag. This implementation is vmsingle-only; it doesn't add global downsampling to
+cluster `vmstorage` or `vmselect`. Cluster and Enterprise downsampling continue to use the separate
+[Enterprise filtered and multi-level implementation](#enterprise-filtered-and-multi-level-downsampling).
 
-The `-downsampling.period` command-line flag can be specified multiple times in order to apply different downsampling levels for different time ranges (aka multi-level downsampling).
-For example, `-downsampling.period=30d:5m,180d:1h` instructs leaving the last sample per each 5-minute interval for samples older than 30 days,
-while leaving the last sample per each 1-hour interval for samples older than 180 days.
+For every [time series](https://docs.victoriametrics.com/victoriametrics/keyconcepts/#time-series), global downsampling leaves the last
+[raw sample](https://docs.victoriametrics.com/victoriametrics/keyconcepts/#raw-samples) per `interval` among samples at or before the moving
+cutoff `current time - offset`. A sample exactly at the cutoff is eligible for downsampling. For example,
+`-downsampling.period=30d:5m` leaves the last sample per 5-minute interval once samples are at least 30 days old.
 
-VictoriaMetrics supports{{% available_from "v1.100.0" %}} configuring independent downsampling per different sets of [time series](https://docs.victoriametrics.com/victoriametrics/keyconcepts/#time-series)
-via `-downsampling.period=filter:offset:interval` syntax. In this case the given `offset:interval` downsampling is applied only to time series matching the given `filter`.
-The `filter` can contain arbitrary [series filter](https://docs.victoriametrics.com/victoriametrics/keyconcepts/#filtering).
-For example, `-downsampling.period='{__name__=~"(node|process)_.*"}:1d:1m` instructs VictoriaMetrics to downsample samples older than one day with one minute interval
-only for [time series](https://docs.victoriametrics.com/victoriametrics/keyconcepts/#time-series) with names starting with `node_` or `process_` prefixes.
-The downsampling for other time series can be configured independently via additional `-downsampling.period` command-line flags.
-Downsampling configuration can be tested in enterprise version of vmui on the page `Tools.Downsampling filters debug`.
+The global mode accepts exactly one `offset:interval` rule, and the flag can be specified only once. It doesn't support series filters or
+multiple downsampling levels. The `offset` and `interval` must be positive, the `offset` must be divisible by the
+`interval`, and the `interval` must divide 24 hours exactly. The day-divisor restriction keeps epoch-aligned bucket boundaries on a daily
+cadence compatible with calendar-month storage partitions. When [deduplication](#deduplication) is enabled, the global downsampling
+`interval` must be strictly greater than and divisible by `-dedup.minScrapeInterval`; equality is rejected as a no-op. The offset,
+interval, and non-zero deduplication interval must resolve to whole numbers of microseconds; sub-microsecond values are rejected. Go duration
+units such as `ms` and `us` and VictoriaMetrics
+units such as `d` and `w` are accepted. For example, `-downsampling.period=2ms:250us` is valid.
 
-If the time series doesn't match any `filter`, then it isn't downsampled. If the time series matches multiple filters, then the downsampling
-for the first matching `filter` is applied. For example, `-downsampling.period='{env="prod"}:1d:30s,{__name__=~"node_.*"}:1d:5m'` de-duplicates
-samples older than one day with 30 seconds interval across all the time series with `env="prod"` [label](https://docs.victoriametrics.com/victoriametrics/keyconcepts/#labels),
-even if their names start with `node_` prefix. All the other time series with names starting with `node_` prefix are de-duplicated with 5 minutes interval.
+Downsampling is applied independently to each time series. Intervals are aligned to the Unix epoch, and the sample with the biggest timestamp
+in each interval is retained. Samples with equal timestamps follow the existing [deduplication](#deduplication) semantics:
+the maximum value is selected, while a non-stale value is preferred over a stale NaN.
 
-If downsampling shouldn't be applied to some time series matching the given `filter`, then pass `-downsampling.period=filter:0s:0s` command-line flag to VictoriaMetrics.
-For example, if series with `env="prod"` label shouldn't be downsampled, then pass `-downsampling.period='{env="prod"}:0s:0s'` command-line flag in front of other `-downsampling.period` flags.
-But `-downsampling.period=0s:interval` or `-downsampling.period=filter:0s:0s` cannot be used with [deduplication](#deduplication) simultaneously as they could conflict.
+Physical downsampling occurs only during part merges, not when raw in-memory parts are created. Raw part creation applies only the configured
+`-dedup.minScrapeInterval`, so ingest-time block boundaries cannot independently downsample samples from the same global bucket. Every part
+merge captures one current timestamp and selects one interval from the maximum timestamp across all input parts: the downsampling interval is
+used only when all inputs are at or before the cutoff; otherwise the base deduplication interval is used. That single interval applies to every
+output block, so the result doesn't depend on source block layout. A later merge can reduce a part after its whole timestamp range becomes
+eligible. Physical materialization may therefore lag past the configured offset while a partition still contains fresh parts. Queries remain
+normalized immediately during this lag. Regular background part mergers don't start new merges while storage is in
+[read-only mode](https://docs.victoriametrics.com/victoriametrics/cluster-victoriametrics/#readonly-mode). Final and forced merges also need
+enough free disk space for the merged output and are skipped when it wouldn't fit.
 
-Downsampling is applied independently per each time series and leaves a single [raw sample](https://docs.victoriametrics.com/victoriametrics/keyconcepts/#raw-samples)
-with the biggest [timestamp](https://en.wikipedia.org/wiki/Unix_time) on the configured interval, in the same way as [deduplication](#deduplication) does.
-It works the best for [counters](https://docs.victoriametrics.com/victoriametrics/keyconcepts/#counter) and [histograms](https://docs.victoriametrics.com/victoriametrics/keyconcepts/#histogram),
-as their values are always increasing. Downsampling [gauges](https://docs.victoriametrics.com/victoriametrics/keyconcepts/#gauge)
-and [summaries](https://docs.victoriametrics.com/victoriametrics/keyconcepts/#summary) lose some changes within the downsampling interval,
-since only the last sample on the given interval is left and the rest of samples are dropped.
+While global downsampling is enabled, the final-merge scheduler checks every partition, including the current-month partition, so samples can
+become eligible as they age. Deduplication-only operation retains the existing behavior of skipping the current month. A final downsampling
+reconciliation is scheduled only after every in-memory and file part in the partition has a maximum timestamp at or before the cutoff. It runs
+when any eligible part records a different interval or when multiple eligible parts need reconciliation because they may contain samples from
+the same bucket. Historical or late backfill can therefore trigger reconciliation that rewrites the whole affected monthly partition. This
+conservative all-parts-behind-cutoff behavior avoids additional persistent metadata and keeps late-data results correct.
 
-You can use [recording rules](https://docs.victoriametrics.com/victoriametrics/vmalert/#rules) or [streaming aggregation](https://docs.victoriametrics.com/victoriametrics/stream-aggregation/)
-to apply custom aggregation functions, like min/max/avg etc., in order to make gauges more resilient to downsampling.
+Queries are normalized immediately even if physical merges haven't processed all matching parts yet. Each logical MetricsQL request captures
+one current timestamp, so all storage fetches made while evaluating the request use a stable cutoff. The effective interval is selected from
+the actual time range fetched from storage, including any lookbehind added by the query engine. If the minimum timestamp of that range is at or
+before the cutoff, one downsampling interval is applied to the whole fetched range, including its newer portion. The physical fetch extends to
+the end of the final epoch-aligned bucket and the result is trimmed back to the requested range after normalization. This keeps query-time and
+post-merge bucket winners consistent near the upper boundary and avoids mixing independently normalized resolutions in one result. A late
+sample at or before the cutoff is therefore query-correct immediately; a later merge physically reconciles it with previously stored blocks.
 
-Downsampling can reduce disk space usage and improve query performance if it is applied to time series with big number
-of samples per each series. The downsampling doesn't improve query performance and doesn't reduce disk space if the database contains big number
-of time series with small number of samples per each series, since downsampling doesn't reduce the number of time series.
-So there is little sense in applying downsampling to time series with [high churn rate](https://docs.victoriametrics.com/victoriametrics/faq/#what-is-high-churn-rate).
-In this case the majority of query time is spent on searching for the matching time series instead of processing the found samples.
-See [Why IndexDB size is so large?](https://docs.victoriametrics.com/victoriametrics/faq/#why-indexdb-size-is-so-large).
+The MetricsQL rollup-result cache is bypassed for instant and range query evaluation while global downsampling is active, because the cutoff
+moves as samples age. This doesn't disable unrelated storage and index caches. `/api/v1/export` without `reduce_mem_usage` in any supported
+output format and `/api/v1/export/csv` without `reduce_mem_usage` return the logically normalized view. Setting `reduce_mem_usage=true` on
+these endpoints, or using `/api/v1/export/native`, exports physical stored blocks instead. Physical exports may contain samples that the
+logical query path removes, including independently reduced winners from separate parts or calendar partitions. Query-time normalization
+reconciles these physical boundaries even when the parts aren't merged together.
 
-Downsampling is performed during [background merges](https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/#storage).
-It cannot be performed if there is not enough of free disk space or if vmstorage is in [read-only mode](https://docs.victoriametrics.com/victoriametrics/cluster-victoriametrics/#readonly-mode).
+During startup with global downsampling, VictoriaMetrics validates the flag and any existing policy, configures the validated process policy,
+then opens and exclusively locks the storage so background mergers observe it immediately. After the storage is open, VictoriaMetrics writes
+or validates the canonical policy at `metadata/downsampling-policy.json` before accepting requests. This prevents a second process that fails
+to acquire the storage lock from latching a policy. The metadata directory,
+including this file, is copied into storage snapshots. A snapshot taken after the policy is latched therefore requires the same policy when
+restored. After latching, omitting `-downsampling.period` or changing its rule is rejected on startup because samples removed by the original
+policy cannot be restored.
 
-Downsampling period changes `/api/v1/export` API output. During query requests, if export `start` period is not specified and `reduce_mem_usage` param is omitted, the biggest `downsampling.period` is applied.
-As an example, export request  `/api/v1/export?match[]=series` with `-downsampling.period=30d:1h,180d:24h` will return samples downsampled with `24h` interval.
+There is no in-place rollback of a latched global policy. To recover the original resolution, restore a backup or snapshot taken before global
+downsampling was enabled, or use a new storage directory and re-import the raw data. Rolling back the executable doesn't restore removed
+samples and isn't a supported way to disable the policy. An older OSS version that predates global downsampling rejects the flag and, if
+started after removing it, doesn't enforce the latch or provide query-time normalization for physical data that hasn't been merged.
 
-It's expected that resource usage will temporarily increase when **downsampling with filters** is applied.
-This is because additional operations are required to read historical data, downsample, and persist it back,
-which will cost extra CPU and memory.
+Downsampling works best for [counters](https://docs.victoriametrics.com/victoriametrics/keyconcepts/#counter) and cumulative
+[histograms](https://docs.victoriametrics.com/victoriametrics/keyconcepts/#histogram), which are normally monotonic between resets.
+[Gauges](https://docs.victoriametrics.com/victoriametrics/keyconcepts/#gauge) and
+[summaries](https://docs.victoriametrics.com/victoriametrics/keyconcepts/#summary) can lose changes within a downsampling interval,
+since only the last sample is retained. Use [recording rules](https://docs.victoriametrics.com/victoriametrics/vmalert/#rules) or
+[streaming aggregation](https://docs.victoriametrics.com/victoriametrics/stream-aggregation/) to calculate custom values such as min, max,
+or avg before downsampling.
 
-Please, note that intervals of `-downsampling.period` for a single filter must be multiples of each other.
-In case [deduplication](https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/#deduplication) is enabled, value of `-dedup.minScrapeInterval` command-line flag must also
-be multiple of `-downsampling.period` intervals. This is required to ensure consistency of deduplication and downsampling results.
+Downsampling can reduce disk space usage and improve query performance for time series with many samples. It doesn't reduce the number of
+time series, so it provides little benefit for a database dominated by series with few samples or a
+[high churn rate](https://docs.victoriametrics.com/victoriametrics/faq/#what-is-high-churn-rate). In this case most query time is spent
+searching for matching series instead of processing samples. See [Why IndexDB size is so large?](https://docs.victoriametrics.com/victoriametrics/faq/#why-indexdb-size-is-so-large).
+Enabling downsampling for existing data can temporarily increase merge CPU, memory, disk I/O, and free disk space requirements. Merge memory
+is bounded primarily by the selected input parts and overlapping input blocks; force and final merges can temporarily use memory proportional
+to those inputs while reconciling a partition.
 
-It is safe updating `-downsampling.period` during VictoriaMetrics restarts - the updated downsampling configuration will be
-applied eventually to historical data during  [background merges](https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/#storage).
+### Enterprise filtered and multi-level downsampling
 
-See [how to configure downsampling in VictoriaMetrics cluster](https://docs.victoriametrics.com/victoriametrics/cluster-victoriametrics/#downsampling).
+[VictoriaMetrics Enterprise](https://docs.victoriametrics.com/victoriametrics/enterprise/) retains its separate filter-aware, multi-rule
+`-downsampling.period` implementation for single-node and cluster deployments. The single-rule restriction, day-divisor validation, and
+immutable policy latch described above apply only to the OSS vmsingle global mode. The flag can be specified multiple times to apply different
+downsampling levels to different time ranges. For example,
+`-downsampling.period=30d:5m,180d:1h` leaves the last sample per 5-minute interval for samples older than 30 days and the last sample per
+1-hour interval for samples older than 180 days.
 
-See also [retention filters](#retention-filters).
+VictoriaMetrics Enterprise supports{{% available_from "v1.100.0" %}} filtered rules via
+`-downsampling.period=filter:offset:interval`. The `filter` can contain an arbitrary
+[series filter](https://docs.victoriametrics.com/victoriametrics/keyconcepts/#filtering). For example,
+`-downsampling.period='{__name__=~"(node|process)_.*"}:1d:1m` applies a 1-minute interval to samples older than one day only for series
+whose names start with `node_` or `process_`. Other series can use additional `-downsampling.period` rules.
 
-The downsampling can be evaluated for free by downloading and using enterprise binaries from [the releases page](https://github.com/VictoriaMetrics/VictoriaMetrics/releases/latest).
+If a time series matches multiple filters, the first matching filter is applied. If it doesn't match any filter, it isn't downsampled.
+Use `-downsampling.period=filter:0s:0s` before other rules to exclude matching series. For example,
+`-downsampling.period='{env="prod"}:0s:0s'` excludes series with the `env="prod"` label.
+`-downsampling.period=0s:interval` and `-downsampling.period=filter:0s:0s` cannot be used together with deduplication because they may conflict.
+
+The intervals configured for a single filter must be multiples of each other. When deduplication is enabled,
+`-dedup.minScrapeInterval` must be a multiple of the Enterprise downsampling intervals to keep results consistent.
+Unlike the latched global policy, Enterprise filtered and multi-level configuration can be updated during a restart and is eventually applied
+to historical data during [background merges](https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/#storage).
+Filtered downsampling can temporarily increase CPU and memory use while historical data is read, downsampled, and persisted.
+
+Enterprise rules can be tested in vmui on the `Tools.Downsampling filters debug` page.
+See [how to configure downsampling in VictoriaMetrics cluster](https://docs.victoriametrics.com/victoriametrics/cluster-victoriametrics/#downsampling)
+and [retention filters](#retention-filters).
+The Enterprise downsampling features can be evaluated for free by downloading Enterprise binaries from
+[the releases page](https://github.com/VictoriaMetrics/VictoriaMetrics/releases/latest).
 See how to request a [free trial license](https://victoriametrics.com/products/enterprise/trial/).
 
 ## Multitenancy {#multi-tenancy}
