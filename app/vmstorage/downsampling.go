@@ -90,6 +90,14 @@ func setDownsamplingConfig(config *downsamplingConfig) {
 	)
 }
 
+func activateDownsamplingConfig(storageDataPath string, config *downsamplingConfig) error {
+	if err := ensureDownsamplingPolicy(storageDataPath, config); err != nil {
+		return err
+	}
+	setDownsamplingConfig(config)
+	return nil
+}
+
 func parseDownsamplingConfig(s string, dedupInterval time.Duration) (*downsamplingConfig, error) {
 	s = strings.TrimSpace(s)
 	if s == "" {

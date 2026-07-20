@@ -173,6 +173,10 @@ type OpenOptions struct {
 	TrackMetricNamesStats       bool
 	IDBPrefillStart             time.Duration
 	LogNewSeries                bool
+
+	// PrepareDataTable is called after acquiring the exclusive storage lock and before
+	// opening the data table or starting its part merge workers.
+	PrepareDataTable func()
 }
 
 // MustOpenStorage opens storage on the given path with the given retention.
@@ -285,6 +289,10 @@ func MustOpenStorage(path string, opts OpenOptions) *Storage {
 	// to prevent unexpected part merges. See https://github.com/VictoriaMetrics/VictoriaMetrics/issues/4023
 	freeSpaceBytes := fs.MustGetFreeSpace(s.path)
 	s.isReadOnly.Store(freeSpaceBytes < freeDiskSpaceLimitBytes)
+
+	if opts.PrepareDataTable != nil {
+		opts.PrepareDataTable()
+	}
 
 	// Load data
 	tablePath := filepath.Join(path, dataDirname)

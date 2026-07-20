@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/VictoriaMetrics/VictoriaMetrics/lib/storage"
 )
 
 func TestParseDownsamplingConfigSuccess(t *testing.T) {
@@ -139,6 +141,42 @@ func TestLoadDownsamplingConfigRejectsEqualDedupWithoutLatch(t *testing.T) {
 	policyPath := getDownsamplingPolicyPath(storageDataPath)
 	if _, err := os.Stat(policyPath); !os.IsNotExist(err) {
 		t.Fatalf("a no-op downsampling config must not latch a policy; got err=%v", err)
+	}
+}
+
+func TestActivateDownsamplingConfig(t *testing.T) {
+	setDownsamplingConfig(nil)
+	defer setDownsamplingConfig(nil)
+
+	config := &downsamplingConfig{
+		offsetUsecs:   100,
+		intervalUsecs: 10,
+	}
+	storageDataPath := t.TempDir()
+	if err := activateDownsamplingConfig(storageDataPath, config); err != nil {
+		t.Fatalf("cannot activate downsampling config: %s", err)
+	}
+	if !storage.IsDownsamplingEnabled() {
+		t.Fatalf("downsampling must be enabled after the policy is latched")
+	}
+	if _, err := os.Stat(getDownsamplingPolicyPath(storageDataPath)); err != nil {
+		t.Fatalf("cannot stat latched policy: %s", err)
+	}
+
+	setDownsamplingConfig(nil)
+	storageDataPath = t.TempDir()
+	policyPath := getDownsamplingPolicyPath(storageDataPath)
+	if err := os.MkdirAll(filepath.Dir(policyPath), 0o755); err != nil {
+		t.Fatalf("cannot create metadata directory: %s", err)
+	}
+	if err := os.WriteFile(policyPath, []byte("invalid"), 0o600); err != nil {
+		t.Fatalf("cannot write invalid policy: %s", err)
+	}
+	if err := activateDownsamplingConfig(storageDataPath, config); err == nil {
+		t.Fatalf("invalid policy must prevent downsampling activation")
+	}
+	if storage.IsDownsamplingEnabled() {
+		t.Fatalf("downsampling must remain disabled when policy activation fails")
 	}
 }
 

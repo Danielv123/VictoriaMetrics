@@ -125,9 +125,9 @@ func Init(vmselectMaxConcurrentRequests int, vmselectMaxQueueDuration time.Durat
 			logger.Fatalf("cannot initialize -downsampling.period: %s", err)
 		}
 		dsConfig = config
-		// Configure downsampling before opening storage, so background mergers
-		// observe the validated policy as soon as they start.
-		setDownsamplingConfig(dsConfig)
+		// Keep downsampling disabled until the canonical policy is durably latched
+		// under the exclusive storage lock.
+		setDownsamplingConfig(nil)
 	}
 	storage.SetDataFlushInterval(*inmemoryDataFlushInterval)
 	storage.LegacySetRetentionTimezoneOffset(*retentionTimezoneOffset)
@@ -171,13 +171,14 @@ func Init(vmselectMaxConcurrentRequests int, vmselectMaxQueueDuration time.Durat
 		IDBPrefillStart:             *idbPrefillStart,
 		LogNewSeries:                *logNewSeries,
 	}
-	strg := storage.MustOpenStorage(*storageDataPath, opts)
 	if useGlobalDownsampling {
-		// Latch the irreversible canonical policy while holding the storage lock.
-		if err := ensureDownsamplingPolicy(*storageDataPath, dsConfig); err != nil {
-			logger.Fatalf("cannot initialize -downsampling.period: %s", err)
+		opts.PrepareDataTable = func() {
+			if err := activateDownsamplingConfig(*storageDataPath, dsConfig); err != nil {
+				logger.Fatalf("cannot initialize -downsampling.period: %s", err)
+			}
 		}
 	}
+	strg := storage.MustOpenStorage(*storageDataPath, opts)
 	vmStorage = newVMStorage(strg, vmselectMaxConcurrentRequests, resetCacheIfNeeded)
 
 	var m storage.Metrics

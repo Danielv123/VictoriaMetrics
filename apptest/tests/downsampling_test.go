@@ -209,6 +209,9 @@ func TestSingleDownsamplingPolicyLatch(t *testing.T) {
 	tc.StopApp("lock-holder")
 
 	tc.MustStartVmsingle("vmsingle", flags)
+	if _, err := os.Stat(policyPath); err != nil {
+		t.Fatalf("policy must be latched before vmsingle reports successful startup: %v", err)
+	}
 	tc.StopApp("vmsingle")
 	tc.MustStartVmsingle("vmsingle", flags)
 	tc.StopApp("vmsingle")

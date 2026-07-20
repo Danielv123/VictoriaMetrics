@@ -1689,10 +1689,10 @@ these endpoints, or using `/api/v1/export/native`, exports physical stored block
 logical query path removes, including independently reduced winners from separate parts or calendar partitions. Query-time normalization
 reconciles these physical boundaries even when the parts aren't merged together.
 
-During startup with global downsampling, VictoriaMetrics validates the flag and any existing policy, configures the validated process policy,
-then opens and exclusively locks the storage so background mergers observe it immediately. After the storage is open, VictoriaMetrics writes
-or validates the canonical policy at `metadata/downsampling-policy.json` before accepting requests. This prevents a second process that fails
-to acquire the storage lock from latching a policy. The metadata directory,
+During startup with global downsampling, VictoriaMetrics validates the flag and any existing policy while downsampling remains disabled. It
+then acquires the exclusive storage lock, writes or validates the canonical policy at `metadata/downsampling-policy.json`, activates the
+validated process policy, and only then opens data partitions and starts background mergers. This prevents irreversible sample removal before
+the policy is durably latched, and prevents a second process that fails to acquire the storage lock from latching a policy. The metadata directory,
 including this file, is copied into storage snapshots. A snapshot taken after the policy is latched therefore requires the same policy when
 restored. After latching, omitting `-downsampling.period` or changing its rule is rejected on startup because samples removed by the original
 policy cannot be restored.
