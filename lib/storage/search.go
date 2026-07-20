@@ -228,6 +228,12 @@ func (s *Search) reset() {
 //
 // Init returns the upper bound on the number of found time series.
 func (s *Search) Init(qt *querytracer.Tracer, storage *Storage, tfss []*TagFilters, tr TimeRange, maxMetrics int, deadline uint64) int {
+	return s.InitWithTimeRangeValidation(qt, storage, tfss, tr, tr, maxMetrics, deadline)
+}
+
+// InitWithTimeRangeValidation initializes s with tr while validating requestedTR
+// against -retentionPeriod and -futureRetention.
+func (s *Search) InitWithTimeRangeValidation(qt *querytracer.Tracer, storage *Storage, tfss []*TagFilters, tr, requestedTR TimeRange, maxMetrics int, deadline uint64) int {
 	qt = qt.NewChild("init series search: filters=%s, timeRange=%s, maxMetrics=%d", tfss, &tr, maxMetrics)
 	defer qt.Done()
 
@@ -245,7 +251,7 @@ func (s *Search) Init(qt *querytracer.Tracer, storage *Storage, tfss []*TagFilte
 	s.deadline = deadline
 	s.needClosing = true
 
-	tsids, err := storage.SearchTSIDs(qt, tfss, tr, maxMetrics, deadline)
+	tsids, err := storage.searchTSIDs(qt, tfss, tr, requestedTR, maxMetrics, deadline)
 
 	// It is ok to call Init on non-nil err.
 	// Init must be called before returning because it will fail
@@ -342,6 +348,11 @@ type SearchQuery struct {
 	TenantTokens  []TenantToken
 	IsMultiTenant bool
 
+	// downsamplingCurrentTimestamp is the current timestamp used for selecting
+	// the query-time downsampling interval. It exists only at runtime and isn't
+	// transferred over the network.
+	downsamplingCurrentTimestamp int64
+
 	// The time range for searching time series
 	MinTimestamp int64
 	MaxTimestamp int64
@@ -359,6 +370,18 @@ func (sq *SearchQuery) GetTimeRange() TimeRange {
 		MinTimestamp: sq.MinTimestamp,
 		MaxTimestamp: sq.MaxTimestamp,
 	}
+}
+
+// SetDownsamplingCurrentTimestamp sets the current timestamp used for selecting
+// the query-time downsampling interval. The timestamp is not serialized.
+func (sq *SearchQuery) SetDownsamplingCurrentTimestamp(timestamp int64) {
+	sq.downsamplingCurrentTimestamp = timestamp
+}
+
+// DownsamplingCurrentTimestamp returns the current timestamp used for selecting
+// the query-time downsampling interval.
+func (sq *SearchQuery) DownsamplingCurrentTimestamp() int64 {
+	return sq.downsamplingCurrentTimestamp
 }
 
 // NewSearchQuery creates new search query for the given args.
@@ -537,6 +560,7 @@ func (sq *SearchQuery) MarshalWithoutTenant(dst []byte) []byte {
 
 // Unmarshal unmarshals sq from src and returns the tail.
 func (sq *SearchQuery) Unmarshal(src []byte) ([]byte, error) {
+	sq.downsamplingCurrentTimestamp = 0
 	if len(src) < 4 {
 		return src, fmt.Errorf("cannot unmarshal AccountID: too short src len: %d; must be at least %d bytes", len(src), 4)
 	}

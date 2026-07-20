@@ -3,6 +3,7 @@ package promql
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/protoparser/prometheus"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/storage"
@@ -51,6 +52,69 @@ m2{b="bar"} 1`, `{}`)
 m2{b="bar",c="x"} 1`, `{b="bar"}`)
 }
 
+func TestEvalConfigMayCacheWithDownsampling(t *testing.T) {
+	if storage.IsDownsamplingEnabled() {
+		t.Fatalf("downsampling must be disabled before the test")
+	}
+	prevDisableCache := *disableCache
+	prevDedupInterval := storage.GetDedupInterval()
+	*disableCache = false
+	storage.SetDedupInterval(2 * time.Microsecond)
+	defer func() {
+		storage.SetDownsamplingPeriod(0, 0)
+		storage.SetDedupInterval(time.Duration(prevDedupInterval) * time.Microsecond)
+		*disableCache = prevDisableCache
+	}()
+
+	testCases := []struct {
+		name string
+		ec   *EvalConfig
+		want bool
+	}{
+		{
+			name: "instant query",
+			ec:   &EvalConfig{Start: 1_000, End: 1_000, Step: 1_000, MayCache: true},
+			want: true,
+		},
+		{
+			name: "range query",
+			ec:   &EvalConfig{Start: 1_000, End: 3_000, Step: 1_000, MayCache: true},
+			want: true,
+		},
+		{
+			name: "partial cache continuation",
+			ec:   &EvalConfig{Start: 2_000, End: 3_000, Step: 1_000, MayCache: true},
+			want: true,
+		},
+		{
+			name: "unaligned range query",
+			ec:   &EvalConfig{Start: 1_001, End: 3_000, Step: 1_000, MayCache: true},
+			want: false,
+		},
+		{
+			name: "cache disabled by evaluation config",
+			ec:   &EvalConfig{Start: 1_000, End: 3_000, Step: 1_000},
+			want: false,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name+" without downsampling", func(t *testing.T) {
+			if got := tc.ec.mayCache(); got != tc.want {
+				t.Fatalf("unexpected mayCache result; got %v; want %v", got, tc.want)
+			}
+		})
+	}
+
+	storage.SetDownsamplingPeriod(100*time.Microsecond, 10*time.Microsecond)
+	for _, tc := range testCases {
+		t.Run(tc.name+" with downsampling", func(t *testing.T) {
+			if tc.ec.mayCache() {
+				t.Fatalf("cache must be disabled when downsampling is enabled")
+			}
+		})
+	}
+}
+
 func TestValidateMaxPointsPerSeriesFailure(t *testing.T) {
 	f := func(start, end, step int64, maxPoints int) {
 		t.Helper()
@@ -77,6 +141,24 @@ func TestValidateMaxPointsPerSeriesSuccess(t *testing.T) {
 	f(1, 1, 1, 2)
 	f(1659962171908, 1659966077742, 5000, 800)
 	f(1659962150000, 1659966070000, 10000, 393)
+}
+
+func TestCopyEvalConfigPreservesCurrentTimestamp(t *testing.T) {
+	const currentTimestamp = int64(123_456_789)
+	ec := &EvalConfig{
+		CurrentTimestamp: currentTimestamp,
+	}
+	for range 2 {
+		ecCopy := copyEvalConfig(ec)
+		if got := ecCopy.CurrentTimestamp; got != currentTimestamp {
+			t.Fatalf("unexpected current timestamp in copied config; got %d; want %d", got, currentTimestamp)
+		}
+		sq := storage.NewSearchQuery(1, 2, nil, 0)
+		sq.SetDownsamplingCurrentTimestamp(ecCopy.CurrentTimestamp)
+		if got := sq.DownsamplingCurrentTimestamp(); got != currentTimestamp {
+			t.Fatalf("multiple fetches must use the same current timestamp; got %d; want %d", got, currentTimestamp)
+		}
+	}
 }
 
 func TestQueryStats_addSeriesFetched(t *testing.T) {

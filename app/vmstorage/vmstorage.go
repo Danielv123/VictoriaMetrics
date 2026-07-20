@@ -260,7 +260,7 @@ func (bi *blockIterator) Error() error {
 //
 // Callers of this method must call PutSearch() once the search instance is not
 // needed anymore.
-func (vms *VMStorage) GetSearch(qt *querytracer.Tracer, sq *storage.SearchQuery, deadline uint64) (*storage.Search, int, error) {
+func (vms *VMStorage) GetSearch(qt *querytracer.Tracer, sq *storage.SearchQuery, requestedTR storage.TimeRange, deadline uint64) (*storage.Search, int, error) {
 	vms.wg.Add(1)
 
 	tr := sq.GetTimeRange()
@@ -272,7 +272,7 @@ func (vms *VMStorage) GetSearch(qt *querytracer.Tracer, sq *storage.SearchQuery,
 	}
 
 	sr := getSearch()
-	maxSeriesCount := sr.Init(qt, vms.s, tfss, tr, sq.MaxMetrics, deadline)
+	maxSeriesCount := sr.InitWithTimeRangeValidation(qt, vms.s, tfss, tr, requestedTR, sq.MaxMetrics, deadline)
 	return sr, maxSeriesCount, nil
 }
 

@@ -18,9 +18,19 @@ import (
 
 var finalDedupScheduleInterval = time.Hour
 
-// SetFinalDedupScheduleInterval configures the interval for checking when the final deduplication process should start.
+// SetFinalDedupScheduleInterval configures the interval for checking when final deduplication and downsampling should start.
 func SetFinalDedupScheduleInterval(d time.Duration) {
 	finalDedupScheduleInterval = d
+}
+
+func addJitter(d time.Duration) time.Duration {
+	dv := d / 4
+	const maxDuration = time.Duration(1<<63 - 1)
+	if dv <= 0 || d > maxDuration-dv {
+		return d
+	}
+	p := float64(fastrand.Uint32()) / (1 << 32)
+	return d + time.Duration(p*float64(dv))
 }
 
 // table represents a single table with time series data.
@@ -490,67 +500,49 @@ func (tb *table) startHistoricalMergeWatcher() {
 	tb.historicalMergeWatcherWG.Go(tb.historicalMergeWatcher)
 }
 
-func (tb *table) historicalMergeWatcher() {
-	if !isDedupEnabled() {
-		// Deduplication and retentionFilters are disabled.
-		return
-	}
+func skipCurrentPartitionForFinalMerge(partitionName, currentPartitionName string) bool {
+	return !IsDownsamplingEnabled() && partitionName == currentPartitionName
+}
 
+func (tb *table) historicalMergeWatcher() {
 	f := func() {
+		if !isDedupOrDownsamplingEnabled() {
+			return
+		}
 		ptws := tb.GetAllPartitions(nil)
 		defer tb.PutPartitions(ptws)
-		timestamp := timestampFromTime(time.Now())
-		currentPartitionName := timestampToPartitionName(timestamp)
+		currentTimestamp := timestampFromTime(time.Now())
+		currentPartitionName := timestampToPartitionName(currentTimestamp)
 
 		var ptwsToMerge []*partitionWrapper
 		for _, ptw := range ptws {
-			if ptw.pt.name == currentPartitionName {
-				// Do not run force merge for the current month.
-				// For the current month, the samples are continuously
-				// deduplicated and retention filters applied by the background in-memory, small, and big part
-				// merge tasks. See:
-				// - partition.mergeParts() in partition.go and
-				// - Block.deduplicateSamplesDuringMerge() in block.go.
-				// - blockStreamMerger.getRetentionDeadline() in block_stream_merger.go
+			if skipCurrentPartitionForFinalMerge(ptw.pt.name, currentPartitionName) {
+				// Preserve the ordinary deduplication behavior: current-month samples are
+				// continuously handled by background part merges. Downsampling also checks
+				// the current month so samples can become eligible as they age.
 				continue
 			}
-			mergeScheduled := false
-			if ptw.pt.isFinalDedupNeeded() {
-				// mark partition with final deduplication marker
-				ptw.pt.isDedupScheduled.Store(true)
-				mergeScheduled = true
-			}
-			if mergeScheduled {
+			if ptw.pt.isFinalMergeNeeded(currentTimestamp) {
+				ptw.pt.isFinalMergeScheduled.Store(true)
 				ptwsToMerge = append(ptwsToMerge, ptw)
 			}
 		}
 		for _, ptw := range ptwsToMerge {
 			t := time.Now()
 			pt := ptw.pt
-			var logContext []string
-			var logErrContext []string
-			if pt.isDedupScheduled.Load() {
-				logContext = append(logContext, "removing duplicate samples")
-				logErrContext = append(logErrContext, "remove duplicate samples")
-			}
-
-			logger.Infof("start %s for partition (%s, %s)", strings.Join(logContext, " and "), pt.bigPartsPath, pt.smallPartsPath)
+			logContext := "final deduplication/downsampling"
+			logger.Infof("start %s for partition (%s, %s)", logContext, pt.bigPartsPath, pt.smallPartsPath)
 			if err := pt.ForceMergeAllParts(tb.stopCh); err != nil {
-				logger.Errorf("cannot %s for partition (%s, %s): %s", strings.Join(logErrContext, " and "), pt.bigPartsPath, pt.smallPartsPath, err)
+				logger.Errorf("cannot perform %s for partition (%s, %s): %s", logContext, pt.bigPartsPath, pt.smallPartsPath, err)
 			}
-			logger.Infof("finished %s for partition (%s, %s) in %.3f seconds", strings.Join(logContext, " and "), pt.bigPartsPath, pt.smallPartsPath, time.Since(t).Seconds())
+			logger.Infof("finished %s for partition (%s, %s) in %.3f seconds", logContext, pt.bigPartsPath, pt.smallPartsPath, time.Since(t).Seconds())
 
-			pt.isDedupScheduled.Store(false)
+			pt.isFinalMergeScheduled.Store(false)
 		}
 	}
 
-	// adds 25% jitter in order to prevent thundering herd problem
+	// Add up to 25% jitter in order to prevent thundering herd problem.
 	// https://github.com/VictoriaMetrics/VictoriaMetrics/issues/7880
-	addJitter := func(d time.Duration) time.Duration {
-		dv := d / 4
-		p := float64(fastrand.Uint32()) / (1 << 32)
-		return d + time.Duration(p*float64(dv))
-	}
 	d := addJitter(finalDedupScheduleInterval)
 	t := time.NewTicker(d)
 	defer t.Stop()

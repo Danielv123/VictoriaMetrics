@@ -18,27 +18,50 @@ import (
 )
 
 func TestSearchQueryMarshalUnmarshal(t *testing.T) {
+	type searchQueryWireFields struct {
+		AccountID    uint32
+		ProjectID    uint32
+		MinTimestamp int64
+		MaxTimestamp int64
+		TagFilterss  [][]TagFilter
+		MaxMetrics   int
+	}
+
 	rnd := rand.New(rand.NewSource(0))
-	typ := reflect.TypeFor[*SearchQuery]()
+	typ := reflect.TypeFor[*searchQueryWireFields]()
 	var buf []byte
 	var sq2 SearchQuery
 
 	for i := range 1000 {
 		v, ok := quick.Value(typ, rnd)
 		if !ok {
-			t.Fatalf("cannot create random SearchQuery via testing/quick.Value")
+			t.Fatalf("cannot create random SearchQuery wire fields via testing/quick.Value")
 		}
-		sq1 := v.Interface().(*SearchQuery)
-		if sq1 == nil {
-			// Skip nil sq1.
+		fields := v.Interface().(*searchQueryWireFields)
+		if fields == nil {
+			// Skip nil fields.
 			continue
+		}
+		sq1 := &SearchQuery{
+			AccountID:    fields.AccountID,
+			ProjectID:    fields.ProjectID,
+			MinTimestamp: fields.MinTimestamp,
+			MaxTimestamp: fields.MaxTimestamp,
+			TagFilterss:  fields.TagFilterss,
+			MaxMetrics:   fields.MaxMetrics,
 		}
 		tt := TenantToken{
 			AccountID: sq1.AccountID,
 			ProjectID: sq1.ProjectID,
 		}
+		bufWithoutRuntimeTimestamp := tt.Marshal(nil)
+		bufWithoutRuntimeTimestamp = sq1.MarshalWithoutTenant(bufWithoutRuntimeTimestamp)
+		sq1.SetDownsamplingCurrentTimestamp(int64(i + 1))
 		buf = tt.Marshal(buf[:0])
 		buf = sq1.MarshalWithoutTenant(buf)
+		if !bytes.Equal(buf, bufWithoutRuntimeTimestamp) {
+			t.Fatalf("runtime downsampling timestamp changed SearchQuery marshal bytes; got %X; want %X", buf, bufWithoutRuntimeTimestamp)
+		}
 
 		tail, err := sq2.Unmarshal(buf)
 		if err != nil {
@@ -82,6 +105,39 @@ func TestSearchQueryMarshalUnmarshal(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+func TestSearchQueryDownsamplingCurrentTimestampIsRuntimeOnly(t *testing.T) {
+	sq := NewSearchQuery(123, 456, nil, 789)
+	sq.AccountID = 1
+	sq.ProjectID = 2
+	sq.SetDownsamplingCurrentTimestamp(123_456_789)
+	if got := sq.DownsamplingCurrentTimestamp(); got != 123_456_789 {
+		t.Fatalf("unexpected runtime timestamp; got %d; want %d", got, 123_456_789)
+	}
+
+	tt := TenantToken{
+		AccountID: sq.AccountID,
+		ProjectID: sq.ProjectID,
+	}
+	buf := tt.Marshal(nil)
+	buf = sq.MarshalWithoutTenant(buf)
+
+	var sqUnmarshaled SearchQuery
+	sqUnmarshaled.SetDownsamplingCurrentTimestamp(42)
+	tail, err := sqUnmarshaled.Unmarshal(buf)
+	if err != nil {
+		t.Fatalf("cannot unmarshal SearchQuery: %s", err)
+	}
+	if len(tail) > 0 {
+		t.Fatalf("unexpected tail after unmarshaling: %q", tail)
+	}
+	if got := sqUnmarshaled.DownsamplingCurrentTimestamp(); got != 0 {
+		t.Fatalf("runtime timestamp must not survive serialization; got %d", got)
+	}
+	if got := sqUnmarshaled.GetTimeRange(); got != sq.GetTimeRange() {
+		t.Fatalf("unexpected time range after unmarshaling; got %s; want %s", &got, &TimeRange{MinTimestamp: sq.MinTimestamp, MaxTimestamp: sq.MaxTimestamp})
 	}
 }
 

@@ -117,6 +117,10 @@ type EvalConfig struct {
 	End   int64
 	Step  int64
 
+	// CurrentTimestamp is the request timestamp used for selecting the
+	// query-time downsampling interval.
+	CurrentTimestamp int64
+
 	// MaxSeries is the maximum number of time series, which can be scanned by the query.
 	// Zero means 'no limit'
 	MaxSeries int
@@ -170,6 +174,7 @@ func copyEvalConfig(src *EvalConfig) *EvalConfig {
 	ec.Start = src.Start
 	ec.End = src.End
 	ec.Step = src.Step
+	ec.CurrentTimestamp = src.CurrentTimestamp
 	ec.MaxSeries = src.MaxSeries
 	ec.MaxPointsPerSeries = src.MaxPointsPerSeries
 	ec.Deadline = src.Deadline
@@ -197,6 +202,9 @@ func (ec *EvalConfig) validate() {
 
 func (ec *EvalConfig) mayCache() bool {
 	if *disableCache {
+		return false
+	}
+	if storage.IsDownsamplingEnabled() {
 		return false
 	}
 	if !ec.MayCache {
@@ -1833,6 +1841,7 @@ func evalRollupFuncNoCache(qt *querytracer.Tracer, ec *EvalConfig, funcName stri
 		minTimestamp -= ec.Step
 	}
 	sq := storage.NewSearchQuery(minTimestamp, ec.End, tfss, ec.MaxSeries)
+	sq.SetDownsamplingCurrentTimestamp(ec.CurrentTimestamp)
 	rss, err := netstorage.ProcessSearchQuery(qt, sq, ec.Deadline)
 	if err != nil {
 		return nil, err
