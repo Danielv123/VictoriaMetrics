@@ -115,6 +115,61 @@ func TestEvalConfigMayCacheWithDownsampling(t *testing.T) {
 	}
 }
 
+func TestApplyRollupDownsamplingLookback(t *testing.T) {
+	prevDedupInterval := storage.GetDedupInterval()
+	defer func() {
+		storage.SetDownsamplingPeriod(0, 0)
+		storage.SetDedupInterval(time.Duration(prevDedupInterval) * time.Microsecond)
+	}()
+
+	storage.SetDedupInterval(2 * time.Microsecond)
+	storage.SetDownsamplingPeriod(100*time.Microsecond, 10*time.Microsecond)
+
+	const currentTimestamp = int64(1_000)
+	f := func(name string, rc *rollupConfig, windowExplicit bool, start, minTimestamp, fetchLookback, lookbackDelta, wantMinTimestamp, wantMinWindow int64) {
+		t.Helper()
+		t.Run(name, func(t *testing.T) {
+			got := applyRollupDownsamplingLookback([]*rollupConfig{rc}, windowExplicit, start, minTimestamp, currentTimestamp, fetchLookback, 0, lookbackDelta)
+			if got != wantMinTimestamp {
+				t.Fatalf("unexpected minimum timestamp; got %d; want %d", got, wantMinTimestamp)
+			}
+			if rc.minWindow != wantMinWindow {
+				t.Fatalf("unexpected minimum rollup window; got %d; want %d", rc.minWindow, wantMinWindow)
+			}
+		})
+	}
+
+	f("implicit default rollup crosses cutoff",
+		&rollupConfig{MayAdjustWindow: true, isDefaultRollup: true}, false, 905, 901, 4, 0, 890, 20)
+	f("explicit lookback delta caps interval",
+		&rollupConfig{MayAdjustWindow: true, isDefaultRollup: true}, false, 905, 901, 4, 8, 897, 8)
+	f("explicit window remains unchanged",
+		&rollupConfig{MayAdjustWindow: true, isDefaultRollup: true}, true, 905, 901, 4, 0, 901, 0)
+	f("implicit adjustable rollup uses downsampling cadence",
+		&rollupConfig{MayAdjustWindow: true}, false, 905, 901, 4, 0, 855, 50)
+	f("fresh range remains unchanged",
+		&rollupConfig{MayAdjustWindow: true, isDefaultRollup: true}, false, 930, 926, 4, 0, 926, 0)
+
+	storage.SetDownsamplingPeriod(0, 0)
+	f("ordinary deduplication remains unchanged",
+		&rollupConfig{MayAdjustWindow: true, isDefaultRollup: true}, false, 905, 901, 4, 0, 901, 0)
+}
+
+func TestGetDownsamplingBucketLookback(t *testing.T) {
+	for _, tc := range []struct {
+		timestamp int64
+		want      int64
+	}{
+		{timestamp: 900, want: 10},
+		{timestamp: 905, want: 15},
+		{timestamp: 909, want: 19},
+	} {
+		if got := getDownsamplingBucketLookback(tc.timestamp, 10); got != tc.want {
+			t.Fatalf("unexpected bucket lookback for timestamp %d; got %d; want %d", tc.timestamp, got, tc.want)
+		}
+	}
+}
+
 func TestValidateMaxPointsPerSeriesFailure(t *testing.T) {
 	f := func(start, end, step int64, maxPoints int) {
 		t.Helper()

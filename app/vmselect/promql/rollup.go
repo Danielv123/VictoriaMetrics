@@ -599,6 +599,9 @@ type rollupConfig struct {
 	// Whether default_rollup is used.
 	isDefaultRollup bool
 
+	// The minimum automatically adjusted lookbehind window.
+	minWindow int64
+
 	// The estimated number of samples scanned per Func call.
 	//
 	// If zero, then it is considered that Func scans all the samples passed to it.
@@ -725,6 +728,9 @@ func (rc *rollupConfig) doInternal(dstValues []float64, tsm *timeseriesMap, valu
 	if rc.Start < rc.End {
 		scrapeInterval := getScrapeInterval(timestamps, rc.Step)
 		maxPrevInterval = getMaxPrevInterval(scrapeInterval)
+	}
+	if maxPrevInterval < rc.minWindow {
+		maxPrevInterval = rc.minWindow
 	}
 
 	if rc.LookbackDelta > 0 && maxPrevInterval > rc.LookbackDelta {

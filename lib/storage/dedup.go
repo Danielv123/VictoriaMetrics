@@ -37,10 +37,22 @@ func IsDownsamplingEnabled() bool {
 	return globalDownsamplingInterval.Load() > 0
 }
 
+// GetDownsamplingInterval returns the configured downsampling interval in microseconds.
+func GetDownsamplingInterval() int64 {
+	return globalDownsamplingInterval.Load()
+}
+
 // GetDedupIntervalForTimeRange returns the deduplication or downsampling interval in microseconds,
 // which must be applied to a time range starting at minTimestamp at currentTimestamp.
 func GetDedupIntervalForTimeRange(minTimestamp, currentTimestamp int64) int64 {
 	return getDedupIntervalForTimestamp(minTimestamp, currentTimestamp)
+}
+
+// GetDownsamplingIntervalForTimeRange returns the downsampling interval in microseconds,
+// which must be applied to a time range starting at minTimestamp at currentTimestamp.
+// It returns 0 if the time range must use the base deduplication interval.
+func GetDownsamplingIntervalForTimeRange(minTimestamp, currentTimestamp int64) int64 {
+	return getDownsamplingIntervalForTimestamp(minTimestamp, currentTimestamp)
 }
 
 // getDedupIntervalForBlock returns the deduplication or downsampling interval in microseconds,
@@ -50,13 +62,19 @@ func getDedupIntervalForBlock(maxTimestamp, currentTimestamp int64) int64 {
 }
 
 func getDedupIntervalForTimestamp(timestamp, currentTimestamp int64) int64 {
-	dedupInterval := globalDedupInterval
+	if downsamplingInterval := getDownsamplingIntervalForTimestamp(timestamp, currentTimestamp); downsamplingInterval > 0 {
+		return downsamplingInterval
+	}
+	return globalDedupInterval
+}
+
+func getDownsamplingIntervalForTimestamp(timestamp, currentTimestamp int64) int64 {
 	downsamplingInterval := globalDownsamplingInterval.Load()
-	if downsamplingInterval <= dedupInterval {
-		return dedupInterval
+	if downsamplingInterval <= globalDedupInterval {
+		return 0
 	}
 	if timestamp > getDownsamplingCutoff(currentTimestamp) {
-		return dedupInterval
+		return 0
 	}
 	return downsamplingInterval
 }

@@ -1676,8 +1676,11 @@ one current timestamp, so all storage fetches made while evaluating the request 
 the actual time range fetched from storage, including any lookbehind added by the query engine. If the minimum timestamp of that range is at or
 before the cutoff, one downsampling interval is applied to the whole fetched range, including its newer portion. The physical fetch extends to
 the end of the final epoch-aligned bucket and the result is trimmed back to the requested range after normalization. This keeps query-time and
-post-merge bucket winners consistent near the upper boundary and avoids mixing independently normalized resolutions in one result. A late
-sample at or before the cutoff is therefore query-correct immediately; a later merge physically reconciles it with previously stored blocks.
+post-merge bucket winners consistent near the upper boundary and avoids mixing independently normalized resolutions in one result. Implicit
+MetricsQL rollups that adapt to the observed sample cadence also account for the downsampling interval. Bare selectors look back far enough to
+include a preceding retained sample, so zooming into a range between downsampled points doesn't produce an empty graph. Explicit rollup windows
+aren't widened, and exact-range export responses remain trimmed to their requested range. A late sample at or before the cutoff is therefore
+query-correct immediately; a later merge physically reconciles it with previously stored blocks.
 
 The MetricsQL rollup-result cache is bypassed for instant and range query evaluation while global downsampling is active, because the cutoff
 moves as samples age. This doesn't disable unrelated storage and index caches. `/api/v1/export` without `reduce_mem_usage` in any supported

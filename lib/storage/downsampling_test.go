@@ -30,13 +30,14 @@ func TestGetDedupIntervalForTimeRange(t *testing.T) {
 
 	const currentTimestamp = 1_000
 	testCases := []struct {
-		name         string
-		minTimestamp int64
-		want         int64
+		name             string
+		minTimestamp     int64
+		want             int64
+		wantDownsampling int64
 	}{
 		{name: "newer than cutoff", minTimestamp: 901, want: 2},
-		{name: "at cutoff", minTimestamp: 900, want: 10},
-		{name: "older than cutoff", minTimestamp: 899, want: 10},
+		{name: "at cutoff", minTimestamp: 900, want: 10, wantDownsampling: 10},
+		{name: "older than cutoff", minTimestamp: 899, want: 10, wantDownsampling: 10},
 		{name: "future", minTimestamp: 1_001, want: 2},
 	}
 	for _, tc := range testCases {
@@ -44,6 +45,10 @@ func TestGetDedupIntervalForTimeRange(t *testing.T) {
 			got := GetDedupIntervalForTimeRange(tc.minTimestamp, currentTimestamp)
 			if got != tc.want {
 				t.Fatalf("unexpected interval; got %d; want %d", got, tc.want)
+			}
+			gotDownsampling := GetDownsamplingIntervalForTimeRange(tc.minTimestamp, currentTimestamp)
+			if gotDownsampling != tc.wantDownsampling {
+				t.Fatalf("unexpected downsampling interval; got %d; want %d", gotDownsampling, tc.wantDownsampling)
 			}
 		})
 	}

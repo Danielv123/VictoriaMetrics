@@ -202,29 +202,72 @@ func TestMergeSortBlocks(t *testing.T) {
 
 func TestGetSearchQueryTimeRangesStableAndNonMutating(t *testing.T) {
 	prevDedupInterval := storage.GetDedupInterval()
-	storage.SetDedupInterval(0)
-	storage.SetDownsamplingPeriod(100*time.Microsecond, 10*time.Microsecond)
 	defer func() {
 		storage.SetDownsamplingPeriod(0, 0)
 		storage.SetDedupInterval(time.Duration(prevDedupInterval) * time.Microsecond)
 	}()
 
-	sq := storage.NewSearchQuery(3, 5, nil, 0)
-	sq.SetDownsamplingCurrentTimestamp(1_000)
-	for range 2 {
-		tr, fetchTR, dedupInterval := getSearchQueryTimeRanges(sq, sq.DownsamplingCurrentTimestamp())
-		if got, want := tr, (storage.TimeRange{MinTimestamp: 3, MaxTimestamp: 5}); got != want {
-			t.Fatalf("unexpected requested range; got %v; want %v", got, want)
-		}
-		if got, want := fetchTR, (storage.TimeRange{MinTimestamp: 3, MaxTimestamp: 10}); got != want {
-			t.Fatalf("unexpected expanded fetch range; got %v; want %v", got, want)
-		}
-		if dedupInterval != 10 {
-			t.Fatalf("unexpected dedup interval; got %d; want %d", dedupInterval, 10)
-		}
-		if sq.MaxTimestamp != 5 {
-			t.Fatalf("range expansion must not mutate the caller's SearchQuery; got max timestamp %d; want %d", sq.MaxTimestamp, 5)
-		}
+	testCases := []struct {
+		name                 string
+		dedupInterval        time.Duration
+		downsamplingOffset   time.Duration
+		downsamplingInterval time.Duration
+		minTimestamp         int64
+		maxTimestamp         int64
+		wantFetchMax         int64
+		wantDedupInterval    int64
+	}{
+		{
+			name:                 "global downsampling expands through bucket end",
+			downsamplingOffset:   100 * time.Microsecond,
+			downsamplingInterval: 10 * time.Microsecond,
+			minTimestamp:         3,
+			maxTimestamp:         5,
+			wantFetchMax:         10,
+			wantDedupInterval:    10,
+		},
+		{
+			name:              "deduplication stays within requested range",
+			dedupInterval:     10 * time.Microsecond,
+			minTimestamp:      3,
+			maxTimestamp:      5,
+			wantFetchMax:      5,
+			wantDedupInterval: 10,
+		},
+		{
+			name:                 "fresh range stays within requested range",
+			dedupInterval:        2 * time.Microsecond,
+			downsamplingOffset:   100 * time.Microsecond,
+			downsamplingInterval: 10 * time.Microsecond,
+			minTimestamp:         901,
+			maxTimestamp:         905,
+			wantFetchMax:         905,
+			wantDedupInterval:    2,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			storage.SetDedupInterval(tc.dedupInterval)
+			storage.SetDownsamplingPeriod(tc.downsamplingOffset, tc.downsamplingInterval)
+
+			sq := storage.NewSearchQuery(tc.minTimestamp, tc.maxTimestamp, nil, 0)
+			sq.SetDownsamplingCurrentTimestamp(1_000)
+			for range 2 {
+				tr, fetchTR, dedupInterval := getSearchQueryTimeRanges(sq, sq.DownsamplingCurrentTimestamp())
+				if got, want := tr, (storage.TimeRange{MinTimestamp: tc.minTimestamp, MaxTimestamp: tc.maxTimestamp}); got != want {
+					t.Fatalf("unexpected requested range; got %v; want %v", got, want)
+				}
+				if got, want := fetchTR, (storage.TimeRange{MinTimestamp: tc.minTimestamp, MaxTimestamp: tc.wantFetchMax}); got != want {
+					t.Fatalf("unexpected fetch range; got %v; want %v", got, want)
+				}
+				if dedupInterval != tc.wantDedupInterval {
+					t.Fatalf("unexpected dedup interval; got %d; want %d", dedupInterval, tc.wantDedupInterval)
+				}
+				if sq.MinTimestamp != tc.minTimestamp || sq.MaxTimestamp != tc.maxTimestamp {
+					t.Fatalf("range calculation must not mutate the caller's SearchQuery; got [%d, %d]; want [%d, %d]", sq.MinTimestamp, sq.MaxTimestamp, tc.minTimestamp, tc.maxTimestamp)
+				}
+			}
+		})
 	}
 }
 

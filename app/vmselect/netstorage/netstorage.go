@@ -1085,10 +1085,14 @@ func SearchMetricNames(qt *querytracer.Tracer, sq *storage.SearchQuery, deadline
 
 func getSearchQueryTimeRanges(sq *storage.SearchQuery, currentTimestamp int64) (storage.TimeRange, storage.TimeRange, int64) {
 	tr := sq.GetTimeRange()
-	dedupInterval := storage.GetDedupIntervalForTimeRange(tr.MinTimestamp, currentTimestamp)
+	downsamplingInterval := storage.GetDownsamplingIntervalForTimeRange(tr.MinTimestamp, currentTimestamp)
+	dedupInterval := downsamplingInterval
+	if dedupInterval <= 0 {
+		dedupInterval = storage.GetDedupInterval()
+	}
 	fetchTR := tr
-	if dedupInterval > 0 {
-		fetchTR.MaxTimestamp = storage.GetDedupIntervalEnd(tr.MaxTimestamp, dedupInterval)
+	if downsamplingInterval > 0 {
+		fetchTR.MaxTimestamp = storage.GetDedupIntervalEnd(tr.MaxTimestamp, downsamplingInterval)
 	}
 	return tr, fetchTR, dedupInterval
 }

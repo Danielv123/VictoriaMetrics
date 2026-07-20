@@ -146,6 +146,53 @@ func TestSingleDownsamplingQueryMergeLateDataAndExports(t *testing.T) {
 	forceMergeAndWaitForRawSamples(tc, sut, metric, oldRangeStart, oldRangeEnd, lateWinner)
 }
 
+func TestSingleDownsamplingLookbackBeforeQueryWindow(t *testing.T) {
+	tc := apptest.NewTestCase(t)
+	defer tc.Stop()
+
+	const metric = "single_downsampling_lookback"
+	storagePath := t.TempDir() + "/vmsingle"
+	previousSample := downsamplingSample{
+		Timestamp: oldBaseUsecs + (1 * time.Minute).Microseconds(),
+		Value:     1,
+	}
+	futureWinner := downsamplingSample{
+		Timestamp: oldBaseUsecs + (110 * time.Minute).Microseconds(),
+		Value:     3,
+	}
+
+	// Seed raw parts before enabling downsampling, so the same query can be
+	// verified before and after physical materialization.
+	sut := tc.MustStartVmsingle("vmsingle", singleDownsamplingFlags(storagePath, ""))
+	importVMRemoteWriteSamples(t, sut, metric, []downsamplingSample{
+		previousSample,
+		{Timestamp: oldBaseUsecs + (70 * time.Minute).Microseconds(), Value: 2},
+		futureWinner,
+	})
+	sut.ForceFlush(t)
+	tc.StopApp("vmsingle")
+
+	sut = tc.MustStartVmsingle("vmsingle", singleDownsamplingFlags(storagePath, "10y:1h"))
+	queryTime := time.UnixMicro(oldBaseUsecs + (90 * time.Minute).Microseconds()).UTC()
+	queryTimeString := queryTime.Format(time.RFC3339Nano)
+	assertInstantQueryValue(t, sut, metric, queryTimeString, 1)
+	assertInstantQueryEmpty(t, sut, "last_over_time("+metric+"[5m])", queryTimeString)
+
+	exportStart := queryTime.Add(-5 * time.Minute).Format(time.RFC3339Nano)
+	assertDownsamplingSamples(t, "normalized export must not leak the PromQL lookback sample", nil,
+		exportRawSamples(t, tc.Client(), sut, metric, exportStart, queryTimeString, false))
+
+	fullRangeEnd := time.UnixMicro(oldBaseUsecs + (3 * time.Hour).Microseconds()).UTC().Format(time.RFC3339Nano)
+	forceMergeAndWaitForRawSamples(tc, sut, metric, oldRangeStart, fullRangeEnd, []downsamplingSample{
+		previousSample,
+		futureWinner,
+	})
+	assertInstantQueryValue(t, sut, metric, queryTimeString, 1)
+	assertInstantQueryEmpty(t, sut, "last_over_time("+metric+"[5m])", queryTimeString)
+	assertDownsamplingSamples(t, "normalized export must remain range-bounded after merge", nil,
+		exportRawSamples(t, tc.Client(), sut, metric, exportStart, queryTimeString, false))
+}
+
 func TestSingleDownsamplingPolicyLatch(t *testing.T) {
 	tc := apptest.NewTestCase(t)
 	defer tc.Stop()
@@ -411,6 +458,38 @@ func assertDownsamplingSamples(t *testing.T, msg string, want, got []downsamplin
 	t.Helper()
 	if diff := cmp.Diff(want, got); diff != "" {
 		t.Fatalf("%s (-want, +got):\n%s", msg, diff)
+	}
+}
+
+func assertInstantQueryValue(t *testing.T, sut *apptest.Vmsingle, query, queryTime string, want float64) {
+	t.Helper()
+	response := sut.PrometheusAPIV1Query(t, query, apptest.QueryOpts{
+		Time: queryTime,
+		Step: "5m",
+	})
+	if response.Status != "success" || response.Error != "" || response.Data == nil || len(response.Data.Result) != 1 || response.Data.Result[0].Sample == nil {
+		t.Fatalf("unexpected instant query response for %q: %+v", query, response)
+	}
+	result := response.Data.Result[0]
+	if got := result.Metric["__name__"]; got != query {
+		t.Fatalf("unexpected instant query metric name; got %q; want %q", got, query)
+	}
+	if got := result.Sample.Value; got != want {
+		t.Fatalf("unexpected instant query value for %q; got %g; want %g", query, got, want)
+	}
+}
+
+func assertInstantQueryEmpty(t *testing.T, sut *apptest.Vmsingle, query, queryTime string) {
+	t.Helper()
+	response := sut.PrometheusAPIV1Query(t, query, apptest.QueryOpts{
+		Time: queryTime,
+		Step: "5m",
+	})
+	if response.Status != "success" || response.Error != "" || response.Data == nil {
+		t.Fatalf("unexpected instant query response for %q: %+v", query, response)
+	}
+	if len(response.Data.Result) > 0 {
+		t.Fatalf("unexpected non-empty instant query response for %q: %+v", query, response)
 	}
 }
 
