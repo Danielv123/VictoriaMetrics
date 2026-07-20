@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/VictoriaMetrics/VictoriaMetrics/lib/encoding/zstd"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/httputil"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/prompb"
 	otlppb "github.com/VictoriaMetrics/VictoriaMetrics/lib/protoparser/opentelemetry/pb"
@@ -683,11 +684,32 @@ func (c *vminsertClient) PrometheusAPIV1ImportNative(t *testing.T, data []byte, 
 func (c *vminsertClient) PrometheusAPIV1Write(t *testing.T, wr prompb.WriteRequest, opts QueryOpts) {
 	t.Helper()
 
-	url := c.url("insert", "prometheus/api/v1/write", opts)
 	data := snappy.Encode(nil, wr.MarshalProtobuf(nil))
+	c.prometheusAPIV1Write(t, wr, opts, data, "", "")
+}
+
+// VictoriaMetricsAPIV1Write is a test helper function that inserts a collection
+// of records in VictoriaMetrics remote-write format, preserving microsecond timestamps.
+func (c *vminsertClient) VictoriaMetricsAPIV1Write(t *testing.T, wr prompb.WriteRequest, opts QueryOpts) {
+	t.Helper()
+
+	data := zstd.CompressLevel(nil, wr.MarshalProtobuf(nil), 1)
+	c.prometheusAPIV1Write(t, wr, opts, data, "zstd", "1")
+}
+
+func (c *vminsertClient) prometheusAPIV1Write(t *testing.T, wr prompb.WriteRequest, opts QueryOpts, data []byte, contentEncoding, vmVersion string) {
+	t.Helper()
+
+	url := c.url("insert", "prometheus/api/v1/write", opts)
 	recordsCount := len(wr.Timeseries)
 	headers := opts.getHeaders()
 	headers.Set("Content-Type", "application/x-protobuf")
+	if contentEncoding != "" {
+		headers.Set("Content-Encoding", contentEncoding)
+	}
+	if vmVersion != "" {
+		headers.Set("X-VictoriaMetrics-Remote-Write-Version", vmVersion)
+	}
 	c.sendBlocking(t, recordsCount, func() {
 		_, statusCode := c.cli.Post(t, url, data, headers)
 		if statusCode != http.StatusNoContent {
