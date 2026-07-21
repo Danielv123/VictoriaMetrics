@@ -125,11 +125,11 @@ func TestApplyRollupDownsamplingLookback(t *testing.T) {
 	storage.SetDedupInterval(2 * time.Microsecond)
 	storage.SetDownsamplingPeriod(100*time.Microsecond, 10*time.Microsecond)
 
-	const currentTimestamp = int64(1_000)
-	f := func(name string, rc *rollupConfig, windowExplicit bool, start, minTimestamp, fetchLookback, lookbackDelta, wantMinTimestamp, wantMinWindow int64) {
+	currentTimestamp := int64(1_000)
+	f := func(name string, rc *rollupConfig, windowExplicit bool, start, minTimestamp, fetchLookback, silenceLookback, lookbackDelta, wantMinTimestamp, wantMinWindow int64) {
 		t.Helper()
 		t.Run(name, func(t *testing.T) {
-			got := applyRollupDownsamplingLookback([]*rollupConfig{rc}, windowExplicit, start, minTimestamp, currentTimestamp, fetchLookback, 0, lookbackDelta)
+			got := applyRollupDownsamplingLookback([]*rollupConfig{rc}, windowExplicit, start, minTimestamp, currentTimestamp, fetchLookback, silenceLookback, lookbackDelta)
 			if got != wantMinTimestamp {
 				t.Fatalf("unexpected minimum timestamp; got %d; want %d", got, wantMinTimestamp)
 			}
@@ -140,19 +140,30 @@ func TestApplyRollupDownsamplingLookback(t *testing.T) {
 	}
 
 	f("implicit default rollup crosses cutoff",
-		&rollupConfig{MayAdjustWindow: true, isDefaultRollup: true}, false, 905, 901, 4, 0, 890, 20)
+		&rollupConfig{MayAdjustWindow: true, isDefaultRollup: true}, false, 905, 901, 4, 0, 0, 890, 20)
 	f("explicit lookback delta caps interval",
-		&rollupConfig{MayAdjustWindow: true, isDefaultRollup: true}, false, 905, 901, 4, 8, 897, 8)
+		&rollupConfig{MayAdjustWindow: true, isDefaultRollup: true}, false, 905, 901, 4, 0, 8, 897, 8)
 	f("explicit window remains unchanged",
-		&rollupConfig{MayAdjustWindow: true, isDefaultRollup: true}, true, 905, 901, 4, 0, 901, 0)
+		&rollupConfig{MayAdjustWindow: true, isDefaultRollup: true}, true, 905, 901, 4, 0, 0, 901, 0)
 	f("implicit adjustable rollup uses downsampling cadence",
-		&rollupConfig{MayAdjustWindow: true}, false, 905, 901, 4, 0, 855, 50)
+		&rollupConfig{MayAdjustWindow: true}, false, 905, 901, 4, 0, 0, 855, 50)
 	f("fresh range remains unchanged",
-		&rollupConfig{MayAdjustWindow: true, isDefaultRollup: true}, false, 930, 926, 4, 0, 926, 0)
+		&rollupConfig{MayAdjustWindow: true, isDefaultRollup: true}, false, 930, 926, 4, 0, 0, 926, 0)
+
+	storage.SetDownsamplingPeriod(10*time.Hour, time.Hour)
+	currentTimestamp = (20 * time.Hour).Microseconds()
+	start := (11 * time.Hour).Microseconds()
+	minWindow := (67*time.Minute + 30*time.Second).Microseconds()
+	f("implicit previous-sample rollup fetches preceding window",
+		&rollupConfig{MayAdjustWindow: true}, false, start, start-(10*time.Minute).Microseconds(), (10 * time.Minute).Microseconds(), (5 * time.Minute).Microseconds(), 0, start-(140*time.Minute).Microseconds(), minWindow)
+	f("previous-sample lookback delta is capped before doubling",
+		&rollupConfig{MayAdjustWindow: true}, false, start, start-(10*time.Minute).Microseconds(), (10 * time.Minute).Microseconds(), (5 * time.Minute).Microseconds(), (30 * time.Minute).Microseconds(), start-(65*time.Minute).Microseconds(), (30 * time.Minute).Microseconds())
+	f("implicit rollup without preceding sample fetches one window",
+		&rollupConfig{MayAdjustWindow: true}, false, start, start-(5*time.Minute).Microseconds(), (5 * time.Minute).Microseconds(), 0, 0, start-minWindow, minWindow)
 
 	storage.SetDownsamplingPeriod(0, 0)
 	f("ordinary deduplication remains unchanged",
-		&rollupConfig{MayAdjustWindow: true, isDefaultRollup: true}, false, 905, 901, 4, 0, 901, 0)
+		&rollupConfig{MayAdjustWindow: true, isDefaultRollup: true}, false, 905, 901, 4, 0, 0, 901, 0)
 }
 
 func TestGetDownsamplingBucketLookback(t *testing.T) {

@@ -1954,6 +1954,9 @@ func applyRollupDownsamplingLookback(rcs []*rollupConfig, windowExplicit bool, s
 		if fetchWindow > minWindow {
 			fetchWindow = minWindow
 		}
+		if !rc.isDefaultRollup && silenceLookback > 0 {
+			fetchWindow = mulNoOverflow(minWindow, 2)
+		}
 		rc.minWindow = minWindow
 		requiredFetchLookback := sumNoOverflow(fetchWindow, silenceLookback)
 		if maxFetchLookback < requiredFetchLookback {

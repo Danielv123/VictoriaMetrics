@@ -150,7 +150,10 @@ func TestSingleDownsamplingLookbackBeforeQueryWindow(t *testing.T) {
 	tc := apptest.NewTestCase(t)
 	defer tc.Stop()
 
-	const metric = "single_downsampling_lookback"
+	const (
+		metric     = "single_downsampling_lookback"
+		rateMetric = "single_downsampling_rate_lookback"
+	)
 	storagePath := t.TempDir() + "/vmsingle"
 	previousSample := downsamplingSample{
 		Timestamp: oldBaseUsecs + (1 * time.Minute).Microseconds(),
@@ -160,8 +163,21 @@ func TestSingleDownsamplingLookbackBeforeQueryWindow(t *testing.T) {
 		Timestamp: oldBaseUsecs + (110 * time.Minute).Microseconds(),
 		Value:     3,
 	}
+	rateSamples := []downsamplingSample{
+		{Timestamp: oldBaseUsecs + (1 * time.Minute).Microseconds(), Value: 60},
+		{Timestamp: oldBaseUsecs + (59 * time.Minute).Microseconds(), Value: 3540},
+		{Timestamp: oldBaseUsecs + (61 * time.Minute).Microseconds(), Value: 3660},
+		{Timestamp: oldBaseUsecs + (119 * time.Minute).Microseconds(), Value: 7140},
+		{Timestamp: oldBaseUsecs + (121 * time.Minute).Microseconds(), Value: 7260},
+		{Timestamp: oldBaseUsecs + (179 * time.Minute).Microseconds(), Value: 10740},
+	}
+	rateWinners := []downsamplingSample{
+		rateSamples[1],
+		rateSamples[3],
+		rateSamples[5],
+	}
 
-	// Seed raw parts before enabling downsampling, so the same query can be
+	// Seed raw parts before enabling downsampling, so the same queries can be
 	// verified before and after physical materialization.
 	sut := tc.MustStartVmsingle("vmsingle", singleDownsamplingFlags(storagePath, ""))
 	importVMRemoteWriteSamples(t, sut, metric, []downsamplingSample{
@@ -169,14 +185,19 @@ func TestSingleDownsamplingLookbackBeforeQueryWindow(t *testing.T) {
 		{Timestamp: oldBaseUsecs + (70 * time.Minute).Microseconds(), Value: 2},
 		futureWinner,
 	})
+	importVMRemoteWriteSamples(t, sut, rateMetric, rateSamples)
 	sut.ForceFlush(t)
 	tc.StopApp("vmsingle")
 
 	sut = tc.MustStartVmsingle("vmsingle", singleDownsamplingFlags(storagePath, "10y:1h"))
 	queryTime := time.UnixMicro(oldBaseUsecs + (90 * time.Minute).Microseconds()).UTC()
 	queryTimeString := queryTime.Format(time.RFC3339Nano)
-	assertInstantQueryValue(t, sut, metric, queryTimeString, 1)
+	assertInstantQueryValue(t, sut, metric, metric, queryTimeString, 1)
 	assertInstantQueryEmpty(t, sut, "last_over_time("+metric+"[5m])", queryTimeString)
+
+	rateQuery := "rate(" + rateMetric + ")"
+	rateQueryTime := time.UnixMicro(oldBaseUsecs + (170 * time.Minute).Microseconds()).UTC().Format(time.RFC3339Nano)
+	assertInstantQueryValue(t, sut, rateQuery, "", rateQueryTime, 1)
 
 	exportStart := queryTime.Add(-5 * time.Minute).Format(time.RFC3339Nano)
 	assertDownsamplingSamples(t, "normalized export must not leak the PromQL lookback sample", nil,
@@ -187,8 +208,11 @@ func TestSingleDownsamplingLookbackBeforeQueryWindow(t *testing.T) {
 		previousSample,
 		futureWinner,
 	})
-	assertInstantQueryValue(t, sut, metric, queryTimeString, 1)
+	assertDownsamplingSamples(t, "rate samples must be physically downsampled", rateWinners,
+		exportRawSamples(t, tc.Client(), sut, rateMetric, oldRangeStart, fullRangeEnd, true))
+	assertInstantQueryValue(t, sut, metric, metric, queryTimeString, 1)
 	assertInstantQueryEmpty(t, sut, "last_over_time("+metric+"[5m])", queryTimeString)
+	assertInstantQueryValue(t, sut, rateQuery, "", rateQueryTime, 1)
 	assertDownsamplingSamples(t, "normalized export must remain range-bounded after merge", nil,
 		exportRawSamples(t, tc.Client(), sut, metric, exportStart, queryTimeString, false))
 }
@@ -464,7 +488,7 @@ func assertDownsamplingSamples(t *testing.T, msg string, want, got []downsamplin
 	}
 }
 
-func assertInstantQueryValue(t *testing.T, sut *apptest.Vmsingle, query, queryTime string, want float64) {
+func assertInstantQueryValue(t *testing.T, sut *apptest.Vmsingle, query, wantMetricName, queryTime string, want float64) {
 	t.Helper()
 	response := sut.PrometheusAPIV1Query(t, query, apptest.QueryOpts{
 		Time: queryTime,
@@ -474,8 +498,8 @@ func assertInstantQueryValue(t *testing.T, sut *apptest.Vmsingle, query, queryTi
 		t.Fatalf("unexpected instant query response for %q: %+v", query, response)
 	}
 	result := response.Data.Result[0]
-	if got := result.Metric["__name__"]; got != query {
-		t.Fatalf("unexpected instant query metric name; got %q; want %q", got, query)
+	if got := result.Metric["__name__"]; got != wantMetricName {
+		t.Fatalf("unexpected instant query metric name; got %q; want %q", got, wantMetricName)
 	}
 	if got := result.Sample.Value; got != want {
 		t.Fatalf("unexpected instant query value for %q; got %g; want %g", query, got, want)
