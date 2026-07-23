@@ -1,6 +1,7 @@
 package vmstorage
 
 import (
+	"flag"
 	"os"
 	"path/filepath"
 	"testing"
@@ -96,6 +97,83 @@ func TestParseDownsamplingConfigFailure(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGlobalDownsamplingFlagIsNotRegisteredOnImport(t *testing.T) {
+	if useGlobalDownsampling {
+		t.Fatalf("global downsampling must not be enabled by importing app/vmstorage")
+	}
+	if f := flag.Lookup("downsampling.period"); f != nil {
+		if _, ok := f.Value.(*downsamplingPeriodFlagValue); ok {
+			t.Fatalf("the native global downsampling flag must not be registered by importing app/vmstorage")
+		}
+	}
+}
+
+func TestRegisterGlobalDownsamplingFlag(t *testing.T) {
+	withFlagSet := func(t *testing.T, f func()) {
+		t.Helper()
+		prevFlagSet := flag.CommandLine
+		prevDownsamplingPeriod := downsamplingPeriod
+		prevUseGlobalDownsampling := useGlobalDownsampling
+		t.Cleanup(func() {
+			flag.CommandLine = prevFlagSet
+			downsamplingPeriod = prevDownsamplingPeriod
+			useGlobalDownsampling = prevUseGlobalDownsampling
+		})
+		flag.CommandLine = flag.NewFlagSet(t.Name(), flag.ContinueOnError)
+		downsamplingPeriod = ""
+		useGlobalDownsampling = false
+		f()
+	}
+
+	t.Run("native flag", func(t *testing.T) {
+		withFlagSet(t, func() {
+			RegisterGlobalDownsamplingFlag()
+			f := flag.Lookup("downsampling.period")
+			if f == nil {
+				t.Fatalf("global downsampling flag wasn't registered")
+			}
+			if _, ok := f.Value.(*downsamplingPeriodFlagValue); !ok {
+				t.Fatalf("unexpected global downsampling flag value type: %T", f.Value)
+			}
+			if !useGlobalDownsampling {
+				t.Fatalf("native global downsampling mode must be enabled when the flag is registered")
+			}
+			if downsamplingPeriod != "" {
+				t.Fatalf("unexpected initial downsampling period; got %q", downsamplingPeriod)
+			}
+			if err := flag.CommandLine.Parse([]string{"-downsampling.period=2d:1h"}); err != nil {
+				t.Fatalf("cannot parse global downsampling flag: %s", err)
+			}
+			if downsamplingPeriod != "2d:1h" {
+				t.Fatalf("unexpected downsampling period; got %q; want %q", downsamplingPeriod, "2d:1h")
+			}
+		})
+	})
+
+	t.Run("existing Enterprise flag", func(t *testing.T) {
+		withFlagSet(t, func() {
+			var enterprisePeriod string
+			flag.CommandLine.StringVar(&enterprisePeriod, "downsampling.period", "", "Enterprise downsampling period")
+			existingFlag := flag.Lookup("downsampling.period")
+
+			RegisterGlobalDownsamplingFlag()
+			if got := flag.Lookup("downsampling.period"); got != existingFlag {
+				t.Fatalf("existing downsampling flag was replaced")
+			}
+			if useGlobalDownsampling {
+				t.Fatalf("native global downsampling mode must remain disabled for an existing Enterprise flag")
+			}
+			const period = "30d:1h,60d:2h"
+			if err := flag.CommandLine.Parse([]string{"-downsampling.period=" + period}); err != nil {
+				t.Fatalf("cannot parse existing downsampling flag: %s", err)
+			}
+			if enterprisePeriod != period {
+				t.Fatalf("unexpected existing downsampling flag value; got %q; want %q", enterprisePeriod, period)
+			}
+		})
+	})
 }
 
 func TestDownsamplingPeriodFlagValueRejectsRepeatedSet(t *testing.T) {

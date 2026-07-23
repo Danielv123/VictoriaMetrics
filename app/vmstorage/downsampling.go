@@ -42,7 +42,8 @@ func (v *downsamplingPeriodFlagValue) Set(s string) error {
 	return nil
 }
 
-func init() {
+// RegisterGlobalDownsamplingFlag registers the vmsingle-only global downsampling flag.
+func RegisterGlobalDownsamplingFlag() {
 	if flag.Lookup("downsampling.period") != nil {
 		// Enterprise builds already register this flag with filter-aware, multi-rule semantics.
 		return
