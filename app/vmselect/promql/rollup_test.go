@@ -28,6 +28,7 @@ func scaleRollupConfig(rc *rollupConfig) {
 	rc.Step *= 1000
 	rc.Window *= 1000
 	rc.LookbackDelta *= 1000
+	rc.minWindow *= 1000
 }
 
 func TestRollupOutlierIQR(t *testing.T) {
@@ -740,6 +741,34 @@ func TestRollupNewRollupFuncError(t *testing.T) {
 	f("predict_linear", []any{me, 123})
 	f("quantile_over_time", []any{123, 123})
 	f("quantiles_over_time", []any{123, 123})
+}
+
+func TestRollupDefaultUsesDownsamplingLookback(t *testing.T) {
+	f := func(name string, window, minWindow, lookbackDelta int64, want float64) {
+		t.Helper()
+		t.Run(name, func(t *testing.T) {
+			rc := rollupConfig{
+				Func:               rollupDefault,
+				Start:              100,
+				End:                100,
+				Step:               10,
+				Window:             window,
+				MaxPointsPerSeries: 1e4,
+				MayAdjustWindow:    true,
+				Timestamps:         []int64{100},
+				LookbackDelta:      lookbackDelta,
+				isDefaultRollup:    true,
+				minWindow:          minWindow,
+			}
+			got, _ := rc.Do(nil, []float64{1}, []int64{81})
+			testRowsEqual(t, got, rc.Timestamps, []float64{want}, rc.Timestamps)
+		})
+	}
+
+	f("step lookback misses previous bucket winner", 0, 0, 0, nan)
+	f("downsampling lookback includes previous bucket winner", 0, 20, 0, 1)
+	f("explicit window remains unchanged", 10, 20, 0, nan)
+	f("explicit lookback delta caps downsampling lookback", 0, 20, 15, nan)
 }
 
 func TestRollupNoWindowNoPoints(t *testing.T) {

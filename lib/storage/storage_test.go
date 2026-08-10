@@ -318,6 +318,28 @@ func TestStorageOpenClose(t *testing.T) {
 	fs.MustRemoveDir(path)
 }
 
+func TestStoragePrepareDataTableRunsBeforeDataOpen(t *testing.T) {
+	defer testRemoveAll(t)
+	path := t.Name()
+
+	prepared := false
+	s := MustOpenStorage(path, OpenOptions{
+		PrepareDataTable: func() {
+			prepared = true
+			if !fs.IsPathExist(filepath.Join(path, fs.FlockFilename)) {
+				t.Fatalf("storage lock file must exist before PrepareDataTable is called")
+			}
+			if fs.IsPathExist(filepath.Join(path, dataDirname)) {
+				t.Fatalf("data directory must not exist before PrepareDataTable is called")
+			}
+		},
+	})
+	if !prepared {
+		t.Fatalf("PrepareDataTable wasn't called")
+	}
+	s.MustClose()
+}
+
 func TestStorageRandTimestamps(t *testing.T) {
 	path := "TestStorageRandTimestamps"
 	opts := OpenOptions{

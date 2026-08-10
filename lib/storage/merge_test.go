@@ -379,7 +379,7 @@ func TestMergeForciblyStop(t *testing.T) {
 	var rowsMerged, rowsDeleted atomic.Uint64
 
 	close(ch) // forcibly close the stop channel
-	if err := mergeBlockStreams(&mp.ph, &bsw, bsrs, ch, dmis, retentionDeadline, &rowsMerged, &rowsDeleted); !errors.Is(err, errForciblyStopped) {
+	if err := mergeBlockStreams(&mp.ph, &bsw, bsrs, ch, dmis, retentionDeadline, 0, &rowsMerged, &rowsDeleted); !errors.Is(err, errForciblyStopped) {
 		t.Fatalf("unexpected error in mergeBlockStreams: got %v; want %v", err, errForciblyStopped)
 	}
 	if n := rowsMerged.Load(); n != 0 {
@@ -399,7 +399,7 @@ func testMergeBlockStreams(t *testing.T, bsrs []*blockStreamReader, expectedBloc
 	dmis := &uint64set.Set{}
 	const retentionDeadline = 0
 	var rowsMerged, rowsDeleted atomic.Uint64
-	if err := mergeBlockStreams(&mp.ph, &bsw, bsrs, nil, dmis, retentionDeadline, &rowsMerged, &rowsDeleted); err != nil {
+	if err := mergeBlockStreams(&mp.ph, &bsw, bsrs, nil, dmis, retentionDeadline, 0, &rowsMerged, &rowsDeleted); err != nil {
 		t.Fatalf("unexpected error in mergeBlockStreams: %s", err)
 	}
 

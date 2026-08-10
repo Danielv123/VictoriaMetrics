@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"sort"
 	"sync"
 	"sync/atomic"
 
@@ -16,12 +17,12 @@ import (
 // mergeBlockStreams returns immediately if stopCh is closed.
 //
 // rowsMerged is atomically updated with the number of merged rows during the merge.
-func mergeBlockStreams(ph *partHeader, bsw *blockStreamWriter, bsrs []*blockStreamReader, stopCh <-chan struct{}, dmis *uint64set.Set, retentionDeadline int64, rowsMerged, rowsDeleted *atomic.Uint64) error {
+func mergeBlockStreams(ph *partHeader, bsw *blockStreamWriter, bsrs []*blockStreamReader, stopCh <-chan struct{}, dmis *uint64set.Set, retentionDeadline, dedupInterval int64, rowsMerged, rowsDeleted *atomic.Uint64) error {
 	ph.Reset()
 
 	bsm := bsmPool.Get().(*blockStreamMerger)
 	bsm.Init(bsrs, retentionDeadline)
-	err := mergeBlockStreamsInternal(ph, bsw, bsm, stopCh, dmis, rowsMerged, rowsDeleted)
+	err := mergeBlockStreamsInternal(ph, bsw, bsm, stopCh, dmis, dedupInterval, rowsMerged, rowsDeleted)
 	bsm.reset()
 	bsmPool.Put(bsm)
 	bsw.MustClose()
@@ -39,8 +40,9 @@ var bsmPool = &sync.Pool{
 
 var errForciblyStopped = fmt.Errorf("forcibly stopped")
 
-func mergeBlockStreamsInternal(ph *partHeader, bsw *blockStreamWriter, bsm *blockStreamMerger, stopCh <-chan struct{}, dmis *uint64set.Set, rowsMerged, rowsDeleted *atomic.Uint64) error {
+func mergeBlockStreamsInternal(ph *partHeader, bsw *blockStreamWriter, bsm *blockStreamMerger, stopCh <-chan struct{}, dmis *uint64set.Set, dedupInterval int64, rowsMerged, rowsDeleted *atomic.Uint64) error {
 	pendingBlockIsEmpty := true
+	pendingBlockIsDeduplicated := false
 	pendingBlock := getBlock()
 	defer putBlock(pendingBlock)
 	tmpBlock := getBlock()
@@ -61,6 +63,71 @@ func mergeBlockStreamsInternal(ph *partHeader, bsw *blockStreamWriter, bsm *bloc
 		localRowsMerged = 0
 	}
 	defer updateStats()
+
+	preparePendingBlockForSplit := func() error {
+		if pendingBlock.rowsCount() <= maxRowsPerBlock {
+			return nil
+		}
+		if err := pendingBlock.UnmarshalData(); err != nil {
+			return fmt.Errorf("cannot unmarshal oversized pending block: %w", err)
+		}
+		if dedupInterval > 0 && !pendingBlockIsDeduplicated {
+			dedups := pendingBlock.deduplicateSamplesDuringMerge(dedupInterval)
+			localRowsMerged += uint64(dedups)
+			pendingBlockIsDeduplicated = true
+		}
+		if pendingBlock.rowsCount() > len(pendingBlock.timestamps)-pendingBlock.nextIdx ||
+			pendingBlock.rowsCount() > len(pendingBlock.values)-pendingBlock.nextIdx {
+			return fmt.Errorf("cannot split oversized pending block with %d rows from %d timestamps and %d values",
+				pendingBlock.rowsCount(), len(pendingBlock.timestamps)-pendingBlock.nextIdx, len(pendingBlock.values)-pendingBlock.nextIdx)
+		}
+		return nil
+	}
+	writePendingBlockPrefix := func(rowsCount int) {
+		start := pendingBlock.nextIdx
+		end := start + rowsCount
+		tmpBlock.Init(
+			&pendingBlock.bh.TSID,
+			pendingBlock.timestamps[start:end],
+			pendingBlock.values[start:end],
+			pendingBlock.bh.Scale,
+			pendingBlock.bh.PrecisionBits,
+		)
+		pendingBlock.nextIdx = end
+		pendingBlock.bh.RowsCount = uint32(pendingBlock.rowsCount())
+		pendingBlock.fixupTimestamps()
+		bsw.WriteExternalBlock(tmpBlock, ph, &localRowsMerged, dedupInterval)
+	}
+	writePendingBlocks := func() error {
+		if err := preparePendingBlockForSplit(); err != nil {
+			return err
+		}
+		for pendingBlock.rowsCount() > maxRowsPerBlock {
+			writePendingBlockPrefix(maxRowsPerBlock)
+		}
+		bsw.WriteExternalBlock(pendingBlock, ph, &localRowsMerged, dedupInterval)
+		pendingBlockIsEmpty = true
+		pendingBlockIsDeduplicated = false
+		return nil
+	}
+	writeSafePendingBlocks := func(nextMinTimestamp int64) error {
+		if dedupInterval <= 0 || pendingBlock.rowsCount() <= maxRowsPerBlock {
+			return nil
+		}
+		if err := preparePendingBlockForSplit(); err != nil {
+			return err
+		}
+		timestamps := pendingBlock.timestamps[pendingBlock.nextIdx:]
+		nextIntervalEnd := GetDedupIntervalEnd(nextMinTimestamp, dedupInterval)
+		safeRowsCount := sort.Search(len(timestamps), func(i int) bool {
+			return GetDedupIntervalEnd(timestamps[i], dedupInterval) >= nextIntervalEnd
+		})
+		for safeRowsCount >= maxRowsPerBlock && pendingBlock.rowsCount() > maxRowsPerBlock {
+			writePendingBlockPrefix(maxRowsPerBlock)
+			safeRowsCount -= maxRowsPerBlock
+		}
+		return nil
+	}
 
 	for bsm.NextBlock() {
 		ct := fasttime.UnixTimestamp()
@@ -92,6 +159,7 @@ func mergeBlockStreamsInternal(ph *partHeader, bsw *blockStreamWriter, bsm *bloc
 			// Load the next block if pendingBlock is empty.
 			pendingBlock.CopyFrom(b)
 			pendingBlockIsEmpty = false
+			pendingBlockIsDeduplicated = false
 			continue
 		}
 
@@ -102,15 +170,28 @@ func mergeBlockStreamsInternal(ph *partHeader, bsw *blockStreamWriter, bsm *bloc
 			if b.bh.TSID.Less(&pendingBlock.bh.TSID) {
 				logger.Panicf("BUG: the next TSID=%+v is smaller than the current TSID=%+v", &b.bh.TSID, &pendingBlock.bh.TSID)
 			}
-			bsw.WriteExternalBlock(pendingBlock, ph, &localRowsMerged)
+			if err := writePendingBlocks(); err != nil {
+				return err
+			}
 			pendingBlock.CopyFrom(b)
+			pendingBlockIsEmpty = false
+			pendingBlockIsDeduplicated = false
 			continue
 		}
-		if pendingBlock.tooBig() && pendingBlock.bh.MaxTimestamp <= b.bh.MinTimestamp {
-			// Fast path - pendingBlock is too big and it doesn't overlap with b.
+		if err := writeSafePendingBlocks(b.bh.MinTimestamp); err != nil {
+			return err
+		}
+		if pendingBlock.tooBig() && pendingBlock.bh.MaxTimestamp <= b.bh.MinTimestamp &&
+			!areBlockBoundariesInSameDedupInterval(pendingBlock.bh.MaxTimestamp, b.bh.MinTimestamp, dedupInterval) {
+			// Fast path - pendingBlock is too big and its last sample doesn't share the
+			// selected deduplication interval with the first sample from b.
 			// Write the pendingBlock and then deal with b.
-			bsw.WriteExternalBlock(pendingBlock, ph, &localRowsMerged)
+			if err := writePendingBlocks(); err != nil {
+				return err
+			}
 			pendingBlock.CopyFrom(b)
+			pendingBlockIsEmpty = false
+			pendingBlockIsDeduplicated = false
 			continue
 		}
 
@@ -133,25 +214,44 @@ func mergeBlockStreamsInternal(ph *partHeader, bsw *blockStreamWriter, bsm *bloc
 				pendingBlockIsEmpty = true
 			}
 			pendingBlock, tmpBlock = tmpBlock, pendingBlock
+			pendingBlockIsDeduplicated = false
 			continue
 		}
 
-		// Write the first maxRowsPerBlock of tmpBlock.timestamps to bsw,
-		// leave the rest in pendingBlock.
+		if dedupInterval > 0 {
+			// Deduplicate an oversized temporary block before retaining it as pending.
+			// It must not be split until a following block establishes a safe timestamp
+			// frontier; otherwise another input stream may still contain samples for a
+			// bucket written to the output already.
+			tmpBlock.fixupTimestamps()
+			dedups := tmpBlock.deduplicateSamplesDuringMerge(dedupInterval)
+			localRowsMerged += uint64(dedups)
+			pendingBlock, tmpBlock = tmpBlock, pendingBlock
+			pendingBlockIsDeduplicated = true
+			continue
+		}
+
+		// Deduplication is disabled, so preserve the existing bounded-memory split.
+		// Write the first maxRowsPerBlock of tmpBlock.timestamps to bsw and leave
+		// the rest in pendingBlock.
 		tmpBlock.nextIdx = maxRowsPerBlock
 		pendingBlock.CopyFrom(tmpBlock)
+		pendingBlockIsDeduplicated = false
+		pendingBlock.bh.RowsCount = uint32(len(pendingBlock.timestamps))
 		pendingBlock.fixupTimestamps()
 		tmpBlock.nextIdx = 0
 		tmpBlock.timestamps = tmpBlock.timestamps[:maxRowsPerBlock]
 		tmpBlock.values = tmpBlock.values[:maxRowsPerBlock]
 		tmpBlock.fixupTimestamps()
-		bsw.WriteExternalBlock(tmpBlock, ph, &localRowsMerged)
+		bsw.WriteExternalBlock(tmpBlock, ph, &localRowsMerged, dedupInterval)
 	}
 	if err := bsm.Error(); err != nil {
 		return fmt.Errorf("cannot read block to be merged: %w", err)
 	}
 	if !pendingBlockIsEmpty {
-		bsw.WriteExternalBlock(pendingBlock, ph, &localRowsMerged)
+		if err := writePendingBlocks(); err != nil {
+			return err
+		}
 	}
 	return nil
 }

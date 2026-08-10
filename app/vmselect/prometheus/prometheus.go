@@ -872,6 +872,7 @@ func QueryHandler(qt *querytracer.Tracer, startTime time.Time, w http.ResponseWr
 		Start:               start,
 		End:                 start,
 		Step:                step,
+		CurrentTimestamp:    ct,
 		MaxPointsPerSeries:  *maxPointsPerTimeseries,
 		MaxSeries:           0, // let vmstorage use maxUniqueTimeseries by default
 		QuotedRemoteAddr:    httpserver.GetQuotedRemoteAddr(r),
@@ -955,10 +956,14 @@ func QueryRangeHandler(qt *querytracer.Tracer, startTime time.Time, w http.Respo
 	return nil
 }
 
+func mayCacheQueryRange(r *http.Request) bool {
+	return !httputil.GetBool(r, "nocache") && !storage.IsDownsamplingEnabled()
+}
+
 func queryRangeHandler(qt *querytracer.Tracer, startTime time.Time, w http.ResponseWriter, query string,
 	start, end, step int64, r *http.Request, ct int64, etfs [][]storage.TagFilter) error {
 	deadline := searchutil.GetDeadlineForQuery(r, startTime)
-	mayCache := !httputil.GetBool(r, "nocache")
+	mayCache := mayCacheQueryRange(r)
 	optimizeRepeatedBinaryOpSubexprs := httputil.GetBool(r, "optimize_repeated_binary_op_subexprs")
 	lookbackDelta, err := getMaxLookback(r)
 	if err != nil {
@@ -984,6 +989,7 @@ func queryRangeHandler(qt *querytracer.Tracer, startTime time.Time, w http.Respo
 		Start:                            start,
 		End:                              end,
 		Step:                             step,
+		CurrentTimestamp:                 ct,
 		MaxPointsPerSeries:               *maxPointsPerTimeseries,
 		MaxSeries:                        0, // let vmstorage use maxUniqueTimeseries by default
 		QuotedRemoteAddr:                 httpserver.GetQuotedRemoteAddr(r),

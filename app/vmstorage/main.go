@@ -76,9 +76,9 @@ var (
 
 	minFreeDiskSpaceBytes = flagutil.NewBytes("storage.minFreeDiskSpaceBytes", 100e6, "The minimum free disk space at -storageDataPath after which the storage stops accepting new data")
 
-	finalDedupScheduleInterval = flag.Duration("storage.finalDedupScheduleCheckInterval", time.Hour, "The interval for checking when final deduplication process should be started."+
+	finalDedupScheduleInterval = flag.Duration("storage.finalDedupScheduleCheckInterval", time.Hour, "The interval for checking when final deduplication and downsampling should be started. "+
 		"Storage unconditionally adds 25% jitter to the interval value on each check evaluation."+
-		" Changing the interval to the bigger values may delay downsampling, deduplication for historical data."+
+		" Changing the interval to bigger values may delay downsampling and deduplication for historical data."+
 		" See also https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/#deduplication")
 
 	cacheSizeStorageTSID = flagutil.NewBytes("storage.cacheSizeStorageTSID", 0, "Overrides max size for storage/tsid cache. "+
@@ -121,6 +121,17 @@ func DataPath() string {
 // Init initializes vmstorage.
 func Init(vmselectMaxConcurrentRequests int, vmselectMaxQueueDuration time.Duration, resetCacheIfNeeded func(mrs []storage.MetricRow)) {
 	storage.SetDedupInterval(*minScrapeInterval)
+	var dsConfig *downsamplingConfig
+	if useGlobalDownsampling {
+		config, err := loadDownsamplingConfig(*storageDataPath, downsamplingPeriod, *minScrapeInterval)
+		if err != nil {
+			logger.Fatalf("cannot initialize -downsampling.period: %s", err)
+		}
+		dsConfig = config
+		// Keep downsampling disabled until the canonical policy is durably latched
+		// under the exclusive storage lock.
+		setDownsamplingConfig(nil)
+	}
 	storage.SetDataFlushInterval(*inmemoryDataFlushInterval)
 	storage.LegacySetRetentionTimezoneOffset(*retentionTimezoneOffset)
 	storage.SetFreeDiskSpaceLimit(minFreeDiskSpaceBytes.N)
@@ -162,6 +173,13 @@ func Init(vmselectMaxConcurrentRequests int, vmselectMaxQueueDuration time.Durat
 		TrackMetricNamesStats:       *trackMetricNamesStats,
 		IDBPrefillStart:             *idbPrefillStart,
 		LogNewSeries:                *logNewSeries,
+	}
+	if useGlobalDownsampling {
+		opts.PrepareDataTable = func() {
+			if err := activateDownsamplingConfig(*storageDataPath, dsConfig); err != nil {
+				logger.Fatalf("cannot initialize -downsampling.period: %s", err)
+			}
+		}
 	}
 	strg := storage.MustOpenStorage(*storageDataPath, opts)
 	vmStorage = newVMStorage(strg, vmselectMaxConcurrentRequests, resetCacheIfNeeded)
@@ -212,7 +230,7 @@ var (
 	vmStorage      *VMStorage
 	VMInsertAPI    vminsertapi.API
 	VMSelectAPI    vmselectapi.API
-	GetSearch      func(qt *querytracer.Tracer, sq *storage.SearchQuery, deadline uint64) (*storage.Search, int, error)
+	GetSearch      func(qt *querytracer.Tracer, sq *storage.SearchQuery, requestedTR storage.TimeRange, deadline uint64) (*storage.Search, int, error)
 	PutSearch      func(sr *storage.Search)
 	RequestHandler func(w http.ResponseWriter, r *http.Request) bool
 

@@ -43,6 +43,10 @@ func Exec(qt *querytracer.Tracer, ec *EvalConfig, q string, isFirstPointOnly boo
 	}
 
 	ec.validate()
+	if ec.CurrentTimestamp == 0 {
+		ec = copyEvalConfig(ec)
+		ec.CurrentTimestamp = time.Now().UnixMicro()
+	}
 
 	e, err := parsePromQLWithCache(q)
 	if err != nil {

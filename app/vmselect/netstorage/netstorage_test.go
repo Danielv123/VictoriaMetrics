@@ -4,8 +4,10 @@ import (
 	"math"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/decimal"
+	"github.com/VictoriaMetrics/VictoriaMetrics/lib/storage"
 )
 
 func TestMergeSortBlocks(t *testing.T) {
@@ -196,6 +198,124 @@ func TestMergeSortBlocks(t *testing.T) {
 		Timestamps: []int64{5, 10, 12},
 		Values:     []float64{7, 24, 26},
 	})
+}
+
+func TestGetSearchQueryTimeRangesStableAndNonMutating(t *testing.T) {
+	prevDedupInterval := storage.GetDedupInterval()
+	defer func() {
+		storage.SetDownsamplingPeriod(0, 0)
+		storage.SetDedupInterval(time.Duration(prevDedupInterval) * time.Microsecond)
+	}()
+
+	testCases := []struct {
+		name                 string
+		dedupInterval        time.Duration
+		downsamplingOffset   time.Duration
+		downsamplingInterval time.Duration
+		minTimestamp         int64
+		maxTimestamp         int64
+		wantFetchMax         int64
+		wantDedupInterval    int64
+	}{
+		{
+			name:                 "global downsampling expands through bucket end",
+			downsamplingOffset:   100 * time.Microsecond,
+			downsamplingInterval: 10 * time.Microsecond,
+			minTimestamp:         3,
+			maxTimestamp:         5,
+			wantFetchMax:         10,
+			wantDedupInterval:    10,
+		},
+		{
+			name:              "deduplication stays within requested range",
+			dedupInterval:     10 * time.Microsecond,
+			minTimestamp:      3,
+			maxTimestamp:      5,
+			wantFetchMax:      5,
+			wantDedupInterval: 10,
+		},
+		{
+			name:                 "fresh range stays within requested range",
+			dedupInterval:        2 * time.Microsecond,
+			downsamplingOffset:   100 * time.Microsecond,
+			downsamplingInterval: 10 * time.Microsecond,
+			minTimestamp:         901,
+			maxTimestamp:         905,
+			wantFetchMax:         905,
+			wantDedupInterval:    2,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			storage.SetDedupInterval(tc.dedupInterval)
+			storage.SetDownsamplingPeriod(tc.downsamplingOffset, tc.downsamplingInterval)
+
+			sq := storage.NewSearchQuery(tc.minTimestamp, tc.maxTimestamp, nil, 0)
+			sq.SetDownsamplingCurrentTimestamp(1_000)
+			for range 2 {
+				tr, fetchTR, dedupInterval := getSearchQueryTimeRanges(sq, sq.DownsamplingCurrentTimestamp())
+				if got, want := tr, (storage.TimeRange{MinTimestamp: tc.minTimestamp, MaxTimestamp: tc.maxTimestamp}); got != want {
+					t.Fatalf("unexpected requested range; got %v; want %v", got, want)
+				}
+				if got, want := fetchTR, (storage.TimeRange{MinTimestamp: tc.minTimestamp, MaxTimestamp: tc.wantFetchMax}); got != want {
+					t.Fatalf("unexpected fetch range; got %v; want %v", got, want)
+				}
+				if dedupInterval != tc.wantDedupInterval {
+					t.Fatalf("unexpected dedup interval; got %d; want %d", dedupInterval, tc.wantDedupInterval)
+				}
+				if sq.MinTimestamp != tc.minTimestamp || sq.MaxTimestamp != tc.maxTimestamp {
+					t.Fatalf("range calculation must not mutate the caller's SearchQuery; got [%d, %d]; want [%d, %d]", sq.MinTimestamp, sq.MaxTimestamp, tc.minTimestamp, tc.maxTimestamp)
+				}
+			}
+		})
+	}
+}
+
+func TestSortBlockDeduplicatesBeforeSampleLimit(t *testing.T) {
+	prevMaxSamplesPerSeries := *maxSamplesPerSeries
+	*maxSamplesPerSeries = 1
+	defer func() {
+		*maxSamplesPerSeries = prevMaxSamplesPerSeries
+	}()
+
+	denseBlock := &sortBlock{
+		Timestamps: []int64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+		Values:     []float64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+	}
+	denseBlock.deduplicateSamples(10)
+	if got := len(denseBlock.Timestamps); got > *maxSamplesPerSeries {
+		t.Fatalf("block-local deduplication must reduce samples before the per-series limit check; got %d; limit %d", got, *maxSamplesPerSeries)
+	}
+	if got := denseBlock.Timestamps; !reflect.DeepEqual(got, []int64{10}) {
+		t.Fatalf("unexpected deduplicated timestamps; got %v; want %v", got, []int64{10})
+	}
+
+	rawBlock := &sortBlock{
+		Timestamps: []int64{0, 1},
+		Values:     []float64{0, 1},
+	}
+	rawBlock.deduplicateSamples(0)
+	if got := len(rawBlock.Timestamps); got <= *maxSamplesPerSeries {
+		t.Fatalf("zero interval must preserve raw sample-limit behavior; got %d samples; limit %d", got, *maxSamplesPerSeries)
+	}
+}
+
+func TestTrimResultToTimeRangeAfterDeduplication(t *testing.T) {
+	var result Result
+	sbh := getSortBlocksHeap()
+	sbh.sbs = append(sbh.sbs[:0], &sortBlock{
+		Timestamps: []int64{3, 8},
+		Values:     []float64{3, 8},
+	})
+	mergeSortBlocks(&result, sbh, 10)
+	putSortBlocksHeap(sbh)
+	trimResultToTimeRange(&result, storage.TimeRange{
+		MinTimestamp: 0,
+		MaxTimestamp: 5,
+	})
+	if len(result.Timestamps) != 0 || len(result.Values) != 0 {
+		t.Fatalf("out-of-range bucket winner must remove the whole bucket; got timestamps=%v, values=%v", result.Timestamps, result.Values)
+	}
 }
 
 func TestEqualSamplesPrefix(t *testing.T) {

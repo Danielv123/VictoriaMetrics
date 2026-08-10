@@ -75,7 +75,7 @@ type partition struct {
 	smallRowsDeleted    atomic.Uint64
 	bigRowsDeleted      atomic.Uint64
 
-	isDedupScheduled atomic.Bool
+	isFinalMergeScheduled atomic.Bool
 
 	mergeIdx atomic.Uint64
 
@@ -377,8 +377,8 @@ func (pt *partition) UpdateMetrics(m *partitionMetrics) {
 
 	pt.partsLock.Lock()
 
-	isDedupScheduled := pt.isDedupScheduled.Load()
-	if isDedupScheduled {
+	isFinalMergeScheduled := pt.isFinalMergeScheduled.Load()
+	if isFinalMergeScheduled {
 		m.ScheduledDownsamplingPartitions++
 	}
 
@@ -389,7 +389,7 @@ func (pt *partition) UpdateMetrics(m *partitionMetrics) {
 		m.InmemorySizeBytes += p.size
 		m.MetaindexSizeBytes += p.metaindexSizeBytes
 		m.InmemoryPartsRefCount += uint64(pw.refCount.Load())
-		if isDedupScheduled {
+		if isFinalMergeScheduled {
 			m.ScheduledDownsamplingPartitionsSize += p.size
 		}
 	}
@@ -400,7 +400,7 @@ func (pt *partition) UpdateMetrics(m *partitionMetrics) {
 		m.SmallSizeBytes += p.size
 		m.MetaindexSizeBytes += p.metaindexSizeBytes
 		m.SmallPartsRefCount += uint64(pw.refCount.Load())
-		if isDedupScheduled {
+		if isFinalMergeScheduled {
 			m.ScheduledDownsamplingPartitionsSize += p.size
 		}
 	}
@@ -411,7 +411,7 @@ func (pt *partition) UpdateMetrics(m *partitionMetrics) {
 		m.BigSizeBytes += p.size
 		m.MetaindexSizeBytes += p.metaindexSizeBytes
 		m.BigPartsRefCount += uint64(pw.refCount.Load())
-		if isDedupScheduled {
+		if isFinalMergeScheduled {
 			m.ScheduledDownsamplingPartitionsSize += p.size
 		}
 	}
@@ -724,7 +724,9 @@ func (pt *partition) mustMergeInmemoryPartsFinal(pws []*partWrapper) *partWrappe
 
 	// Merge parts.
 	// The merge shouldn't be interrupted by stopCh, so use nil stopCh.
-	ph, err := pt.mergePartsInternal("", bsw, bsrs, partInmemory, nil, time.Now().UnixMicro(), false)
+	currentTimestamp := time.Now().UnixMicro()
+	dedupInterval := getDedupIntervalForParts(pws, currentTimestamp)
+	ph, err := pt.mergePartsInternal("", bsw, bsrs, partInmemory, nil, currentTimestamp, dedupInterval, false)
 	putBlockStreamWriter(bsw)
 	for _, bsr := range bsrs {
 		putBlockStreamReader(bsr)
@@ -1195,14 +1197,37 @@ func (pt *partition) releasePartsToMerge(pws []*partWrapper) {
 	pt.partsLock.Unlock()
 }
 
-func (pt *partition) isFinalDedupNeeded() bool {
-	dedupInterval := GetDedupInterval()
-
-	pws := pt.GetParts(nil, false)
-	minDedupInterval := getMinDedupInterval(pws)
+func (pt *partition) isFinalMergeNeeded(currentTimestamp int64) bool {
+	pws := pt.GetParts(nil, true)
+	isNeeded := isFinalMergeNeededForParts(pws, currentTimestamp)
 	pt.PutParts(pws)
+	return isNeeded
+}
 
-	return dedupInterval > minDedupInterval
+func isFinalMergeNeededForParts(pws []*partWrapper, currentTimestamp int64) bool {
+	if len(pws) == 0 {
+		return false
+	}
+	if globalDedupInterval > getMinDedupInterval(pws) {
+		return true
+	}
+
+	downsamplingInterval := globalDownsamplingInterval.Load()
+	if downsamplingInterval <= 0 {
+		return false
+	}
+
+	cutoff := getDownsamplingCutoff(currentTimestamp)
+	for _, pw := range pws {
+		if pw.p.ph.MaxTimestamp > cutoff {
+			return false
+		}
+	}
+	if len(pws) > 1 {
+		// Independently reduced parts may contain samples from the same downsampling bucket.
+		return true
+	}
+	return pws[0].p.ph.MinDedupInterval != downsamplingInterval
 }
 
 func getMinDedupInterval(pws []*partWrapper) int64 {
@@ -1217,6 +1242,16 @@ func getMinDedupInterval(pws []*partWrapper) int64 {
 		}
 	}
 	return dMin
+}
+
+func getDedupIntervalForParts(pws []*partWrapper, currentTimestamp int64) int64 {
+	maxTimestamp := pws[0].p.ph.MaxTimestamp
+	for _, pw := range pws[1:] {
+		if pw.p.ph.MaxTimestamp > maxTimestamp {
+			maxTimestamp = pw.p.ph.MaxTimestamp
+		}
+	}
+	return getDedupIntervalForBlock(maxTimestamp, currentTimestamp)
 }
 
 // mergeParts merges pws to a single resulting part.
@@ -1240,14 +1275,17 @@ func (pt *partition) mergeParts(pws []*partWrapper, stopCh <-chan struct{}, isFi
 	defer pt.releasePartsToMerge(pws)
 
 	startTime := time.Now()
+	currentTimestamp := startTime.UnixMicro()
+	dedupInterval := getDedupIntervalForParts(pws, currentTimestamp)
 
 	// Initialize destination paths.
 	dstPartType := pt.getDstPartType(pws, isFinal)
 	mergeIdx := pt.nextMergeIdx()
 	dstPartPath := pt.getDstPartPath(dstPartType, mergeIdx)
 
-	if !isDedupEnabled() && isFinal && len(pws) == 1 && pws[0].mp != nil {
-		// Fast path: flush a single in-memory part to disk.
+	if isFinal && len(pws) == 1 && pws[0].mp != nil && dedupInterval <= 0 && pws[0].p.ph.MinDedupInterval == dedupInterval {
+		// Fast path: flush a single in-memory part to disk when merge-time
+		// deduplication and downsampling are disabled.
 		mp := pws[0].mp
 		mp.MustStoreToDisk(dstPartPath)
 		pwNew := pt.openCreatedPart(&mp.ph, pws, nil, dstPartPath)
@@ -1269,7 +1307,6 @@ func (pt *partition) mergeParts(pws []*partWrapper, stopCh <-chan struct{}, isFi
 	}
 	rowsPerBlock := float64(srcRowsCount) / float64(srcBlocksCount)
 	compressLevel := getCompressLevel(rowsPerBlock)
-	currentTimestamp := startTime.UnixMicro()
 	bsw := getBlockStreamWriter()
 	var mpNew *inmemoryPart
 	if dstPartType == partInmemory {
@@ -1284,7 +1321,7 @@ func (pt *partition) mergeParts(pws []*partWrapper, stopCh <-chan struct{}, isFi
 	}
 
 	// Merge source parts to destination part.
-	ph, err := pt.mergePartsInternal(dstPartPath, bsw, bsrs, dstPartType, stopCh, currentTimestamp, useSparseCache)
+	ph, err := pt.mergePartsInternal(dstPartPath, bsw, bsrs, dstPartType, stopCh, currentTimestamp, dedupInterval, useSparseCache)
 	putBlockStreamWriter(bsw)
 	for _, bsr := range bsrs {
 		putBlockStreamReader(bsr)
@@ -1396,7 +1433,7 @@ func mustOpenBlockStreamReaders(pws []*partWrapper) []*blockStreamReader {
 	return bsrs
 }
 
-func (pt *partition) mergePartsInternal(dstPartPath string, bsw *blockStreamWriter, bsrs []*blockStreamReader, dstPartType partType, stopCh <-chan struct{}, currentTimestamp int64, useSparseCache bool) (*partHeader, error) {
+func (pt *partition) mergePartsInternal(dstPartPath string, bsw *blockStreamWriter, bsrs []*blockStreamReader, dstPartType partType, stopCh <-chan struct{}, currentTimestamp, dedupInterval int64, useSparseCache bool) (*partHeader, error) {
 	var ph partHeader
 	var rowsMerged *atomic.Uint64
 	var rowsDeleted *atomic.Uint64
@@ -1425,14 +1462,13 @@ func (pt *partition) mergePartsInternal(dstPartPath string, bsw *blockStreamWrit
 	activeMerges.Add(1)
 	_ = useSparseCache // unused in OSS version.
 	dmis := pt.idb.getDeletedMetricIDs()
-	err := mergeBlockStreams(&ph, bsw, bsrs, stopCh, dmis, retentionDeadline, rowsMerged, rowsDeleted)
+	err := mergeBlockStreams(&ph, bsw, bsrs, stopCh, dmis, retentionDeadline, dedupInterval, rowsMerged, rowsDeleted)
 	activeMerges.Add(-1)
 	mergesCount.Add(1)
 	if err != nil {
 		return nil, fmt.Errorf("cannot merge %d parts to %s: %w", len(bsrs), dstPartPath, err)
 	}
 	if dstPartPath != "" {
-		ph.MinDedupInterval = GetDedupInterval()
 		ph.MustWriteMetadata(dstPartPath)
 	}
 	return &ph, nil

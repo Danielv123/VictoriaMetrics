@@ -156,10 +156,9 @@ func (b *Block) tooBig() bool {
 	return false
 }
 
-func (b *Block) deduplicateSamplesDuringMerge() {
-	if !isDedupEnabled() {
-		// Deduplication is disabled
-		return
+func (b *Block) deduplicateSamplesDuringMerge(dedupInterval int64) int {
+	if dedupInterval <= 0 {
+		return 0
 	}
 	// Unmarshal block if it isn't unmarshaled yet in order to apply the de-duplication to unmarshaled samples.
 	if err := b.UnmarshalData(); err != nil {
@@ -167,13 +166,7 @@ func (b *Block) deduplicateSamplesDuringMerge() {
 	}
 	srcTimestamps := b.timestamps[b.nextIdx:]
 	if len(srcTimestamps) < 2 {
-		// Nothing to dedup.
-		return
-	}
-	dedupInterval := GetDedupInterval()
-	if dedupInterval <= 0 {
-		// Deduplication is disabled.
-		return
+		return 0
 	}
 	srcValues := b.values[b.nextIdx:]
 	timestamps, values := deduplicateSamplesDuringMerge(srcTimestamps, srcValues, dedupInterval)
@@ -181,6 +174,9 @@ func (b *Block) deduplicateSamplesDuringMerge() {
 	dedupsDuringMerge.Add(uint64(dedups))
 	b.timestamps = b.timestamps[:b.nextIdx+len(timestamps)]
 	b.values = b.values[:b.nextIdx+len(values)]
+	b.bh.RowsCount = uint32(len(timestamps))
+	b.fixupTimestamps()
+	return dedups
 }
 
 var dedupsDuringMerge atomicutil.Uint64

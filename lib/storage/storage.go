@@ -173,6 +173,10 @@ type OpenOptions struct {
 	TrackMetricNamesStats       bool
 	IDBPrefillStart             time.Duration
 	LogNewSeries                bool
+
+	// PrepareDataTable is called after acquiring the exclusive storage lock and before
+	// opening the data table or starting its part merge workers.
+	PrepareDataTable func()
 }
 
 // MustOpenStorage opens storage on the given path with the given retention.
@@ -285,6 +289,10 @@ func MustOpenStorage(path string, opts OpenOptions) *Storage {
 	// to prevent unexpected part merges. See https://github.com/VictoriaMetrics/VictoriaMetrics/issues/4023
 	freeSpaceBytes := fs.MustGetFreeSpace(s.path)
 	s.isReadOnly.Store(freeSpaceBytes < freeDiskSpaceLimitBytes)
+
+	if opts.PrepareDataTable != nil {
+		opts.PrepareDataTable()
+	}
 
 	// Load data
 	tablePath := filepath.Join(path, dataDirname)
@@ -1270,10 +1278,14 @@ func (s *Storage) checkTimeRange(tr TimeRange) error {
 // The method will fail if the number of found TSIDs exceeds maxMetrics or the
 // search has not completed within the specified deadline.
 func (s *Storage) SearchTSIDs(qt *querytracer.Tracer, tfss []*TagFilters, tr TimeRange, maxMetrics int, deadline uint64) ([]TSID, error) {
+	return s.searchTSIDs(qt, tfss, tr, tr, maxMetrics, deadline)
+}
+
+func (s *Storage) searchTSIDs(qt *querytracer.Tracer, tfss []*TagFilters, tr, requestedTR TimeRange, maxMetrics int, deadline uint64) ([]TSID, error) {
 	qt = qt.NewChild("search TSIDs: filters=%s, timeRange=%s, maxMetrics=%d", tfss, &tr, maxMetrics)
 	defer qt.Done()
 
-	if err := s.checkTimeRange(tr); err != nil {
+	if err := s.checkTimeRange(requestedTR); err != nil {
 		return nil, err
 	}
 

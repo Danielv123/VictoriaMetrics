@@ -117,6 +117,10 @@ type EvalConfig struct {
 	End   int64
 	Step  int64
 
+	// CurrentTimestamp is the request timestamp used for selecting the
+	// query-time downsampling interval.
+	CurrentTimestamp int64
+
 	// MaxSeries is the maximum number of time series, which can be scanned by the query.
 	// Zero means 'no limit'
 	MaxSeries int
@@ -170,6 +174,7 @@ func copyEvalConfig(src *EvalConfig) *EvalConfig {
 	ec.Start = src.Start
 	ec.End = src.End
 	ec.Step = src.Step
+	ec.CurrentTimestamp = src.CurrentTimestamp
 	ec.MaxSeries = src.MaxSeries
 	ec.MaxPointsPerSeries = src.MaxPointsPerSeries
 	ec.Deadline = src.Deadline
@@ -197,6 +202,9 @@ func (ec *EvalConfig) validate() {
 
 func (ec *EvalConfig) mayCache() bool {
 	if *disableCache {
+		return false
+	}
+	if storage.IsDownsamplingEnabled() {
 		return false
 	}
 	if !ec.MayCache {
@@ -1176,7 +1184,7 @@ func removeNanValues(dstValues []float64, dstTimestamps []int64, values []float6
 
 // evalInstantRollup evaluates instant rollup where ec.Start == ec.End.
 func evalInstantRollup(qt *querytracer.Tracer, ec *EvalConfig, funcName string, rf rollupFunc,
-	expr metricsql.Expr, me *metricsql.MetricExpr, iafc *incrementalAggrFuncContext, window int64,
+	expr metricsql.Expr, me *metricsql.MetricExpr, iafc *incrementalAggrFuncContext, window int64, windowExplicit bool,
 ) ([]*timeseries, error) {
 	if ec.Start != ec.End {
 		logger.Panicf("BUG: evalInstantRollup cannot be called on non-empty time range; got %s", ec.timeRangeString())
@@ -1192,7 +1200,7 @@ func evalInstantRollup(qt *querytracer.Tracer, ec *EvalConfig, funcName string, 
 		ecCopy.Start = timestamp
 		ecCopy.End = timestamp
 		pointsPerSeries := int64(1)
-		return evalRollupFuncNoCache(qt, ecCopy, funcName, rf, expr, me, iafc, window, pointsPerSeries)
+		return evalRollupFuncNoCache(qt, ecCopy, funcName, rf, expr, me, iafc, window, windowExplicit, pointsPerSeries)
 	}
 	tooBigOffset := func(offset int64) bool {
 		maxOffset := min(window/2, 1800*1e6)
@@ -1724,12 +1732,13 @@ func evalRollupFuncWithMetricExpr(qt *querytracer.Tracer, ec *EvalConfig, funcNa
 		return nil, fmt.Errorf("cannot parse lookbehind window in square brackets at %s: %w", expr.AppendString(nil), err)
 	}
 	window *= 1e3
+	windowExplicit := windowExpr != nil
 	if me.IsEmpty() {
 		return evalNumber(ec, nan), nil
 	}
 
 	if ec.Start == ec.End {
-		rvs, err := evalInstantRollup(qt, ec, funcName, rf, expr, me, iafc, window)
+		rvs, err := evalInstantRollup(qt, ec, funcName, rf, expr, me, iafc, window, windowExplicit)
 		if err != nil {
 			err = &httpserver.UserReadableError{
 				Err: err,
@@ -1740,7 +1749,7 @@ func evalRollupFuncWithMetricExpr(qt *querytracer.Tracer, ec *EvalConfig, funcNa
 	}
 	pointsPerSeries := 1 + (ec.End-ec.Start)/ec.Step
 	evalWithConfig := func(ec *EvalConfig) ([]*timeseries, error) {
-		tss, err := evalRollupFuncNoCache(qt, ec, funcName, rf, expr, me, iafc, window, pointsPerSeries)
+		tss, err := evalRollupFuncNoCache(qt, ec, funcName, rf, expr, me, iafc, window, windowExplicit, pointsPerSeries)
 		if err != nil {
 			err = &httpserver.UserReadableError{
 				Err: err,
@@ -1804,7 +1813,7 @@ func evalRollupFuncWithMetricExpr(qt *querytracer.Tracer, ec *EvalConfig, funcNa
 //
 // pointsPerSeries is used only for estimating the needed memory for query processing
 func evalRollupFuncNoCache(qt *querytracer.Tracer, ec *EvalConfig, funcName string, rf rollupFunc,
-	expr metricsql.Expr, me *metricsql.MetricExpr, iafc *incrementalAggrFuncContext, window, pointsPerSeries int64,
+	expr metricsql.Expr, me *metricsql.MetricExpr, iafc *incrementalAggrFuncContext, window int64, windowExplicit bool, pointsPerSeries int64,
 ) ([]*timeseries, error) {
 	if qt.Enabled() {
 		qt = qt.NewChild("rollup %s: timeRange=%s, step=%d, window=%d", expr.AppendString(nil), ec.timeRangeString(), ec.Step, window)
@@ -1819,20 +1828,32 @@ func evalRollupFuncNoCache(qt *querytracer.Tracer, ec *EvalConfig, funcName stri
 	if err != nil {
 		return nil, err
 	}
+	if windowExplicit {
+		for _, rc := range rcs {
+			rc.MayAdjustWindow = false
+		}
+	}
 
 	// Fetch the result.
 	tfss := searchutil.ToTagFilterss(me.LabelFilterss)
 	tfss = searchutil.JoinTagFilterss(tfss, ec.EnforcedTagFilterss)
-	minTimestamp := ec.Start
+	windowLookback := ec.Step
+	if window > windowLookback {
+		windowLookback = window
+	}
+	silenceLookback := int64(0)
 	if needSilenceIntervalForRollupFunc[funcName] {
-		minTimestamp -= maxSilenceInterval()
+		silenceLookback = maxSilenceInterval()
 	}
-	if window > ec.Step {
-		minTimestamp -= window
-	} else {
-		minTimestamp -= ec.Step
+	fetchLookback := sumNoOverflow(windowLookback, silenceLookback)
+	minTimestamp := subtractLookback(ec.Start, fetchLookback)
+	currentTimestamp := ec.CurrentTimestamp
+	if currentTimestamp == 0 {
+		currentTimestamp = time.Now().UnixMicro()
 	}
+	minTimestamp = applyRollupDownsamplingLookback(rcs, windowExplicit, ec.Start, minTimestamp, currentTimestamp, fetchLookback, silenceLookback, ec.LookbackDelta)
 	sq := storage.NewSearchQuery(minTimestamp, ec.End, tfss, ec.MaxSeries)
+	sq.SetDownsamplingCurrentTimestamp(currentTimestamp)
 	rss, err := netstorage.ProcessSearchQuery(qt, sq, ec.Deadline)
 	if err != nil {
 		return nil, err
@@ -1905,6 +1926,67 @@ func evalRollupFuncNoCache(qt *querytracer.Tracer, ec *EvalConfig, funcName stri
 		return evalRollupWithIncrementalAggregate(qt, funcName, keepMetricNames, iafc, rss, rcs, preFunc, sharedTimestamps)
 	}
 	return evalRollupNoIncrementalAggregate(qt, funcName, keepMetricNames, rss, rcs, preFunc, sharedTimestamps)
+}
+
+func applyRollupDownsamplingLookback(rcs []*rollupConfig, windowExplicit bool, start, minTimestamp, currentTimestamp, fetchLookback, silenceLookback, lookbackDelta int64) int64 {
+	if windowExplicit {
+		return minTimestamp
+	}
+	downsamplingInterval := storage.GetDownsamplingInterval()
+	if downsamplingInterval <= storage.GetDedupInterval() {
+		return minTimestamp
+	}
+
+	maxFetchLookback := fetchLookback
+	for _, rc := range rcs {
+		if !rc.MayAdjustWindow {
+			continue
+		}
+		minWindow := getMaxPrevInterval(downsamplingInterval)
+		fetchWindow := minWindow
+		if rc.isDefaultRollup {
+			minWindow = mulNoOverflow(downsamplingInterval, 2)
+			fetchWindow = getDownsamplingBucketLookback(start, downsamplingInterval)
+		}
+		if lookbackDelta > 0 && minWindow > lookbackDelta {
+			minWindow = lookbackDelta
+		}
+		if fetchWindow > minWindow {
+			fetchWindow = minWindow
+		}
+		if !rc.isDefaultRollup && silenceLookback > 0 {
+			fetchWindow = mulNoOverflow(minWindow, 2)
+		}
+		rc.minWindow = minWindow
+		requiredFetchLookback := sumNoOverflow(fetchWindow, silenceLookback)
+		if maxFetchLookback < requiredFetchLookback {
+			maxFetchLookback = requiredFetchLookback
+		}
+	}
+
+	candidateMinTimestamp := subtractLookback(start, maxFetchLookback)
+	if storage.GetDownsamplingIntervalForTimeRange(candidateMinTimestamp, currentTimestamp) <= 0 {
+		for _, rc := range rcs {
+			rc.minWindow = 0
+		}
+		return minTimestamp
+	}
+	return candidateMinTimestamp
+}
+
+func getDownsamplingBucketLookback(timestamp, interval int64) int64 {
+	phase := timestamp % interval
+	if phase < 0 {
+		phase += interval
+	}
+	return sumNoOverflow(interval, phase)
+}
+
+func subtractLookback(timestamp, lookback int64) int64 {
+	if timestamp <= lookback {
+		return 0
+	}
+	return timestamp - lookback
 }
 
 var (

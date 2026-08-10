@@ -3,11 +3,47 @@ package prometheus
 import (
 	"math"
 	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/VictoriaMetrics/VictoriaMetrics/app/vmselect/netstorage"
+	"github.com/VictoriaMetrics/VictoriaMetrics/app/vmselect/promql"
+	"github.com/VictoriaMetrics/VictoriaMetrics/lib/storage"
 )
+
+func TestQueryRangeCacheAlignmentDisabledWithDownsampling(t *testing.T) {
+	if storage.IsDownsamplingEnabled() {
+		t.Fatalf("downsampling must be disabled before the test")
+	}
+	defer storage.SetDownsamplingPeriod(0, 0)
+
+	const (
+		start = int64(1_001)
+		end   = int64(100_001)
+		step  = int64(1_000)
+	)
+	r := httptest.NewRequest(http.MethodGet, "/api/v1/query_range", nil)
+
+	adjust := func() (int64, int64) {
+		if !mayCacheQueryRange(r) {
+			return start, end
+		}
+		return promql.AdjustStartEnd(start, end, step)
+	}
+
+	withoutDownsamplingStart, withoutDownsamplingEnd := adjust()
+	if withoutDownsamplingStart == start && withoutDownsamplingEnd == end {
+		t.Fatalf("test range must be cache-aligned when downsampling is disabled")
+	}
+
+	storage.SetDownsamplingPeriod(time.Hour, time.Minute)
+	withDownsamplingStart, withDownsamplingEnd := adjust()
+	if withDownsamplingStart != start || withDownsamplingEnd != end {
+		t.Fatalf("downsampling must bypass cache alignment; got (%d, %d); want (%d, %d)", withDownsamplingStart, withDownsamplingEnd, start, end)
+	}
+}
 
 func TestRemoveEmptyValuesAndTimeseries(t *testing.T) {
 	f := func(tss []netstorage.Result, tssExpected []netstorage.Result) {

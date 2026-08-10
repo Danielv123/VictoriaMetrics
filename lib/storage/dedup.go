@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"math"
+	"sync/atomic"
 	"time"
 
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/decimal"
@@ -20,10 +22,95 @@ func GetDedupInterval() int64 {
 	return globalDedupInterval
 }
 
-var globalDedupInterval int64
+// SetDownsamplingPeriod sets the offset and interval for downsampling.
+//
+// Downsampling is disabled if interval is 0.
+//
+// This function must be called before the storage starts accepting writes.
+func SetDownsamplingPeriod(offset, interval time.Duration) {
+	globalDownsamplingOffset.Store(offset.Microseconds())
+	globalDownsamplingInterval.Store(interval.Microseconds())
+}
 
-func isDedupEnabled() bool {
-	return globalDedupInterval > 0
+// IsDownsamplingEnabled returns whether downsampling is enabled.
+func IsDownsamplingEnabled() bool {
+	return globalDownsamplingInterval.Load() > 0
+}
+
+// GetDownsamplingInterval returns the configured downsampling interval in microseconds.
+func GetDownsamplingInterval() int64 {
+	return globalDownsamplingInterval.Load()
+}
+
+// GetDedupIntervalForTimeRange returns the deduplication or downsampling interval in microseconds,
+// which must be applied to a time range starting at minTimestamp at currentTimestamp.
+func GetDedupIntervalForTimeRange(minTimestamp, currentTimestamp int64) int64 {
+	return getDedupIntervalForTimestamp(minTimestamp, currentTimestamp)
+}
+
+// GetDownsamplingIntervalForTimeRange returns the downsampling interval in microseconds,
+// which must be applied to a time range starting at minTimestamp at currentTimestamp.
+// It returns 0 if the time range must use the base deduplication interval.
+func GetDownsamplingIntervalForTimeRange(minTimestamp, currentTimestamp int64) int64 {
+	return getDownsamplingIntervalForTimestamp(minTimestamp, currentTimestamp)
+}
+
+// getDedupIntervalForBlock returns the deduplication or downsampling interval in microseconds,
+// which must be applied to a block with the given maximum timestamp at currentTimestamp.
+func getDedupIntervalForBlock(maxTimestamp, currentTimestamp int64) int64 {
+	return getDedupIntervalForTimestamp(maxTimestamp, currentTimestamp)
+}
+
+func getDedupIntervalForTimestamp(timestamp, currentTimestamp int64) int64 {
+	if downsamplingInterval := getDownsamplingIntervalForTimestamp(timestamp, currentTimestamp); downsamplingInterval > 0 {
+		return downsamplingInterval
+	}
+	return globalDedupInterval
+}
+
+func getDownsamplingIntervalForTimestamp(timestamp, currentTimestamp int64) int64 {
+	downsamplingInterval := globalDownsamplingInterval.Load()
+	if downsamplingInterval <= globalDedupInterval {
+		return 0
+	}
+	if timestamp > getDownsamplingCutoff(currentTimestamp) {
+		return 0
+	}
+	return downsamplingInterval
+}
+
+func getDownsamplingCutoff(currentTimestamp int64) int64 {
+	return currentTimestamp - globalDownsamplingOffset.Load()
+}
+
+// GetDedupIntervalEnd returns the inclusive end of the epoch-aligned bucket
+// containing timestamp. It returns timestamp if dedupInterval isn't positive
+// and clamps the result to math.MaxInt64 on overflow.
+func GetDedupIntervalEnd(timestamp, dedupInterval int64) int64 {
+	if dedupInterval <= 0 {
+		return timestamp
+	}
+	delta := dedupInterval - 1
+	if timestamp > math.MaxInt64-delta {
+		return math.MaxInt64
+	}
+	timestamp += delta
+	return timestamp - timestamp%dedupInterval
+}
+
+func areBlockBoundariesInSameDedupInterval(pendingMaxTimestamp, nextMinTimestamp, dedupInterval int64) bool {
+	return dedupInterval > 0 &&
+		GetDedupIntervalEnd(pendingMaxTimestamp, dedupInterval) == GetDedupIntervalEnd(nextMinTimestamp, dedupInterval)
+}
+
+var (
+	globalDedupInterval        int64
+	globalDownsamplingOffset   atomic.Int64
+	globalDownsamplingInterval atomic.Int64
+)
+
+func isDedupOrDownsamplingEnabled() bool {
+	return globalDedupInterval > 0 || globalDownsamplingInterval.Load() > 0
 }
 
 // DeduplicateSamples removes samples from src* if they are closer to each other than dedupInterval in microseconds.
@@ -32,8 +119,7 @@ func DeduplicateSamples(srcTimestamps []int64, srcValues []float64, dedupInterva
 		// Fast path - nothing to deduplicate
 		return srcTimestamps, srcValues
 	}
-	tsNext := srcTimestamps[0] + dedupInterval - 1
-	tsNext -= tsNext % dedupInterval
+	tsNext := GetDedupIntervalEnd(srcTimestamps[0], dedupInterval)
 	dstTimestamps := srcTimestamps[:0]
 	dstValues := srcValues[:0]
 	for i, ts := range srcTimestamps[1:] {
@@ -64,8 +150,7 @@ func DeduplicateSamples(srcTimestamps []int64, srcValues []float64, dedupInterva
 		dstValues = append(dstValues, vPrev)
 		tsNext += dedupInterval
 		if tsNext < ts {
-			tsNext = ts + dedupInterval - 1
-			tsNext -= tsNext % dedupInterval
+			tsNext = GetDedupIntervalEnd(ts, dedupInterval)
 		}
 	}
 	j := len(srcTimestamps) - 1
@@ -96,8 +181,7 @@ func deduplicateSamplesDuringMerge(srcTimestamps, srcValues []int64, dedupInterv
 		// Fast path - nothing to deduplicate
 		return srcTimestamps, srcValues
 	}
-	tsNext := srcTimestamps[0] + dedupInterval - 1
-	tsNext -= tsNext % dedupInterval
+	tsNext := GetDedupIntervalEnd(srcTimestamps[0], dedupInterval)
 	dstTimestamps := srcTimestamps[:0]
 	dstValues := srcValues[:0]
 	for i, ts := range srcTimestamps[1:] {
@@ -128,8 +212,7 @@ func deduplicateSamplesDuringMerge(srcTimestamps, srcValues []int64, dedupInterv
 		dstValues = append(dstValues, vPrev)
 		tsNext += dedupInterval
 		if tsNext < ts {
-			tsNext = ts + dedupInterval - 1
-			tsNext -= tsNext % dedupInterval
+			tsNext = GetDedupIntervalEnd(ts, dedupInterval)
 		}
 	}
 	j := len(srcTimestamps) - 1
@@ -159,16 +242,14 @@ func needsDedup(timestamps []int64, dedupInterval int64) bool {
 	if len(timestamps) < 2 || dedupInterval <= 0 {
 		return false
 	}
-	tsNext := timestamps[0] + dedupInterval - 1
-	tsNext -= tsNext % dedupInterval
+	tsNext := GetDedupIntervalEnd(timestamps[0], dedupInterval)
 	for _, ts := range timestamps[1:] {
 		if ts <= tsNext {
 			return true
 		}
 		tsNext += dedupInterval
 		if tsNext < ts {
-			tsNext = ts + dedupInterval - 1
-			tsNext -= tsNext % dedupInterval
+			tsNext = GetDedupIntervalEnd(ts, dedupInterval)
 		}
 	}
 	return false

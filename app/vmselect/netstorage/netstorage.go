@@ -10,6 +10,7 @@ import (
 	"sort"
 	"sync"
 	"sync/atomic"
+	"time"
 	"unsafe"
 
 	"github.com/VictoriaMetrics/metrics"
@@ -57,8 +58,10 @@ func (r *Result) reset() {
 
 // Results holds results returned from ProcessSearchQuery.
 type Results struct {
-	tr       storage.TimeRange
-	deadline searchutil.Deadline
+	tr            storage.TimeRange
+	fetchTR       storage.TimeRange
+	dedupInterval int64
+	deadline      searchutil.Deadline
 
 	packedTimeseries []packedTimeseries
 	sr               *storage.Search
@@ -101,7 +104,7 @@ func (tsw *timeseriesWork) do(r *Result, workerID uint) error {
 		tsw.mustStop.Store(true)
 		return fmt.Errorf("timeout exceeded during query execution: %s", rss.deadline.String())
 	}
-	if err := tsw.pts.Unpack(r, rss.tbf, rss.tr); err != nil {
+	if err := tsw.pts.Unpack(r, rss.tbf, rss.fetchTR, rss.tr, rss.dedupInterval); err != nil {
 		tsw.mustStop.Store(true)
 		return fmt.Errorf("error during time series unpacking: %w", err)
 	}
@@ -331,17 +334,19 @@ type packedTimeseries struct {
 }
 
 type unpackWork struct {
-	tbf *tmpBlocksFile
-	br  blockRef
-	tr  storage.TimeRange
-	sb  *sortBlock
-	err error
+	tbf           *tmpBlocksFile
+	br            blockRef
+	tr            storage.TimeRange
+	dedupInterval int64
+	sb            *sortBlock
+	err           error
 }
 
 func (upw *unpackWork) reset() {
 	upw.tbf = nil
 	upw.br = blockRef{}
 	upw.tr = storage.TimeRange{}
+	upw.dedupInterval = 0
 	upw.sb = nil
 	upw.err = nil
 }
@@ -353,6 +358,7 @@ func (upw *unpackWork) unpack(tmpBlock *storage.Block) {
 		upw.err = fmt.Errorf("cannot unpack block: %w", err)
 		return
 	}
+	sb.deduplicateSamples(upw.dedupInterval)
 	upw.sb = sb
 }
 
@@ -418,26 +424,26 @@ func putTmpStorageBlock(sb *storage.Block) {
 var tmpStorageBlockPool sync.Pool
 
 // Unpack unpacks pts to dst.
-func (pts *packedTimeseries) Unpack(dst *Result, tbf *tmpBlocksFile, tr storage.TimeRange) error {
+func (pts *packedTimeseries) Unpack(dst *Result, tbf *tmpBlocksFile, fetchTR, resultTR storage.TimeRange, dedupInterval int64) error {
 	dst.reset()
 	if err := dst.MetricName.Unmarshal(bytesutil.ToUnsafeBytes(pts.metricName)); err != nil {
 		return fmt.Errorf("cannot unmarshal metricName %q: %w", pts.metricName, err)
 	}
 	sbh := getSortBlocksHeap()
 	var err error
-	sbh.sbs, err = pts.unpackTo(sbh.sbs[:0], tbf, tr)
+	sbh.sbs, err = pts.unpackTo(sbh.sbs[:0], tbf, fetchTR, dedupInterval)
 	pts.brs = pts.brs[:0]
 	if err != nil {
 		putSortBlocksHeap(sbh)
 		return err
 	}
-	dedupInterval := storage.GetDedupInterval()
 	mergeSortBlocks(dst, sbh, dedupInterval)
 	putSortBlocksHeap(sbh)
+	trimResultToTimeRange(dst, resultTR)
 	return nil
 }
 
-func (pts *packedTimeseries) unpackTo(dst []*sortBlock, tbf *tmpBlocksFile, tr storage.TimeRange) ([]*sortBlock, error) {
+func (pts *packedTimeseries) unpackTo(dst []*sortBlock, tbf *tmpBlocksFile, tr storage.TimeRange, dedupInterval int64) ([]*sortBlock, error) {
 	upwsLen := len(pts.brs)
 	if upwsLen == 0 {
 		// Nothing to do
@@ -447,6 +453,7 @@ func (pts *packedTimeseries) unpackTo(dst []*sortBlock, tbf *tmpBlocksFile, tr s
 		upw.tbf = tbf
 		upw.br = br
 		upw.tr = tr
+		upw.dedupInterval = dedupInterval
 	}
 	if gomaxprocs == 1 || upwsLen <= 1000 {
 		// It is faster to unpack all the data in the current goroutine.
@@ -613,6 +620,26 @@ func mergeSortBlocks(dst *Result, sbh *sortBlocksHeap, dedupInterval int64) {
 
 var dedupsDuringSelect = metrics.NewCounter(`vm_deduplicated_samples_total{type="select"}`)
 
+func trimResultToTimeRange(r *Result, tr storage.TimeRange) {
+	timestamps := r.Timestamps
+	start := sort.Search(len(timestamps), func(i int) bool {
+		return timestamps[i] >= tr.MinTimestamp
+	})
+	end := sort.Search(len(timestamps), func(i int) bool {
+		return timestamps[i] > tr.MaxTimestamp
+	})
+	if end < start {
+		end = start
+	}
+	if start == 0 && end == len(timestamps) {
+		return
+	}
+	copy(timestamps, timestamps[start:end])
+	copy(r.Values, r.Values[start:end])
+	r.Timestamps = timestamps[:end-start]
+	r.Values = r.Values[:end-start]
+}
+
 func equalSamplesPrefix(a, b *sortBlock) int {
 	n := equalTimestampsPrefix(a.Timestamps[a.NextIdx:], b.Timestamps[b.NextIdx:])
 	if n == 0 {
@@ -668,6 +695,13 @@ func (sb *sortBlock) reset() {
 	sb.Timestamps = sb.Timestamps[:0]
 	sb.Values = sb.Values[:0]
 	sb.NextIdx = 0
+}
+
+func (sb *sortBlock) deduplicateSamples(dedupInterval int64) {
+	timestamps, values := storage.DeduplicateSamples(sb.Timestamps, sb.Values, dedupInterval)
+	dedupsDuringSelect.Add(len(sb.Timestamps) - len(timestamps))
+	sb.Timestamps = timestamps
+	sb.Values = values
 }
 
 func (sb *sortBlock) unpackFrom(tmpBlock *storage.Block, tbf *tmpBlocksFile, br blockRef, tr storage.TimeRange) error {
@@ -943,7 +977,7 @@ func ExportBlocks(qt *querytracer.Tracer, sq *storage.SearchQuery, deadline sear
 	}
 
 	tr := sq.GetTimeRange()
-	sr, _, err := vmstorage.GetSearch(qt, sq, deadline.Deadline())
+	sr, _, err := vmstorage.GetSearch(qt, sq, tr, deadline.Deadline())
 	if err != nil {
 		return err
 	}
@@ -1049,6 +1083,20 @@ func SearchMetricNames(qt *querytracer.Tracer, sq *storage.SearchQuery, deadline
 	return metricNames, nil
 }
 
+func getSearchQueryTimeRanges(sq *storage.SearchQuery, currentTimestamp int64) (storage.TimeRange, storage.TimeRange, int64) {
+	tr := sq.GetTimeRange()
+	downsamplingInterval := storage.GetDownsamplingIntervalForTimeRange(tr.MinTimestamp, currentTimestamp)
+	dedupInterval := downsamplingInterval
+	if dedupInterval <= 0 {
+		dedupInterval = storage.GetDedupInterval()
+	}
+	fetchTR := tr
+	if downsamplingInterval > 0 {
+		fetchTR.MaxTimestamp = storage.GetDedupIntervalEnd(tr.MaxTimestamp, downsamplingInterval)
+	}
+	return tr, fetchTR, dedupInterval
+}
+
 // ProcessSearchQuery performs sq until the given deadline.
 //
 // Results.RunParallel or Results.Cancel must be called on the returned Results.
@@ -1059,7 +1107,20 @@ func ProcessSearchQuery(qt *querytracer.Tracer, sq *storage.SearchQuery, deadlin
 		return nil, fmt.Errorf("timeout exceeded before starting the query processing: %s", deadline.String())
 	}
 
-	sr, maxSeriesCount, err := vmstorage.GetSearch(qt, sq, deadline.Deadline())
+	currentTimestamp := sq.DownsamplingCurrentTimestamp()
+	if currentTimestamp == 0 {
+		currentTimestamp = time.Now().UnixMicro()
+	}
+	tr, fetchTR, dedupInterval := getSearchQueryTimeRanges(sq, currentTimestamp)
+
+	fetchSQ := sq
+	if fetchTR != tr {
+		fetchSQCopy := *sq
+		fetchSQCopy.MaxTimestamp = fetchTR.MaxTimestamp
+		fetchSQ = &fetchSQCopy
+	}
+
+	sr, maxSeriesCount, err := vmstorage.GetSearch(qt, fetchSQ, tr, deadline.Deadline())
 	if err != nil {
 		return nil, err
 	}
@@ -1194,7 +1255,9 @@ func ProcessSearchQuery(qt *querytracer.Tracer, sq *storage.SearchQuery, deadlin
 	qt.Printf("fetch unique series=%d, blocks=%d, samples=%d, bytes=%d", len(m), blocksRead, samples, tbf.Len())
 
 	var rss Results
-	rss.tr = sq.GetTimeRange()
+	rss.tr = tr
+	rss.fetchTR = fetchTR
+	rss.dedupInterval = dedupInterval
 	rss.deadline = deadline
 	pts := make([]packedTimeseries, len(orderedMetricNames))
 	for i, metricName := range orderedMetricNames {

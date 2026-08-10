@@ -73,6 +73,8 @@ The v1.148.x line will be supported for at least 12 months since [v1.148.0](http
 * BUGFIX: [stream aggregation](https://docs.victoriametrics.com/victoriametrics/stream-aggregation/): fix incorrect [sum_samples_total](https://docs.victoriametrics.com/victoriametrics/stream-aggregation/configuration/#sum_samples_total) results when `enable_windows: true` is set. See [#11261](https://github.com/VictoriaMetrics/VictoriaMetrics/issues/11261). Thanks to @beyond-infra for contribution.
 * BUGFIX: [vmsingle](https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/), `vmselect` in [VictoriaMetrics cluster](https://docs.victoriametrics.com/victoriametrics/cluster-victoriametrics/) and [vmctl](https://docs.victoriametrics.com/victoriametrics/vmctl/): accept scientific notation with sub-second precision (e.g. `1.784144612388E9`) for timestamp args such as `start` and `end` in `/api/v1/query_range` and `--vm-native-filter-time-start` and `--vm-native-filter-time-end` in `vmctl`. Previously, values with this pattern were rejected, which is incompatible with Prometheus. See [#11268](https://github.com/VictoriaMetrics/VictoriaMetrics/issues/11268). Thanks to @STiFLeR7 for contribution.
 
+* FEATURE: [vmsingle](https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/): support vmsingle-only global downsampling with a single non-filtered `-downsampling.period=offset:interval` rule, microsecond duration resolution, and merge-time physical materialization. The interval must divide 24 hours exactly. Cluster and Enterprise downsampling behavior remains separate.
+
 ## [v1.148.0](https://github.com/VictoriaMetrics/VictoriaMetrics/releases/tag/v1.148.0)
 
 Released at 2026-07-20

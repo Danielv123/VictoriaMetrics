@@ -3,6 +3,7 @@ package promql
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/protoparser/prometheus"
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/storage"
@@ -51,6 +52,135 @@ m2{b="bar"} 1`, `{}`)
 m2{b="bar",c="x"} 1`, `{b="bar"}`)
 }
 
+func TestEvalConfigMayCacheWithDownsampling(t *testing.T) {
+	if storage.IsDownsamplingEnabled() {
+		t.Fatalf("downsampling must be disabled before the test")
+	}
+	prevDisableCache := *disableCache
+	prevDedupInterval := storage.GetDedupInterval()
+	*disableCache = false
+	storage.SetDedupInterval(2 * time.Microsecond)
+	defer func() {
+		storage.SetDownsamplingPeriod(0, 0)
+		storage.SetDedupInterval(time.Duration(prevDedupInterval) * time.Microsecond)
+		*disableCache = prevDisableCache
+	}()
+
+	testCases := []struct {
+		name string
+		ec   *EvalConfig
+		want bool
+	}{
+		{
+			name: "instant query",
+			ec:   &EvalConfig{Start: 1_000, End: 1_000, Step: 1_000, MayCache: true},
+			want: true,
+		},
+		{
+			name: "range query",
+			ec:   &EvalConfig{Start: 1_000, End: 3_000, Step: 1_000, MayCache: true},
+			want: true,
+		},
+		{
+			name: "partial cache continuation",
+			ec:   &EvalConfig{Start: 2_000, End: 3_000, Step: 1_000, MayCache: true},
+			want: true,
+		},
+		{
+			name: "unaligned range query",
+			ec:   &EvalConfig{Start: 1_001, End: 3_000, Step: 1_000, MayCache: true},
+			want: false,
+		},
+		{
+			name: "cache disabled by evaluation config",
+			ec:   &EvalConfig{Start: 1_000, End: 3_000, Step: 1_000},
+			want: false,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name+" without downsampling", func(t *testing.T) {
+			if got := tc.ec.mayCache(); got != tc.want {
+				t.Fatalf("unexpected mayCache result; got %v; want %v", got, tc.want)
+			}
+		})
+	}
+
+	storage.SetDownsamplingPeriod(100*time.Microsecond, 10*time.Microsecond)
+	for _, tc := range testCases {
+		t.Run(tc.name+" with downsampling", func(t *testing.T) {
+			if tc.ec.mayCache() {
+				t.Fatalf("cache must be disabled when downsampling is enabled")
+			}
+		})
+	}
+}
+
+func TestApplyRollupDownsamplingLookback(t *testing.T) {
+	prevDedupInterval := storage.GetDedupInterval()
+	defer func() {
+		storage.SetDownsamplingPeriod(0, 0)
+		storage.SetDedupInterval(time.Duration(prevDedupInterval) * time.Microsecond)
+	}()
+
+	storage.SetDedupInterval(2 * time.Microsecond)
+	storage.SetDownsamplingPeriod(100*time.Microsecond, 10*time.Microsecond)
+
+	currentTimestamp := int64(1_000)
+	f := func(name string, rc *rollupConfig, windowExplicit bool, start, minTimestamp, fetchLookback, silenceLookback, lookbackDelta, wantMinTimestamp, wantMinWindow int64) {
+		t.Helper()
+		t.Run(name, func(t *testing.T) {
+			got := applyRollupDownsamplingLookback([]*rollupConfig{rc}, windowExplicit, start, minTimestamp, currentTimestamp, fetchLookback, silenceLookback, lookbackDelta)
+			if got != wantMinTimestamp {
+				t.Fatalf("unexpected minimum timestamp; got %d; want %d", got, wantMinTimestamp)
+			}
+			if rc.minWindow != wantMinWindow {
+				t.Fatalf("unexpected minimum rollup window; got %d; want %d", rc.minWindow, wantMinWindow)
+			}
+		})
+	}
+
+	f("implicit default rollup crosses cutoff",
+		&rollupConfig{MayAdjustWindow: true, isDefaultRollup: true}, false, 905, 901, 4, 0, 0, 890, 20)
+	f("explicit lookback delta caps interval",
+		&rollupConfig{MayAdjustWindow: true, isDefaultRollup: true}, false, 905, 901, 4, 0, 8, 897, 8)
+	f("explicit window remains unchanged",
+		&rollupConfig{MayAdjustWindow: true, isDefaultRollup: true}, true, 905, 901, 4, 0, 0, 901, 0)
+	f("implicit adjustable rollup uses downsampling cadence",
+		&rollupConfig{MayAdjustWindow: true}, false, 905, 901, 4, 0, 0, 855, 50)
+	f("fresh range remains unchanged",
+		&rollupConfig{MayAdjustWindow: true, isDefaultRollup: true}, false, 930, 926, 4, 0, 0, 926, 0)
+
+	storage.SetDownsamplingPeriod(10*time.Hour, time.Hour)
+	currentTimestamp = (20 * time.Hour).Microseconds()
+	start := (11 * time.Hour).Microseconds()
+	minWindow := (67*time.Minute + 30*time.Second).Microseconds()
+	f("implicit previous-sample rollup fetches preceding window",
+		&rollupConfig{MayAdjustWindow: true}, false, start, start-(10*time.Minute).Microseconds(), (10 * time.Minute).Microseconds(), (5 * time.Minute).Microseconds(), 0, start-(140*time.Minute).Microseconds(), minWindow)
+	f("previous-sample lookback delta is capped before doubling",
+		&rollupConfig{MayAdjustWindow: true}, false, start, start-(10*time.Minute).Microseconds(), (10 * time.Minute).Microseconds(), (5 * time.Minute).Microseconds(), (30 * time.Minute).Microseconds(), start-(65*time.Minute).Microseconds(), (30 * time.Minute).Microseconds())
+	f("implicit rollup without preceding sample fetches one window",
+		&rollupConfig{MayAdjustWindow: true}, false, start, start-(5*time.Minute).Microseconds(), (5 * time.Minute).Microseconds(), 0, 0, start-minWindow, minWindow)
+
+	storage.SetDownsamplingPeriod(0, 0)
+	f("ordinary deduplication remains unchanged",
+		&rollupConfig{MayAdjustWindow: true, isDefaultRollup: true}, false, 905, 901, 4, 0, 0, 901, 0)
+}
+
+func TestGetDownsamplingBucketLookback(t *testing.T) {
+	for _, tc := range []struct {
+		timestamp int64
+		want      int64
+	}{
+		{timestamp: 900, want: 10},
+		{timestamp: 905, want: 15},
+		{timestamp: 909, want: 19},
+	} {
+		if got := getDownsamplingBucketLookback(tc.timestamp, 10); got != tc.want {
+			t.Fatalf("unexpected bucket lookback for timestamp %d; got %d; want %d", tc.timestamp, got, tc.want)
+		}
+	}
+}
+
 func TestValidateMaxPointsPerSeriesFailure(t *testing.T) {
 	f := func(start, end, step int64, maxPoints int) {
 		t.Helper()
@@ -77,6 +207,24 @@ func TestValidateMaxPointsPerSeriesSuccess(t *testing.T) {
 	f(1, 1, 1, 2)
 	f(1659962171908, 1659966077742, 5000, 800)
 	f(1659962150000, 1659966070000, 10000, 393)
+}
+
+func TestCopyEvalConfigPreservesCurrentTimestamp(t *testing.T) {
+	const currentTimestamp = int64(123_456_789)
+	ec := &EvalConfig{
+		CurrentTimestamp: currentTimestamp,
+	}
+	for range 2 {
+		ecCopy := copyEvalConfig(ec)
+		if got := ecCopy.CurrentTimestamp; got != currentTimestamp {
+			t.Fatalf("unexpected current timestamp in copied config; got %d; want %d", got, currentTimestamp)
+		}
+		sq := storage.NewSearchQuery(1, 2, nil, 0)
+		sq.SetDownsamplingCurrentTimestamp(ecCopy.CurrentTimestamp)
+		if got := sq.DownsamplingCurrentTimestamp(); got != currentTimestamp {
+			t.Fatalf("multiple fetches must use the same current timestamp; got %d; want %d", got, currentTimestamp)
+		}
+	}
 }
 
 func TestQueryStats_addSeriesFetched(t *testing.T) {

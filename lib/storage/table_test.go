@@ -8,6 +8,19 @@ import (
 	"github.com/VictoriaMetrics/VictoriaMetrics/lib/fs"
 )
 
+func TestAddJitterOverflowSafe(t *testing.T) {
+	const maxDuration = time.Duration(1<<63 - 1)
+	if got := addJitter(maxDuration); got != maxDuration {
+		t.Fatalf("jitter near MaxInt64 must be skipped; got %s; want %s", got, maxDuration)
+	}
+
+	const d = 4 * time.Hour
+	got := addJitter(d)
+	if got < d || got >= d+d/4 {
+		t.Fatalf("unexpected jittered duration; got %s; want in [%s, %s)", got, d, d+d/4)
+	}
+}
+
 func TestTableOpenClose(t *testing.T) {
 	const path = "TestTableOpenClose"
 	const retention = 123 * retention31Days
