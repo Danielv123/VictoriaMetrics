@@ -429,9 +429,8 @@ func (tb *table) getMinMaxIngestionTimestamps() (int64, int64) {
 func (tb *table) getMinMaxTimestampsForAge(minAgeUsecs int64) (int64, int64) {
 	now := int64(fasttime.UnixTimestamp() * 1e6)
 	minTimestamp := now - minAgeUsecs
-	if minTimestamp < 0 {
-		// Negative timestamps aren't supported by the storage.
-		minTimestamp = 0
+	if minTimestamp < minUnixMicro {
+		minTimestamp = minUnixMicro
 	}
 	maxTimestamp := int64(maxUnixMicro)
 	if maxUnixMicro-now > tb.s.futureRetentionUsecs {

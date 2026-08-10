@@ -40,12 +40,6 @@ type TimeRange struct {
 	MaxTimestamp int64
 }
 
-// Zero time range and zero date are used to force global index search.
-var (
-	globalIndexTimeRange = TimeRange{}
-	globalIndexDate      = uint64(0)
-)
-
 // DateRange returns the date range for the given time range.
 func (tr *TimeRange) DateRange() (uint64, uint64) {
 	minDate := uint64(tr.MinTimestamp) / usecPerDay
@@ -117,6 +111,12 @@ func (tr *TimeRange) contains(timestamp int64) bool {
 	return tr.MinTimestamp <= timestamp && timestamp <= tr.MaxTimestamp
 }
 
+// Zero time range and zero date are used to force global index search.
+var (
+	globalIndexDate      = uint64(0)
+	globalIndexTimeRange = TimeRange{}
+)
+
 const (
 	usecPerDay  = 24 * 3600 * 1000 * 1000
 	usecPerHour = 3600 * 1000 * 1000
@@ -124,6 +124,19 @@ const (
 	// maxUnixMilli is the maximum timestamp supported by the millisecond
 	// storage format used by released VictoriaMetrics versions.
 	maxUnixMilli = 9222422399999
+
+	// minUnixMicro is the min microsecond that is allowed to be used as the
+	// sample timestamp.
+	//
+	// It corresponds to the first microsecond of the second day of the Unix
+	// Epoch, i.e. 1970-01-02T00:00:00.000Z.
+	//
+	// The first day of the Unix Epoch is reserved: zero date and zero time
+	// range are used for indicating that the the global index search is
+	// required. See globalIndexDate and globalIndexTimeRange above.
+	//
+	// Negative timestamps aren't supported.
+	minUnixMicro = usecPerDay
 
 	// maxUnixMicro is the max microsecond that is allowed to be used as the
 	// sample timestamp.
