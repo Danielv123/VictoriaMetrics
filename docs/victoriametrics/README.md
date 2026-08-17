@@ -1306,7 +1306,7 @@ since it uses lower amounts of RAM, CPU and network bandwidth than Prometheus.
 If you use identically configured [vmagent](https://docs.victoriametrics.com/victoriametrics/vmagent/) instances for collecting the same data
 and sending it to VictoriaMetrics, then do not forget enabling [deduplication](#deduplication) at VictoriaMetrics side.
 
-See [victoria-metrics-distributed chart](https://docs.victoriametrics.com/helm/victoria-metrics-distributed/) for an example.
+See [VMDistributed](https://docs.victoriametrics.com/operator/resources/vmdistributed/) Kubernetes operator resource for an example.
 
 ## Deduplication
 
@@ -1406,6 +1406,9 @@ for fast block lookups, which belong to the given `TSID` and cover the given tim
 * improved query speed, since queries over smaller number of parts are executed faster
 * various background maintenance tasks such as [de-duplication](#deduplication), [downsampling](#downsampling)
   and [freeing up disk space for the deleted time series](#how-to-delete-time-series) are performed during the merge
+
+See how `vmstorage` [selects parts for background merging](https://victoriametrics.com/blog/vmstorage-retention-merging-deduplication/#merge-process),
+including merge limits and monitoring metrics.
 
 Newly added `parts` either successfully appear in the storage or fail to appear.
 The newly added `part` is atomically registered in the `parts.json` file under the corresponding partition
@@ -1534,6 +1537,8 @@ are **eventually deleted** during [background merge](https://medium.com/@valyala
 The time range covered by data part is **not limited by retention period unit**. One data part can cover hours or days of
 data. Hence, a data part can be deleted only **when fully outside the configured retention**.
 See more about partitions and parts in the [Storage section](#storage).
+See how the [retention and free-disk watchers manage storage](https://victoriametrics.com/blog/vmstorage-retention-merging-deduplication/#retention-free-disk-space-guard-and-downsampling)
+for implementation details and monitoring metrics.
 
 The maximum disk space usage for a given `-retentionPeriod` is going to be (`-retentionPeriod` + 1) months.
 For example, if `-retentionPeriod` is set to 1, data for January is deleted on March 1st.
