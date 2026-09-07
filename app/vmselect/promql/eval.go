@@ -1074,6 +1074,7 @@ func evalRollupFuncWithSubquery(qt *querytracer.Tracer, ec *EvalConfig, funcName
 	var samplesScannedTotal atomic.Uint64
 	keepMetricNames := getKeepMetricNames(expr)
 	tsw := getTimeseriesByWorkerID()
+	defer putTimeseriesByWorkerID(tsw)
 	seriesByWorkerID := tsw.byWorkerID
 	doParallel(tssSQ, func(tsSQ *timeseries, values []float64, timestamps []int64, workerID uint) ([]float64, []int64) {
 		values, timestamps = removeNanValues(values[:0], timestamps[:0], tsSQ.Values, tsSQ.Timestamps)
@@ -1096,7 +1097,6 @@ func evalRollupFuncWithSubquery(qt *querytracer.Tracer, ec *EvalConfig, funcName
 	for i := range seriesByWorkerID {
 		tss = append(tss, seriesByWorkerID[i].tss...)
 	}
-	putTimeseriesByWorkerID(tsw)
 
 	rowsScannedPerQuery.Update(float64(samplesScannedTotal.Load()))
 	qt.Printf("rollup %s() over %d series returned by subquery: series=%d, samplesScanned=%d", funcName, len(tssSQ), len(tss), samplesScannedTotal.Load())
@@ -1976,6 +1976,7 @@ func evalRollupNoIncrementalAggregate(qt *querytracer.Tracer, funcName string, k
 
 	var samplesScannedTotal atomic.Uint64
 	tsw := getTimeseriesByWorkerID()
+	defer putTimeseriesByWorkerID(tsw)
 	seriesByWorkerID := tsw.byWorkerID
 	seriesLen := rss.Len()
 	err := rss.RunParallel(qt, func(rs *netstorage.Result, workerID uint) error {
@@ -2002,7 +2003,6 @@ func evalRollupNoIncrementalAggregate(qt *querytracer.Tracer, funcName string, k
 	for i := range seriesByWorkerID {
 		tss = append(tss, seriesByWorkerID[i].tss...)
 	}
-	putTimeseriesByWorkerID(tsw)
 
 	rowsScannedPerQuery.Update(float64(samplesScannedTotal.Load()))
 	qt.Printf("samplesScanned=%d", samplesScannedTotal.Load())
