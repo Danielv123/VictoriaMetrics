@@ -193,7 +193,15 @@ func TestMixedGraphiteQueries(t *testing.T) {
 		"-storageNode=" + vmsingle.VmselectAddr(),
 	})
 
+	rowsInserted := getRowsInsertedTotal(t, vmsingle)
 	vmsingle.GraphiteWrite(tc.T(), data.Samples, apptest.QueryOpts{})
+	tc.Assert(&apptest.AssertOptions{
+		Msg: "unexpected row inserted metrics check",
+		Got: func() any {
+			return (getRowsInsertedTotal(t, vmsingle) - rowsInserted) >= numMetrics
+		},
+		Want: true,
+	})
 	vmsingle.ForceFlush(t)
 
 	// Ensure vmsingle returns data.
