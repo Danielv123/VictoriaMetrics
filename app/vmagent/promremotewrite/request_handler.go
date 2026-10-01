@@ -50,25 +50,19 @@ func insertRows(at *auth.Token, timeseries []prompb.TimeSeries, mms []prompb.Met
 		ts := &timeseries[i]
 		rowsTotal += len(ts.Samples)
 		labelsLen := len(labels)
-		for i := range ts.Labels {
-			label := &ts.Labels[i]
-			labels = append(labels, prompb.Label{
-				Name:  label.Name,
-				Value: label.Value,
-			})
-		}
+		labels = append(labels, ts.Labels...)
 		labels = append(labels, extraLabels...)
 		samplesLen := len(samples)
-		for i := range ts.Samples {
-			sample := &ts.Samples[i]
-			timestamp := sample.Timestamp
-			if !isVMRemoteWrite {
-				timestamp *= 1e3
+		if isVMRemoteWrite {
+			samples = append(samples, ts.Samples...)
+		} else {
+			for i := range ts.Samples {
+				sample := &ts.Samples[i]
+				samples = append(samples, prompb.Sample{
+					Value:     sample.Value,
+					Timestamp: sample.Timestamp * 1e3,
+				})
 			}
-			samples = append(samples, prompb.Sample{
-				Value:     sample.Value,
-				Timestamp: timestamp,
-			})
 		}
 		tssDst = append(tssDst, prompb.TimeSeries{
 			Labels:  labels[labelsLen:],
